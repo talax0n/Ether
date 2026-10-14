@@ -34,7 +34,10 @@ PROPS
   echo "Wrote local.properties"
 fi
 
-if ! adb devices | awk 'NR > 1 && $2 == "device"' | grep -q .; then
+. scripts/_local.sh
+require_local_backend
+
+if ! use_emulator; then
   if ! emulator -list-avds | grep -qx "$AVD"; then
     image=$(cd "$SDK" && ls -d system-images/android-3*/google_apis*/arm64-v8a system-images/android-3*/google_apis*/x86_64 2>/dev/null | sort -r | head -1)
     [ -n "$image" ] || fail "No Android 30+ Google APIs system image in $SDK/system-images. Install one with sdkmanager."
@@ -47,7 +50,9 @@ if ! adb devices | awk 'NR > 1 && $2 == "device"' | grep -q .; then
   window=()
   [ "${HEADLESS:-0}" = 1 ] && window=(-no-window -no-audio)
   nohup emulator -avd "$AVD" "${window[@]}" -no-snapshot-save >/tmp/ether-emulator.log 2>&1 &
+  unset ANDROID_SERIAL
   adb wait-for-device
+  until use_emulator; do sleep 2; done
   until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; do sleep 2; done
 fi
 

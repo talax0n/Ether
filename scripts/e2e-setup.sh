@@ -2,6 +2,10 @@
 # Seeds the state the Maestro flows expect on top of `supabase db reset`. Safe to run repeatedly.
 set -euo pipefail
 DB_URL="${DB_URL:-postgresql://postgres:postgres@127.0.0.1:54322/postgres}"
+case "$DB_URL" in
+  *@127.0.0.1:*|*@localhost:*) ;;
+  *) echo "error: DB_URL must point at the local Supabase database (127.0.0.1 or localhost)." >&2; exit 1 ;;
+esac
 
 psql "$DB_URL" -v ON_ERROR_STOP=1 -q -o /dev/null <<'SQL'
 -- swipe_and_match: Byte Club (owner demo7) has already swiped right on demo3's solo listing.
