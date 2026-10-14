@@ -82,6 +82,7 @@ fun DeckScreen(
             DeckPhase.SWIPING -> SwipeDeck(
                 cards = state.cards,
                 onSwipe = vm::swipe,
+                enabled = !state.swiping,
                 modifier = inner.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
             )
         }

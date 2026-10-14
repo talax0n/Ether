@@ -1,0 +1,46 @@
+appId: dev.ether.app
+name: Drag left, then match with a team that already liked you
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    file: subflows/sign_in.yaml
+    env:
+      EMAIL: demo3@student.example.ac.id
+- tapOn: "Campus Hackathon 2026"
+- tapOn: "Start swiping"
+- extendedWaitUntil:
+    visible:
+      id: "top_card"
+    timeout: 15000
+- assertVisible: "30 swipes left today"
+- swipe:
+    from:
+      id: "top_card"
+    direction: LEFT
+- extendedWaitUntil:
+    visible: "29 swipes left today"
+    timeout: 10000
+- repeat:
+    while:
+      notVisible: "Byte Club"
+    commands:
+      - tapOn:
+          id: "pass"
+      - waitForAnimationToEnd
+- tapOn:
+    id: "like"
+- extendedWaitUntil:
+    visible: "It's a match!"
+    timeout: 15000
+- assertVisible: "You and Byte Club both swiped right."
+- assertVisible: "Message on WhatsApp"
+- tapOn: "Keep swiping"
+- assertVisible: "Your listing is closed.*"
+- back
+- back
+- tapOn: "Matches"
+- extendedWaitUntil:
+    visible: "Byte Club"
+    timeout: 10000
+- assertVisible: "WhatsApp"

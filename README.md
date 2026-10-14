@@ -2,7 +2,7 @@
 
 > Swipe to find your hackathon team. A campus-only Android app where students swipe right on teammates or teams for a specific competition, and a mutual right swipe becomes a match.
 
-**Status:** 📐 Pre-build spec. See [SPEC.md](SPEC.md) and [PLAN.md](PLAN.md).
+**Status:** MVP runs end to end against local Supabase. See [SPEC.md](SPEC.md) and [PLAN.md](PLAN.md).
 
 | | |
 |---|---|
@@ -24,6 +24,27 @@
 - [SPEC.md](SPEC.md) covers the problem, MVP scope, data model, architecture, and risks.
 - [PLAN.md](PLAN.md) covers the build order and definition of done.
 - [CLAUDE.md](CLAUDE.md) gives coding agents the project conventions.
+
+## Demo
+
+```sh
+scripts/demo.sh
+```
+
+Needs Docker running, the Supabase CLI, JDK 17 and the Android SDK. The script starts local Supabase and resets it to the seed data. It writes `local.properties` if it is missing, boots the `ether` emulator (and creates the AVD if needed), then installs and opens the app. It is safe to re-run.
+
+- **Accounts:** `demo1@student.example.ac.id` … `demo8@student.example.ac.id`, or any new `@student.example.ac.id` address.
+- **Sign-in codes** arrive in Mailpit at http://127.0.0.1:54324.
+- **Seed:** Campus Hackathon 2026 has solo listings for demo1–6 and the team Byte Club (demo7 + demo8). Data Challenge 2026 has ended, and its team Night Owls (demo1–3) can endorse each other and report a result.
+- **Recording:** [docs/demo/ether-demo.mp4](docs/demo/ether-demo.mp4).
+
+### End-to-end tests
+
+```sh
+scripts/e2e.sh
+```
+
+This resets the database, runs `scripts/e2e-setup.sh`, installs the debug app, and runs every [Maestro](https://maestro.mobile.dev) flow in `.maestro/` against the real backend. It exits non-zero if any flow fails. A device or emulator must be connected.
 
 ## Run
 

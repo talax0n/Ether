@@ -49,6 +49,7 @@ import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.input.pointer.util.addPointerInputChange
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
@@ -94,16 +95,23 @@ private class SwipeCardState {
 }
 
 @Composable
-fun SwipeDeck(cards: List<DeckCard>, onSwipe: (DeckCard, SwipeDirection) -> Unit, modifier: Modifier = Modifier) {
+fun SwipeDeck(
+    cards: List<DeckCard>,
+    onSwipe: (DeckCard, SwipeDirection) -> Unit,
+    modifier: Modifier = Modifier,
+    /** False while the previous swipe is still on its way to the database. */
+    enabled: Boolean = true,
+) {
     val top = cards.firstOrNull() ?: return
     val next = cards.getOrNull(1)
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
     val currentOnSwipe by rememberUpdatedState(onSwipe)
+    val currentEnabled by rememberUpdatedState(enabled)
     val state = remember(top.listingId) { SwipeCardState() }
 
     fun commit(direction: SwipeDirection) {
-        if (state.committing) return
+        if (state.committing || !currentEnabled) return
         state.committing = true
         haptics.performHapticFeedback(HapticFeedbackType.Confirm)
         scope.launch {
@@ -131,6 +139,7 @@ fun SwipeDeck(cards: List<DeckCard>, onSwipe: (DeckCard, SwipeDirection) -> Unit
                     stampProgress = { state.progress },
                     modifier = Modifier
                         .fillMaxSize()
+                        .testTag("top_card")
                         .onSizeChanged { state.width = it.width.toFloat() }
                         // Gesture detection sits outside graphicsLayer so pointer positions stay in the
                         // unmoved frame; otherwise the finger looks stationary to the velocity tracker.
@@ -140,19 +149,22 @@ fun SwipeDeck(cards: List<DeckCard>, onSwipe: (DeckCard, SwipeDirection) -> Unit
                                 val tracker = VelocityTracker()
                                 detectDragGestures(
                                     onDragStart = { tracker.resetTracking() },
+                                    // Once committing, flyAway owns the offset: a springBack here would cancel it
+                                    // before onSwipe runs and leave the card stuck.
                                     onDragEnd = {
+                                        if (state.committing) return@detectDragGestures
                                         val x = state.offset.value.x
                                         val vx = tracker.calculateVelocity().x
                                         val passed = abs(x) > state.width * COMMIT_FRACTION
                                         val flung = abs(vx) > flingPx && sign(vx) == sign(x)
                                         when {
-                                            passed || flung -> commit(if (x > 0) SwipeDirection.RIGHT else SwipeDirection.LEFT)
+                                            (passed || flung) && currentEnabled -> commit(if (x > 0) SwipeDirection.RIGHT else SwipeDirection.LEFT)
                                             else -> launch { state.springBack() }
                                         }
                                     },
-                                    onDragCancel = { launch { state.springBack() } },
+                                    onDragCancel = { if (!state.committing) launch { state.springBack() } },
                                 ) { change, drag ->
-                                    if (state.committing) return@detectDragGestures
+                                    if (state.committing || !currentEnabled) return@detectDragGestures
                                     change.consume()
                                     tracker.addPointerInputChange(change)
                                     launch { state.offset.snapTo(state.offset.value + drag) }
@@ -177,7 +189,8 @@ fun SwipeDeck(cards: List<DeckCard>, onSwipe: (DeckCard, SwipeDirection) -> Unit
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(40.dp, Alignment.CenterHorizontally)) {
             FilledIconButton(
                 onClick = { commit(SwipeDirection.LEFT) },
-                modifier = Modifier.size(68.dp),
+                enabled = enabled,
+                modifier = Modifier.size(68.dp).testTag("pass"),
                 colors = IconButtonDefaults.filledIconButtonColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                     contentColor = NopeRed,
@@ -185,7 +198,8 @@ fun SwipeDeck(cards: List<DeckCard>, onSwipe: (DeckCard, SwipeDirection) -> Unit
             ) { Icon(painterResource(R.drawable.ic_close), "Pass on ${top.name}", Modifier.size(32.dp)) }
             FilledIconButton(
                 onClick = { commit(SwipeDirection.RIGHT) },
-                modifier = Modifier.size(68.dp),
+                enabled = enabled,
+                modifier = Modifier.size(68.dp).testTag("like"),
                 colors = IconButtonDefaults.filledIconButtonColors(containerColor = LikeGreen, contentColor = Color.White),
             ) { Icon(painterResource(R.drawable.ic_favorite), "Like ${top.name}", Modifier.size(32.dp)) }
         }

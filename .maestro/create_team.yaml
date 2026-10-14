@@ -1,0 +1,49 @@
+appId: dev.ether.app
+name: Create a team and see it in another user's deck
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    file: subflows/sign_in.yaml
+    env:
+      EMAIL: demo5@student.example.ac.id
+- tapOn: "Campus Hackathon 2026"
+- tapOn: "Create a team, find members"
+- tapOn: "Team name"
+- inputText: "Rocket Owls"
+# BACK with the keyboard up closes the keyboard, the next BACK closes the dialog; the app stays put.
+- back
+- assertVisible: "Create a team"
+- back
+- assertVisible: "How are you entering?"
+- tapOn: "Create a team, find members"
+- tapOn: "Team name"
+- inputText: "Rocket Owls"
+- tapOn: "Pitch"
+- inputText: "Campus ride sharing for night classes."
+- tapOn: "Open roles, comma separated"
+- inputText: "Designer, Backend"
+- hideKeyboard
+- tapOn: "Create"
+- extendedWaitUntil:
+    visible: "Your team is listed.*"
+    timeout: 15000
+- back
+- tapOn: "Teams"
+- assertVisible: "Rocket Owls"
+- tapOn: "Profile"
+- scrollUntilVisible:
+    element: "Sign out"
+- tapOn: "Sign out"
+- runFlow:
+    file: subflows/sign_in.yaml
+    env:
+      EMAIL: demo6@student.example.ac.id
+- tapOn: "Campus Hackathon 2026"
+- tapOn: "Start swiping"
+- extendedWaitUntil:
+    visible:
+      id: "top_card"
+    timeout: 15000
+- assertVisible: "Rocket Owls"
+- assertVisible: "Campus ride sharing for night classes."

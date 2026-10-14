@@ -1,0 +1,12 @@
+appId: dev.ether.app
+name: Outside email is rejected
+---
+- launchApp:
+    clearState: true
+- tapOn: "University email"
+- inputText: "someone@gmail.com"
+- tapOn: "Send code"
+- extendedWaitUntil:
+    visible: "Use your university email.*"
+    timeout: 15000
+- assertNotVisible: "6-digit code"

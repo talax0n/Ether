@@ -1,0 +1,42 @@
+appId: dev.ether.app
+name: Sign in with a new address and set up a profile
+---
+- launchApp:
+    clearState: true
+- runScript: scripts/new_email.js
+- runFlow:
+    file: subflows/sign_in.yaml
+    env:
+      EMAIL: ${output.email}
+- extendedWaitUntil:
+    visible: "Save"
+    timeout: 15000
+- tapOn: "Name"
+- inputText: "Rani Maestro"
+- tapOn: "Major"
+- inputText: "Informatics"
+- tapOn: "Year (1-10)"
+- inputText: "2"
+- tapOn: "Bio"
+- inputText: "Builds things end to end."
+- hideKeyboard
+- tapOn: "Skills, comma separated"
+- inputText: "Kotlin, SQL"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Roles, comma separated"
+- tapOn: "Roles, comma separated"
+- inputText: "Mobile"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Contact link.*"
+- tapOn: "Contact link.*"
+- inputText: "https://t.me/rani_maestro"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Save"
+- tapOn: "Save"
+- extendedWaitUntil:
+    visible: "Campus Hackathon 2026"
+    timeout: 15000
+- assertVisible: "Data Challenge 2026"

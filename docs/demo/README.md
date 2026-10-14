@@ -22,6 +22,7 @@ Captured on the `ether` emulator (Android 16) running the debug build against lo
 | `15-swipe-cap.png` | The `swipe_cap_reached` error mapped to the daily-cap screen |
 | `16-error-email-domain.png` | A non-university email rejected at sign-up |
 | `17-error-registration-closed.png` | `registration_closed` when joining the ended competition |
+| `ether-demo.mp4` | 68-second screen recording of the happy path as demo3: sign in with a Mailpit code, open the deck, drag two cards left, pass to Byte Club, drag right, match dialog with the WhatsApp button, then Matches, Teams and Profile. Driven by Maestro after `scripts/e2e-setup.sh` |
 
 **How the match was set up.** Byte Club's right swipe on Rani was created beforehand in SQL, by calling `swipe()` as demo7 (the team owner) under an `authenticated` JWT claim. Rani then swiped right on Byte Club in the app, and the database created the match.
 

@@ -1,0 +1,47 @@
+appId: dev.ether.app
+name: Endorse, report Winner, teammate confirms, XP and badge show
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    file: subflows/sign_in.yaml
+    env:
+      EMAIL: demo1@student.example.ac.id
+- tapOn: "Teams"
+- extendedWaitUntil:
+    visible: "Night Owls"
+    timeout: 15000
+- tapOn:
+    id: "endorse Budi Santoso"
+- extendedWaitUntil:
+    visible: "Endorsed"
+    timeout: 10000
+- scrollUntilVisible:
+    element: "Winner"
+- tapOn: "Winner"
+- extendedWaitUntil:
+    visible: "You reported Winner.*"
+    timeout: 10000
+- tapOn: "Profile"
+- scrollUntilVisible:
+    element: "Sign out"
+- tapOn: "Sign out"
+- runFlow:
+    file: subflows/sign_in.yaml
+    env:
+      EMAIL: demo2@student.example.ac.id
+- tapOn: "Teams"
+- scrollUntilVisible:
+    element: "Confirm Winner"
+- tapOn: "Confirm Winner"
+- extendedWaitUntil:
+    visible: "Winner, confirmed by your team."
+    timeout: 10000
+- tapOn: "Profile"
+# Seed 300 (profile 50 + team 100 + finished 150), +30 endorsement, +200 confirmed result.
+- extendedWaitUntil:
+    visible: "530"
+    timeout: 10000
+- scrollUntilVisible:
+    element: "Winner"
+- assertVisible: "First Team"

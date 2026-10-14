@@ -1,0 +1,16 @@
+appId: dev.ether.app
+---
+- runScript: ../scripts/clear_mail.js
+- tapOn: "University email"
+- inputText: ${EMAIL}
+- tapOn: "Send code"
+- extendedWaitUntil:
+    visible: "6-digit code"
+    timeout: 15000
+- runScript:
+    file: ../scripts/otp.js
+    env:
+      EMAIL: ${EMAIL}
+- tapOn: "6-digit code"
+- inputText: ${output.otp}
+- tapOn: "Verify"

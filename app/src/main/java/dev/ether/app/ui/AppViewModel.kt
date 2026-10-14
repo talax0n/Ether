@@ -24,7 +24,7 @@ sealed interface AppUiState {
     data class Failed(val message: String) : AppUiState
 }
 
-class AppViewModel(auth: AuthRepository, private val profiles: ProfileRepository) : ViewModel() {
+class AppViewModel(private val auth: AuthRepository, private val profiles: ProfileRepository) : ViewModel() {
     private val recheck = MutableStateFlow(0)
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -35,12 +35,18 @@ class AppViewModel(auth: AuthRepository, private val profiles: ProfileRepository
                 AuthState.SignedOut -> emit(AppUiState.SignedOut)
                 is AuthState.SignedIn -> {
                     emit(AppUiState.Loading)
-                    emit(
-                        runCatching { profiles.myProfile() }.fold(
-                            onSuccess = { if (it?.isComplete == true) AppUiState.Ready else AppUiState.NeedsProfile(authState.userId) },
-                            onFailure = { AppUiState.Failed(it.userMessage()) },
-                        ),
-                    )
+                    val profile = runCatching { profiles.myProfile() }
+                    when {
+                        profile.isFailure -> emit(AppUiState.Failed(profile.exceptionOrNull()!!.userMessage()))
+                        // Sign-up always creates the profile row, so a missing row means the account was deleted
+                        // (e.g. a DB reset) while this device still holds its token.
+                        profile.getOrNull() == null -> {
+                            runCatching { auth.signOut() }
+                            emit(AppUiState.SignedOut)
+                        }
+                        profile.getOrNull()!!.isComplete -> emit(AppUiState.Ready)
+                        else -> emit(AppUiState.NeedsProfile(authState.userId))
+                    }
                 }
             }
         }

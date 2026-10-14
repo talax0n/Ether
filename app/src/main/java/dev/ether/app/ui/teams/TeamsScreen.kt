@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -138,7 +139,7 @@ private fun TeammateRow(mate: Teammate, eventEnded: Boolean, busy: Boolean, onEn
             if (mate.endorsedByMe) {
                 Text("Endorsed", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             } else {
-                FilledTonalButton(onClick = { onEndorse(mate) }, enabled = !busy, contentPadding = ButtonDefaults.ButtonWithIconContentPadding) {
+                FilledTonalButton(onClick = { onEndorse(mate) }, enabled = !busy, modifier = Modifier.testTag("endorse ${mate.name}"), contentPadding = ButtonDefaults.ButtonWithIconContentPadding) {
                     Icon(painterResource(R.drawable.ic_thumb_up), contentDescription = null, Modifier.size(18.dp))
                     Text("Endorse", Modifier.padding(start = 6.dp))
                 }

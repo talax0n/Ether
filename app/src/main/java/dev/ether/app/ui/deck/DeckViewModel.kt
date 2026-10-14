@@ -19,8 +19,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import java.time.Instant
 
 /** LISTING_CLOSED: the user's own listing went inactive, usually because a match just put them on a team. */
@@ -33,6 +31,8 @@ data class DeckUiState(
     val remaining: Int? = null,
     /** Set when a swipe produced a match; cleared when the user dismisses the dialog. */
     val match: Match? = null,
+    /** A swipe is on its way to the database; further swipes are ignored until it settles. */
+    val swiping: Boolean = false,
     val error: String? = null,
 )
 
@@ -44,9 +44,6 @@ class DeckViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(DeckUiState())
     val state: StateFlow<DeckUiState> = _state.asStateFlow()
-
-    // Swipes run one at a time so a deck refill never races a swipe that hasn't reached the DB yet.
-    private val swipeLock = Mutex()
 
     init { load() }
 
@@ -70,47 +67,41 @@ class DeckViewModel(
 
     fun swipe(card: DeckCard, direction: SwipeDirection) {
         val current = _state.value
-        if (current.phase != DeckPhase.SWIPING || current.cards.firstOrNull() != card) return
-        _state.update { it.copy(cards = it.cards.drop(1), error = null) }
+        if (current.phase != DeckPhase.SWIPING || current.swiping || current.cards.firstOrNull() != card) return
+        _state.update { it.copy(cards = it.cards.drop(1), swiping = true, error = null) }
         viewModelScope.launch {
-            swipeLock.withLock {
-                try {
-                    onSwiped(card, deck.swipe(from, card.listingId, direction))
-                } catch (e: EtherError.SwipeCapReached) {
-                    _state.update { it.copy(phase = DeckPhase.CAP_REACHED, remaining = 0, cards = listOf(card) + it.cards) }
-                } catch (e: EtherError.ListingInactive) {
-                    // Usually the card filled up or matched elsewhere; putting it back would make it unswipeable.
-                    _state.update { it.copy(phase = phaseFor(it.cards, it.remaining ?: 1), error = e.userMessage()) }
-                } catch (e: Exception) {
-                    _state.update { it.copy(cards = listOf(card) + it.cards, error = e.userMessage()) }
-                }
+            try {
+                val result = deck.swipe(from, card.listingId, direction)
+                val match = if (result.matched) findMatch(card, result) else null
+                _state.update { it.copy(remaining = result.remaining, match = match ?: it.match) }
+                // A match can close the caller's own listing (a solo just joined a team, or a team filled up),
+                // so re-read the deck from the DB instead of trusting the local cards.
+                if (match != null || _state.value.cards.isEmpty()) refresh(result.remaining) else settle()
+            } catch (e: EtherError.SwipeCapReached) {
+                _state.update { it.copy(phase = DeckPhase.CAP_REACHED, remaining = 0, cards = listOf(card) + it.cards, swiping = false) }
+            } catch (e: EtherError.ListingInactive) {
+                // Either the card filled up or matched elsewhere, or our own listing closed; the DB knows which.
+                _state.update { it.copy(error = e.userMessage()) }
+                refresh(_state.value.remaining ?: 1)
+            } catch (e: Exception) {
+                _state.update { it.copy(cards = listOf(card) + it.cards, swiping = false, error = e.userMessage()) }
             }
         }
     }
 
     fun dismissMatch() = _state.update { it.copy(match = null) }
 
-    private suspend fun onSwiped(card: DeckCard, result: SwipeResult) {
-        val match = if (result.matched) findMatch(card, result) else null
-        var cards = _state.value.cards
-        var closed = false
-        if (cards.isEmpty() && result.remaining > 0) {
-            cards = try {
-                deck.deck(from)
-            } catch (e: EtherError.ListingInactive) {
-                closed = true
-                emptyList()
-            } catch (e: EtherError) {
-                emptyList()
-            }
-        }
-        _state.update {
-            it.copy(
-                phase = if (closed) DeckPhase.LISTING_CLOSED else phaseFor(cards, result.remaining),
-                cards = cards,
-                remaining = result.remaining,
-                match = match ?: it.match,
-            )
+    private fun settle() = _state.update { it.copy(phase = phaseFor(it.cards, it.remaining ?: 1), swiping = false) }
+
+    private suspend fun refresh(remaining: Int) {
+        if (remaining <= 0) return _state.update { it.copy(phase = DeckPhase.CAP_REACHED, swiping = false) }
+        try {
+            val cards = deck.deck(from)
+            _state.update { it.copy(phase = phaseFor(cards, remaining), cards = cards, swiping = false) }
+        } catch (e: EtherError.ListingInactive) {
+            _state.update { it.copy(phase = DeckPhase.LISTING_CLOSED, cards = emptyList(), swiping = false) }
+        } catch (e: Exception) {
+            _state.update { it.copy(phase = DeckPhase.FAILED, cards = emptyList(), swiping = false, error = e.userMessage()) }
         }
     }
 
