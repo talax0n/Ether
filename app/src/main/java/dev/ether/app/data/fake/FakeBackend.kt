@@ -175,7 +175,7 @@ object DemoData {
         bio = "Android dev who likes shipping fast.",
         skills = listOf("Kotlin", "Compose", "Postgres"),
         roles = listOf("Mobile"),
-        contactUrl = "https://t.me/theo",
+        contactUrl = "https://t.me/ether_demo",
         avatarUrl = null,
         xp = 225,
     )

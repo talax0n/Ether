@@ -68,7 +68,8 @@ class SupabaseAuthRepository(private val client: SupabaseClient) : AuthRepositor
     }
 
     override suspend fun signOut(): Unit = backend {
-        client.auth.signOut()
+        // The server call fails for an account that no longer exists; the local session must still go.
+        runCatching { client.auth.signOut() }.onFailure { client.auth.clearSession() }
     }
 }
 
