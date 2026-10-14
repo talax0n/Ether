@@ -347,5 +347,55 @@ where id = '00000000-0000-0000-0000-00000000000d';
 reset role;
 select is((select xp from profiles where id = '00000000-0000-0000-0000-00000000000d'), 50, 'profile completed awards 50 XP');
 
+-- ---------------------------------------------------------------- create_team RPC
+
+insert into competitions (id, name, registration_deadline, event_end, min_team_size, max_team_size) values
+  ('30000000-0000-0000-0000-000000000003', 'Third', now() + interval '7 days', now() + interval '14 days', 2, 3);
+insert into listings (id, competition_id, kind, profile_id) values
+  ('10000000-0000-0000-0000-0000000000f3', '30000000-0000-0000-0000-000000000003', 'solo', '00000000-0000-0000-0000-00000000000c');
+
+select pg_temp.login('00000000-0000-0000-0000-00000000000d');
+select is((select count(*)::int from profile_contacts where profile_id = '00000000-0000-0000-0000-00000000000c'), 0,
+  'contact hidden before becoming teammates');
+reset role;
+
+select pg_temp.login('00000000-0000-0000-0000-00000000000c');
+create temp table c3 as
+  select create_team('30000000-0000-0000-0000-000000000003', ' Rocket ', 'We ship', array['Mobile']) id;
+reset role;
+select is((select array[name, pitch, owner_id::text] from teams where id = (select id from c3)),
+  array['Rocket', 'We ship', '00000000-0000-0000-0000-00000000000c'], 'create_team: team owned by the caller, name trimmed');
+select is((select array_agg(profile_id) from team_members where team_id = (select id from c3)),
+  array['00000000-0000-0000-0000-00000000000c']::uuid[], 'create_team: owner is the only member');
+select is((select active from listings where team_id = (select id from c3) and kind = 'team'), true,
+  'create_team: active TEAM listing created');
+select is((select active from listings where id = '10000000-0000-0000-0000-0000000000f3'), false,
+  'create_team: the owner''s solo listing goes inactive');
+
+select pg_temp.login('00000000-0000-0000-0000-00000000000c');
+select throws_ok($$ select create_team('30000000-0000-0000-0000-000000000003', 'Again', null, '{}') $$,
+  'P0001', 'already_in_team', 'create_team: second team in the same competition rejected');
+select throws_ok($$ select create_team('30000000-0000-0000-0000-000000000002', 'Late', null, '{}') $$,
+  'P0001', 'registration_closed', 'create_team: rejected after registration_deadline');
+select throws_ok($$ select create_team('30000000-0000-0000-0000-0000000000ff', 'Nowhere', null, '{}') $$,
+  'P0001', 'competition_not_found', 'create_team: unknown competition rejected');
+reset role;
+select pg_temp.login('00000000-0000-0000-0000-00000000000d');
+select throws_ok($$ select create_team('30000000-0000-0000-0000-000000000003', '  ', null, '{}') $$,
+  'P0001', 'team_name_required', 'create_team: blank name rejected');
+reset role;
+select is((select count(*)::int from teams where competition_id = '30000000-0000-0000-0000-000000000003'), 1,
+  'create_team: failed calls leave no team behind');
+
+select set_config('request.jwt.claims', '', true);
+select throws_ok($$ select create_team('30000000-0000-0000-0000-000000000003', 'Anon', null, '{}') $$,
+  '42501', 'not_authenticated', 'create_team: requires a signed-in user');
+
+insert into team_members (team_id, profile_id) values ((select id from c3), '00000000-0000-0000-0000-00000000000d');
+select pg_temp.login('00000000-0000-0000-0000-00000000000d');
+select is((select contact_url from profile_contacts where profile_id = '00000000-0000-0000-0000-00000000000c'),
+  'https://wa.me/c', 'teammates can read each other''s contact without a match');
+reset role;
+
 select * from finish();
 rollback;
