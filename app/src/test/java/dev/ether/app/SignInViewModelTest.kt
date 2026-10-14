@@ -16,7 +16,7 @@ class SignInViewModelTest {
     @get:Rule val main = MainDispatcherRule()
 
     private val backend = FakeBackend()
-    private val vm = SignInViewModel(backend)
+    private val vm by lazy { SignInViewModel(backend) }
 
     @Test
     fun `sending the code moves to the code step`() = runTest {
@@ -61,7 +61,9 @@ class SignInViewModelTest {
         vm.onCodeChange("123456")
         vm.submit()
 
-        assertNull(vm.state.value.error)
         assertEquals(AuthState.SignedIn(ProfileId("p-me")), backend.authState.value)
+        // Reset for the next sign-in after a sign-out.
+        assertEquals(SignInStep.EMAIL, vm.state.value.step)
+        assertEquals("", vm.state.value.email)
     }
 }

@@ -95,13 +95,18 @@ class SupabaseProfileRepository(private val client: SupabaseClient) : ProfileRep
         ProfileSummary(profile, badges, Reliability(score))
     }
 
-    // The sign-up trigger creates the profiles row and clients may only UPDATE it, so no upsert here.
+    // The sign-up trigger creates the profiles row and clients may only UPDATE it.
     override suspend fun saveMyProfile(draft: ProfileDraft): Unit = backend {
         val uid = client.uid()
         client.from("profiles").update(
             ProfileUpdateDto(draft.name, draft.major, draft.year, draft.bio, draft.skills, draft.roles),
         ) { filter { eq("id", uid) } }
-        client.from("profile_contacts").upsert(ProfileContactDto(uid, draft.contactUrl))
+        // No upsert: on conflict PostgREST also rewrites profile_id, and only contact_url is granted for UPDATE.
+        val updated = client.from("profile_contacts").update({ set("contact_url", draft.contactUrl) }) {
+            filter { eq("profile_id", uid) }
+            select()
+        }.decodeList<ProfileContactDto>()
+        if (updated.isEmpty()) client.from("profile_contacts").insert(ProfileContactDto(uid, draft.contactUrl))
     }
 }
 
@@ -130,7 +135,7 @@ class SupabaseCompetitionRepository(private val client: SupabaseClient) : Compet
     }
 
     override suspend fun joinSolo(id: CompetitionId): Listing = backend {
-        client.from("listings").insert(SoloListingInsertDto(id.value, client.uid())) { select() }
+        client.from("listings").insert(SoloListingInsertDto(id.value, client.uid(), ListingKindDto.SOLO)) { select() }
             .decodeSingle<ListingDto>().toDomain()
     }
 
@@ -226,7 +231,7 @@ class SupabaseTeamRepository(private val client: SupabaseClient) : TeamRepositor
     }
 
     override suspend fun endorse(competitionId: CompetitionId, teammate: ProfileId): Unit = backend {
-        client.from("endorsements").insert(EndorsementInsertDto(client.uid(), teammate.value, competitionId.value))
+        client.from("endorsements").insert(EndorsementInsertDto(client.uid(), teammate.value, competitionId.value, positive = true))
     }
 
     override suspend fun reportResult(teamId: TeamId, result: TeamResult): Unit = backend {

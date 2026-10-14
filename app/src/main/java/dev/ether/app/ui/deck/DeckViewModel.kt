@@ -23,7 +23,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.Instant
 
-enum class DeckPhase { LOADING, SWIPING, OUT_OF_CARDS, CAP_REACHED, FAILED }
+/** LISTING_CLOSED: the user's own listing went inactive, usually because a match just put them on a team. */
+enum class DeckPhase { LOADING, SWIPING, OUT_OF_CARDS, CAP_REACHED, LISTING_CLOSED, FAILED }
 
 data class DeckUiState(
     val phase: DeckPhase = DeckPhase.LOADING,
@@ -59,7 +60,10 @@ class DeckViewModel(
             }.onSuccess { (cards, remaining) ->
                 _state.update { it.copy(phase = phaseFor(cards, remaining), cards = cards, remaining = remaining) }
             }.onFailure { e ->
-                _state.update { it.copy(phase = DeckPhase.FAILED, error = e.userMessage()) }
+                _state.update {
+                    if (e is EtherError.ListingInactive) it.copy(phase = DeckPhase.LISTING_CLOSED, cards = emptyList())
+                    else it.copy(phase = DeckPhase.FAILED, error = e.userMessage())
+                }
             }
         }
     }
@@ -89,10 +93,20 @@ class DeckViewModel(
     private suspend fun onSwiped(card: DeckCard, result: SwipeResult) {
         val match = if (result.matched) findMatch(card, result) else null
         var cards = _state.value.cards
-        if (cards.isEmpty() && result.remaining > 0) cards = runCatching { deck.deck(from) }.getOrDefault(emptyList())
+        var closed = false
+        if (cards.isEmpty() && result.remaining > 0) {
+            cards = try {
+                deck.deck(from)
+            } catch (e: EtherError.ListingInactive) {
+                closed = true
+                emptyList()
+            } catch (e: EtherError) {
+                emptyList()
+            }
+        }
         _state.update {
             it.copy(
-                phase = phaseFor(cards, result.remaining),
+                phase = if (closed) DeckPhase.LISTING_CLOSED else phaseFor(cards, result.remaining),
                 cards = cards,
                 remaining = result.remaining,
                 match = match ?: it.match,

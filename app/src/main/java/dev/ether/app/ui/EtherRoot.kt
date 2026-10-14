@@ -15,6 +15,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -55,10 +56,20 @@ fun EtherRoot(vm: AppViewModel = koinViewModel()) {
     when (val s = state) {
         AppUiState.Loading -> LoadingBox()
         AppUiState.SignedOut -> SignInScreen()
-        AppUiState.NeedsProfile -> ProfileEditScreen(isSetup = true, onDone = vm::recheck, onBack = {})
+        // Keyed by user: this screen lives outside the NavHost, so its ViewModel would otherwise outlive a sign-out.
+        is AppUiState.NeedsProfile -> ProfileEditScreen(
+            isSetup = true, onDone = vm::recheck, onBack = {},
+            vm = koinViewModel(key = "profile-setup-${s.userId.value}"),
+        )
         is AppUiState.Failed -> MessageBox(s.message, action = "Retry", onAction = vm::recheck)
         AppUiState.Ready -> MainNavHost()
     }
+}
+
+private fun NavHostController.navigateToTab(tab: Tab) = navigate(tab.route) {
+    popUpTo(graph.findStartDestination().id) { saveState = true }
+    launchSingleTop = true
+    restoreState = true
 }
 
 @Composable
@@ -74,13 +85,7 @@ private fun MainNavHost() {
                     Tab.entries.forEach { tab ->
                         NavigationBarItem(
                             selected = tab == currentTab,
-                            onClick = {
-                                nav.navigate(tab.route) {
-                                    popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
+                            onClick = { nav.navigateToTab(tab) },
                             icon = { Icon(painterResource(tab.icon), contentDescription = null) },
                             label = { Text(tab.label) },
                         )
@@ -99,6 +104,7 @@ private fun MainNavHost() {
                     competitionId = route.competitionId,
                     onOpenDeck = { listingId -> nav.navigate(DeckRoute(route.competitionId, listingId.value)) },
                     onOpenMatches = { nav.navigate(MatchesRoute(route.competitionId)) },
+                    onOpenTeams = { nav.navigateToTab(Tab.TEAMS) },
                     onBack = nav::popBackStack,
                 )
             }

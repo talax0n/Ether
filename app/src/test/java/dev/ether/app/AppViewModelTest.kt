@@ -30,11 +30,11 @@ class AppViewModelTest {
 
     @Test
     fun `a profile missing its bio goes to profile setup`() = runTest {
-        assertEquals(AppUiState.NeedsProfile, stateFor(FakeBackend(signedIn = true, profile = DemoData.me.copy(bio = ""))))
+        assertEquals(AppUiState.NeedsProfile(DemoData.me.id), stateFor(FakeBackend(signedIn = true, profile = DemoData.me.copy(bio = ""))))
     }
 
     @Test
     fun `a profile missing its contact link goes to profile setup`() = runTest {
-        assertEquals(AppUiState.NeedsProfile, stateFor(FakeBackend(signedIn = true, profile = DemoData.me.copy(contactUrl = null))))
+        assertEquals(AppUiState.NeedsProfile(DemoData.me.id), stateFor(FakeBackend(signedIn = true, profile = DemoData.me.copy(contactUrl = null))))
     }
 }

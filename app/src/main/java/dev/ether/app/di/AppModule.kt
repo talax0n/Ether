@@ -61,7 +61,7 @@ private val viewModels = module {
     viewModelOf(::ProfileEditViewModel)
     viewModelOf(::ProfileViewModel)
     viewModelOf(::CompetitionListViewModel)
-    viewModel { (id: String) -> CompetitionDetailViewModel(CompetitionId(id), get()) }
+    viewModel { (id: String) -> CompetitionDetailViewModel(CompetitionId(id), get(), get()) }
     viewModel { (competitionId: String, listingId: String) ->
         DeckViewModel(CompetitionId(competitionId), ListingId(listingId), get(), get())
     }

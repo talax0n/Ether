@@ -25,6 +25,7 @@ import dev.ether.app.ui.LoadingBox
 import dev.ether.app.ui.MessageBox
 import dev.ether.app.ui.shortDate
 import org.koin.compose.viewmodel.koinViewModel
+import java.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,8 +64,14 @@ private fun CompetitionCard(c: Competition, onClick: () -> Unit) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(c.name, style = MaterialTheme.typography.titleLarge)
             Text(c.description, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+            val now = Instant.now()
+            val status = when {
+                now > c.eventEnd -> "Ended ${c.eventEnd.shortDate()}"
+                now > c.registrationDeadline -> "Registration closed"
+                else -> "Register by ${c.registrationDeadline.shortDate()}"
+            }
             Text(
-                "Register by ${c.registrationDeadline.shortDate()} · Teams of ${c.minTeamSize}–${c.maxTeamSize}",
+                "$status · Teams of ${c.minTeamSize}–${c.maxTeamSize}",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
             )

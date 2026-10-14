@@ -120,7 +120,7 @@ data class ListingDto(
 data class SoloListingInsertDto(
     @SerialName("competition_id") val competitionId: String,
     @SerialName("profile_id") val profileId: String,
-    val kind: ListingKindDto = ListingKindDto.SOLO,
+    val kind: ListingKindDto,
 )
 
 /** One row of `deck(p_listing, p_limit)`, i.e. the `listing_cards` view. */
@@ -215,7 +215,7 @@ data class EndorsementInsertDto(
     @SerialName("from_profile_id") val fromProfileId: String,
     @SerialName("to_profile_id") val toProfileId: String,
     @SerialName("competition_id") val competitionId: String,
-    val positive: Boolean = true,
+    val positive: Boolean,
 )
 
 @Serializable
