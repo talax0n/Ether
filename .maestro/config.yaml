@@ -1,0 +1,10 @@
+flows:
+  - "*.yaml"
+executionOrder:
+  continueOnFailure: true
+  flowsOrder:
+    - rejects_outside_email
+    - signin_and_onboard
+    - swipe_and_match
+    - create_team
+    - endorse_and_xp
