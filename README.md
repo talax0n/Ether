@@ -25,6 +25,22 @@
 - [PLAN.md](PLAN.md) covers the build order and definition of done.
 - [CLAUDE.md](CLAUDE.md) gives coding agents the project conventions.
 
+## Run
+
+Needs JDK 17 and the Android SDK (platform 36). Put config in gitignored `local.properties` or the environment:
+
+```properties
+sdk.dir=/Users/you/Library/Android/sdk
+SUPABASE_URL=http://10.0.2.2:54321   # default: local Supabase seen from the emulator
+SUPABASE_ANON_KEY=...                 # blank → in-memory demo backend
+USE_FAKE_BACKEND=true                 # force the demo backend (sign in with any email, code 123456)
+```
+
+```sh
+./gradlew :app:installDebug
+./gradlew :app:testDebugUnitTest
+```
+
 ## Notes
 
 - No secrets in source. `.env.example` lists the variable names. Real values stay in a gitignored `.env` or `local.properties`.

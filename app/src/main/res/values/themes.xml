@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.Ether" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+    <color name="window_background">#FFFFF8F4</color>
+    <color name="brand">#FFFF5A36</color>
+</resources>
