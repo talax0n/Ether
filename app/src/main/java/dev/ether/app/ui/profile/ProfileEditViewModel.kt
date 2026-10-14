@@ -22,7 +22,7 @@ data class ProfileForm(
     val contactUrl: String = "",
 ) {
     fun toDraftOrNull(): ProfileDraft? {
-        val yearValue = year.trim().toIntOrNull()?.takeIf { it in 1..7 } ?: return null
+        val yearValue = year.trim().toIntOrNull()?.takeIf { it in 1..10 } ?: return null
         if (name.isBlank() || major.isBlank() || !contactUrl.trim().startsWith("https://")) return null
         return ProfileDraft(
             name.trim(), major.trim(), yearValue, bio.trim(),
@@ -53,7 +53,7 @@ class ProfileEditViewModel(private val profiles: ProfileRepository) : ViewModel(
                 .onSuccess { p ->
                     val form = p?.let {
                         ProfileForm(
-                            it.name, it.major, it.year.toString(), it.bio,
+                            it.name, it.major.orEmpty(), it.year?.toString().orEmpty(), it.bio,
                             it.skills.joinToString(", "), it.roles.joinToString(", "), it.contactUrl.orEmpty(),
                         )
                     } ?: ProfileForm()

@@ -64,7 +64,7 @@ class FakeBackend(
     override suspend fun myProfile(): Profile? = profile
 
     override suspend fun mySummary(): ProfileSummary =
-        ProfileSummary(checkNotNull(profile), DemoData.badges, Reliability(positive = 4, total = 5))
+        ProfileSummary(checkNotNull(profile), DemoData.badges, Reliability(4))
 
     override suspend fun saveMyProfile(draft: ProfileDraft) {
         val base = profile ?: DemoData.me.copy(xp = 0)
@@ -159,32 +159,32 @@ object DemoData {
 
     val deck: List<DeckCard> = listOf(
         DeckCard.Solo(
-            ListingId("l-ana"), "Ana Putri", null, "Information Systems", 2,
+            ListingId("l-ana"), "Ana Putri", null,
             "UI/UX designer. Figma all day, won a campus design jam last spring.",
             listOf("Figma", "User research", "Prototyping"), listOf("Designer"), xp = 310,
-            reliability = Reliability(5, 5),
+            reliability = Reliability(5),
         ),
         DeckCard.Team(
             ListingId("l-byte-brigade"), "Byte Brigade", null,
             "Building an offline-first clinic queue app. Backend is done, need someone on mobile.",
-            listOf("Mobile", "Designer"), memberCount = 2, maxTeamSize = 3,
+            listOf("Mobile", "Designer"), memberCount = 2, xp = 340, reliability = Reliability(3),
         ),
         DeckCard.Solo(
-            ListingId("l-budi"), "Budi Santoso", null, "Electrical Engineering", 4,
+            ListingId("l-budi"), "Budi Santoso", null,
             "Embedded and data person. Can wire a sensor and plot what it says.",
             listOf("Python", "Pandas", "Arduino"), listOf("Data", "Hardware"), xp = 120,
-            reliability = Reliability(2, 3),
+            reliability = Reliability(2),
         ),
         DeckCard.Solo(
-            ListingId("l-citra"), "Citra Lestari", null, "Computer Science", 1,
+            ListingId("l-citra"), "Citra Lestari", null,
             "First hackathon. Fast learner, solid at React.",
             listOf("React", "TypeScript"), listOf("Frontend"), xp = 0,
-            reliability = Reliability(0, 0),
+            reliability = Reliability(0),
         ),
         DeckCard.Team(
             ListingId("l-pixel"), "Pixel Pushers", null,
             "Gamified recycling tracker. We pitch well, we need a backend.",
-            listOf("Backend"), memberCount = 1, maxTeamSize = 3,
+            listOf("Backend"), memberCount = 1, xp = 60, reliability = Reliability(0),
         ),
     )
 

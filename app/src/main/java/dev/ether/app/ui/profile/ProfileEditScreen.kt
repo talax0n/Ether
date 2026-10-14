@@ -56,7 +56,7 @@ fun ProfileEditScreen(isSetup: Boolean, onDone: () -> Unit, onBack: () -> Unit, 
         ) {
             Field("Name", form.name) { vm.edit { copy(name = it) } }
             Field("Major", form.major) { vm.edit { copy(major = it) } }
-            Field("Year (1-7)", form.year, KeyboardType.Number) { vm.edit { copy(year = it) } }
+            Field("Year (1-10)", form.year, KeyboardType.Number) { vm.edit { copy(year = it) } }
             Field("Bio", form.bio, singleLine = false) { vm.edit { copy(bio = it) } }
             Field("Skills, comma separated", form.skills) { vm.edit { copy(skills = it) } }
             Field("Roles, comma separated", form.roles) { vm.edit { copy(roles = it) } }

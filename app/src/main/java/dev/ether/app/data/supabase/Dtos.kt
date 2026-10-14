@@ -44,16 +44,16 @@ val SwipeDirection.wire: String
 data class ProfileDto(
     val id: String,
     val name: String,
-    val major: String,
-    val year: Int,
-    val bio: String = "",
+    val major: String? = null,
+    val year: Int? = null,
+    val bio: String? = null,
     val skills: List<String> = emptyList(),
     val roles: List<String> = emptyList(),
     @SerialName("avatar_url") val avatarUrl: String? = null,
     val xp: Int = 0,
 ) {
     fun toDomain(contactUrl: String?) = Profile(
-        ProfileId(id), name, major, year, bio, skills, roles, contactUrl, avatarUrl, xp,
+        ProfileId(id), name, major, year, bio.orEmpty(), skills, roles, contactUrl, avatarUrl, xp,
     )
 }
 
@@ -104,12 +104,6 @@ data class TeamInsertDto(
 data class IdDto(val id: String)
 
 @Serializable
-data class TeamMemberDto(
-    @SerialName("team_id") val teamId: String,
-    @SerialName("profile_id") val profileId: String,
-)
-
-@Serializable
 data class ListingDto(
     val id: String,
     @SerialName("competition_id") val competitionId: String,
@@ -138,33 +132,27 @@ data class ListingInsertDto(
     @SerialName("team_id") val teamId: String? = null,
 )
 
-/** One row of `deck(p_listing, p_limit)`. Columns are provisional until the DB migration lands. */
+/** One row of `deck(p_listing, p_limit)`, i.e. the `listing_cards` view. */
 @Serializable
 data class DeckRowDto(
     @SerialName("listing_id") val listingId: String,
     val kind: ListingKindDto,
     val name: String,
-    @SerialName("avatar_url") val avatarUrl: String? = null,
-    val major: String? = null,
-    val year: Int? = null,
-    val bio: String? = null,
+    val headline: String? = null,
     val skills: List<String> = emptyList(),
     val roles: List<String> = emptyList(),
-    val xp: Int = 0,
-    @SerialName("endorsements_positive") val endorsementsPositive: Int = 0,
-    @SerialName("endorsements_total") val endorsementsTotal: Int = 0,
-    val pitch: String? = null,
     @SerialName("open_roles") val openRoles: List<String> = emptyList(),
-    @SerialName("member_count") val memberCount: Int = 0,
-    @SerialName("max_team_size") val maxTeamSize: Int = 0,
+    @SerialName("member_count") val memberCount: Int = 1,
+    val xp: Int = 0,
+    @SerialName("reliability_score") val reliabilityScore: Int = 0,
+    @SerialName("avatar_url") val avatarUrl: String? = null,
 ) {
     fun toDomain(): DeckCard = when (kind) {
         ListingKindDto.SOLO -> DeckCard.Solo(
-            ListingId(listingId), name, avatarUrl, major.orEmpty(), year ?: 0, bio.orEmpty(),
-            skills, roles, xp, Reliability(endorsementsPositive, endorsementsTotal),
+            ListingId(listingId), name, avatarUrl, headline.orEmpty(), skills, roles, xp, Reliability(reliabilityScore),
         )
         ListingKindDto.TEAM -> DeckCard.Team(
-            ListingId(listingId), name, avatarUrl, pitch.orEmpty(), openRoles, memberCount, maxTeamSize,
+            ListingId(listingId), name, avatarUrl, headline.orEmpty(), openRoles, memberCount, xp, Reliability(reliabilityScore),
         )
     }
 }
@@ -178,21 +166,20 @@ data class SwipeResultDto(
     fun toDomain() = SwipeResult(matched, matchId?.let(::MatchId), remaining)
 }
 
-/** One row of `my_matches(p_competition)`. Columns are provisional until the DB migration lands. */
+/** One row of `my_matches(p_competition)`: the other side's card plus its contact link. */
 @Serializable
 data class MatchRowDto(
     @SerialName("match_id") val matchId: String,
-    @SerialName("competition_id") val competitionId: String,
-    @SerialName("other_listing_id") val otherListingId: String,
-    @SerialName("other_kind") val otherKind: ListingKindDto,
-    @SerialName("other_name") val otherName: String,
-    @SerialName("other_avatar_url") val otherAvatarUrl: String? = null,
+    @SerialName("matched_at") val matchedAt: String,
+    @SerialName("listing_id") val listingId: String,
+    val kind: ListingKindDto,
+    val name: String,
+    @SerialName("avatar_url") val avatarUrl: String? = null,
     @SerialName("contact_url") val contactUrl: String? = null,
-    @SerialName("created_at") val createdAt: String,
 ) {
-    fun toDomain() = Match(
-        MatchId(matchId), CompetitionId(competitionId), ListingId(otherListingId), otherKind.toDomain(),
-        otherName, otherAvatarUrl, contactUrl, parseTimestamp(createdAt),
+    fun toDomain(competitionId: CompetitionId) = Match(
+        MatchId(matchId), competitionId, ListingId(listingId), kind.toDomain(),
+        name, avatarUrl, contactUrl, parseTimestamp(matchedAt),
     )
 }
 
@@ -206,8 +193,5 @@ data class ProfileBadgeDto(
 
 @Serializable
 data class BadgeDto(val code: String, val name: String, val description: String = "")
-
-@Serializable
-data class EndorsementDto(val positive: Boolean)
 
 internal fun parseTimestamp(value: String): Instant = OffsetDateTime.parse(value).toInstant()

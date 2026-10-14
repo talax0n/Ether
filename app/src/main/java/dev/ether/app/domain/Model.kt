@@ -11,8 +11,8 @@ import java.time.Instant
 data class Profile(
     val id: ProfileId,
     val name: String,
-    val major: String,
-    val year: Int,
+    val major: String?,
+    val year: Int?,
     val bio: String,
     val skills: List<String>,
     val roles: List<String>,
@@ -86,9 +86,9 @@ data class SwipeResult(val matched: Boolean, val matchId: MatchId?, val remainin
 /** The database refused a swipe because today's cap is used up. */
 class SwipeCapReachedException : Exception("Daily swipe limit reached")
 
-data class Reliability(val positive: Int, val total: Int) {
-    /** Null until someone has been endorsed at least once, so new users don't show 0%. */
-    val percent: Int? get() = if (total == 0) null else positive * 100 / total
+/** Positive endorsements received, as computed by the database's `reliability_score`. */
+@JvmInline value class Reliability(val endorsements: Int) {
+    val label: String get() = if (endorsements == 0) "New" else "$endorsements endorsements"
 }
 
 sealed interface DeckCard {
@@ -100,9 +100,7 @@ sealed interface DeckCard {
         override val listingId: ListingId,
         override val name: String,
         override val avatarUrl: String?,
-        val major: String,
-        val year: Int,
-        val bio: String,
+        val headline: String,
         val skills: List<String>,
         val roles: List<String>,
         val xp: Int,
@@ -116,7 +114,8 @@ sealed interface DeckCard {
         val pitch: String,
         val openRoles: List<String>,
         val memberCount: Int,
-        val maxTeamSize: Int,
+        val xp: Int,
+        val reliability: Reliability,
     ) : DeckCard
 }
 

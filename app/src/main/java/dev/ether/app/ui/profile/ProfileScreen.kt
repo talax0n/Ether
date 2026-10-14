@@ -71,10 +71,12 @@ private fun ProfileContent(summary: ProfileSummary, onSignOut: () -> Unit, modif
     ) {
         Avatar(p.name, p.avatarUrl, 96.dp)
         Text(p.name, style = MaterialTheme.typography.headlineMedium)
-        Text("${p.major} · Year ${p.year}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        listOfNotNull(p.major, p.year?.let { "Year $it" }).takeIf { it.isNotEmpty() }?.let {
+            Text(it.joinToString(" · "), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Stat("XP", p.xp.toString(), Modifier.weight(1f))
-            Stat("Reliability", summary.reliability.percent?.let { "$it%" } ?: "New", Modifier.weight(1f))
+            Stat("Endorsements", summary.reliability.endorsements.toString(), Modifier.weight(1f))
             Stat("Badges", summary.badges.size.toString(), Modifier.weight(1f))
         }
         if (p.bio.isNotBlank()) Text(p.bio, Modifier.fillMaxWidth())

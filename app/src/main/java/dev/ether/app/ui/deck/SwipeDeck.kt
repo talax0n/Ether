@@ -244,12 +244,11 @@ private fun CardHeader(card: DeckCard) {
 @Composable
 private fun SoloBody(card: DeckCard.Solo) {
     Text(card.name, style = MaterialTheme.typography.headlineSmall)
-    Text("${card.major} · Year ${card.year}", color = MaterialTheme.colorScheme.onSurfaceVariant)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Pill("${card.xp} XP")
-        Pill(card.reliability.percent?.let { "$it% reliable" } ?: "New")
+        Pill(card.reliability.label)
     }
-    Text(card.bio, maxLines = 4, overflow = TextOverflow.Ellipsis)
+    Text(card.headline, maxLines = 4, overflow = TextOverflow.Ellipsis)
     TagRow(card.roles, container = MaterialTheme.colorScheme.tertiaryContainer)
     TagRow(card.skills)
 }
@@ -257,7 +256,11 @@ private fun SoloBody(card: DeckCard.Solo) {
 @Composable
 private fun TeamBody(card: DeckCard.Team) {
     Text(card.name, style = MaterialTheme.typography.headlineSmall)
-    Text("${card.memberCount} of ${card.maxTeamSize} members", color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(if (card.memberCount == 1) "1 member" else "${card.memberCount} members", color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Pill("${card.xp} XP")
+        Pill(card.reliability.label)
+    }
     Text(card.pitch, maxLines = 5, overflow = TextOverflow.Ellipsis)
     Spacer(Modifier.height(4.dp))
     Text("Looking for", style = MaterialTheme.typography.titleSmall)

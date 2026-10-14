@@ -83,10 +83,8 @@ class SupabaseProfileRepository(private val client: SupabaseClient) : ProfileRep
             .select(Columns.raw("awarded_at, badges(code, name, description)")) { filter { eq("profile_id", uid) } }
             .decodeList<ProfileBadgeDto>()
             .map { it.toDomain() }
-        val endorsements = client.from("endorsements")
-            .select(Columns.list("positive")) { filter { eq("to_profile_id", uid) } }
-            .decodeList<EndorsementDto>()
-        return ProfileSummary(profile, badges, Reliability(endorsements.count { it.positive }, endorsements.size))
+        val score = client.postgrest.rpc("reliability_score", buildJsonObject { put("p_profile", uid) }).decodeAs<Int>()
+        return ProfileSummary(profile, badges, Reliability(score))
     }
 
     override suspend fun saveMyProfile(draft: ProfileDraft) {
@@ -125,7 +123,6 @@ class SupabaseCompetitionRepository(private val client: SupabaseClient) : Compet
         val uid = client.uid()
         val team = client.from("teams").insert(TeamInsertDto(id.value, uid, name, pitch, openRoles)) { select(Columns.list("id")) }
             .decodeSingle<IdDto>()
-        client.from("team_members").insert(TeamMemberDto(team.id, uid))
         return client.from("listings").insert(ListingInsertDto(id.value, ListingKindDto.TEAM, teamId = team.id)) { select() }
             .decodeSingle<ListingDto>().toDomain()
     }
@@ -157,5 +154,5 @@ class SupabaseDeckRepository(private val client: SupabaseClient) : DeckRepositor
 class SupabaseMatchRepository(private val client: SupabaseClient) : MatchRepository {
     override suspend fun matches(competitionId: CompetitionId): List<Match> =
         client.postgrest.rpc("my_matches", buildJsonObject { put("p_competition", competitionId.value) })
-            .decodeList<MatchRowDto>().map { it.toDomain() }
+            .decodeList<MatchRowDto>().map { it.toDomain(competitionId) }
 }
