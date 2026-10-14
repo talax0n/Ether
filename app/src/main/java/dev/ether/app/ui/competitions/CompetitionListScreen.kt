@@ -9,8 +9,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -18,11 +16,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.ether.app.R
 import dev.ether.app.domain.Competition
 import dev.ether.app.domain.CompetitionId
 import dev.ether.app.ui.LoadingBox
@@ -34,16 +30,12 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun CompetitionListScreen(
     onOpen: (CompetitionId) -> Unit,
-    onProfile: () -> Unit,
     vm: CompetitionListViewModel = koinViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Competitions") },
-                actions = { IconButton(onClick = onProfile) { Icon(painterResource(R.drawable.ic_person), "Your profile") } },
-            )
+            TopAppBar(title = { Text("Competitions") })
         },
     ) { padding ->
         when (val s = state) {

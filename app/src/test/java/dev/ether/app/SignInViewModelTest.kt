@@ -50,7 +50,7 @@ class SignInViewModelTest {
         vm.onCodeChange("000000")
         vm.submit()
 
-        assertEquals("Invalid or expired code", vm.state.value.error)
+        assertEquals("That code is wrong or has expired.", vm.state.value.error)
         assertEquals(AuthState.SignedOut, backend.authState.value)
     }
 

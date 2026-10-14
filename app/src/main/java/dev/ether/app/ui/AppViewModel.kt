@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
@@ -26,7 +27,7 @@ class AppViewModel(auth: AuthRepository, private val profiles: ProfileRepository
     private val recheck = MutableStateFlow(0)
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val state: StateFlow<AppUiState> = combine(auth.authState, recheck) { authState, _ -> authState }
+    val state: StateFlow<AppUiState> = combine(auth.authState.distinctUntilChanged(), recheck) { authState, _ -> authState }
         .transformLatest { authState ->
             when (authState) {
                 AuthState.Loading -> emit(AppUiState.Loading)
@@ -35,7 +36,7 @@ class AppViewModel(auth: AuthRepository, private val profiles: ProfileRepository
                     emit(AppUiState.Loading)
                     emit(
                         runCatching { profiles.myProfile() }.fold(
-                            onSuccess = { if (it == null) AppUiState.NeedsProfile else AppUiState.Ready },
+                            onSuccess = { if (it?.isComplete == true) AppUiState.Ready else AppUiState.NeedsProfile },
                             onFailure = { AppUiState.Failed(it.userMessage()) },
                         ),
                     )

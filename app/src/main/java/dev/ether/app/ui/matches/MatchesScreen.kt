@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ether.app.R
 import dev.ether.app.domain.ListingKind
@@ -39,13 +40,26 @@ import org.koin.core.parameter.parametersOf
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MatchesScreen(competitionId: String, onBack: () -> Unit, vm: MatchesViewModel = koinViewModel { parametersOf(competitionId) }) {
+fun MatchesScreen(
+    competitionId: String?,
+    onBack: (() -> Unit)?,
+    vm: MatchesViewModel = koinViewModel {
+        if (competitionId == null) parametersOf() else parametersOf(competitionId)
+    },
+) {
     val state by vm.state.collectAsStateWithLifecycle()
+    // Reload on resume: a match made in the deck should show up when switching back to this tab.
+    LifecycleResumeEffect(Unit) {
+        vm.load()
+        onPauseOrDispose {}
+    }
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Matches") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "Back") } },
+                navigationIcon = {
+                    onBack?.let { IconButton(onClick = it) { Icon(painterResource(R.drawable.ic_arrow_back), "Back") } }
+                },
             )
         },
     ) { padding ->
@@ -53,14 +67,23 @@ fun MatchesScreen(competitionId: String, onBack: () -> Unit, vm: MatchesViewMode
             MatchesUiState.Loading -> LoadingBox(Modifier.padding(padding))
             is MatchesUiState.Failed -> MessageBox(s.message, Modifier.padding(padding), "Retry", vm::load)
             is MatchesUiState.Loaded ->
-                if (s.matches.isEmpty()) {
-                    MessageBox("No matches yet. Keep swiping.", Modifier.padding(padding))
+                if (s.isEmpty) {
+                    MessageBox("No matches yet. Swipe right in a competition and they'll show up here.", Modifier.padding(padding))
                 } else {
                     LazyColumn(
                         Modifier.padding(padding),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) { items(s.matches, key = { it.id.value }) { MatchRow(it) } }
+                    ) {
+                        s.sections.forEach { section ->
+                            if (competitionId == null) {
+                                item(key = section.competitionName) {
+                                    Text(section.competitionName, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                            items(section.matches, key = { it.id.value }) { MatchRow(it) }
+                        }
+                    }
                 }
         }
     }
@@ -79,6 +102,7 @@ private fun MatchRow(match: Match) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                match.contactUrl?.let { Text(it.removePrefix("https://"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
             }
             match.contactUrl?.let { url ->
                 FilledTonalButton(onClick = { openContact(context, url) }) { Text(contactLabel(url).removePrefix("Message on ")) }

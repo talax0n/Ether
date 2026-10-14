@@ -9,7 +9,7 @@ import dev.ether.app.domain.DeckCard
 import dev.ether.app.domain.ListingId
 import dev.ether.app.domain.ListingKind
 import dev.ether.app.domain.Match
-import dev.ether.app.domain.SwipeCapReachedException
+import dev.ether.app.domain.EtherError
 import dev.ether.app.domain.SwipeDirection
 import dev.ether.app.domain.SwipeResult
 import dev.ether.app.ui.userMessage
@@ -72,8 +72,11 @@ class DeckViewModel(
             swipeLock.withLock {
                 try {
                     onSwiped(card, deck.swipe(from, card.listingId, direction))
-                } catch (e: SwipeCapReachedException) {
+                } catch (e: EtherError.SwipeCapReached) {
                     _state.update { it.copy(phase = DeckPhase.CAP_REACHED, remaining = 0, cards = listOf(card) + it.cards) }
+                } catch (e: EtherError.ListingInactive) {
+                    // Usually the card filled up or matched elsewhere; putting it back would make it unswipeable.
+                    _state.update { it.copy(phase = phaseFor(it.cards, it.remaining ?: 1), error = e.userMessage()) }
                 } catch (e: Exception) {
                     _state.update { it.copy(cards = listOf(card) + it.cards, error = e.userMessage()) }
                 }
