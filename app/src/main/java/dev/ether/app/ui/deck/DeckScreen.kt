@@ -59,7 +59,7 @@ fun DeckScreen(
                     Column {
                         Text("Swipe")
                         state.remaining?.let {
-                            Text("$it swipes left today", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                            Text(if (it == 1) "1 swipe left today" else "$it swipes left today", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 },
@@ -73,7 +73,11 @@ fun DeckScreen(
         when (state.phase) {
             DeckPhase.LOADING -> LoadingBox(inner)
             DeckPhase.FAILED -> MessageBox(state.error ?: "Couldn't load the deck", inner, "Retry", vm::load)
-            DeckPhase.OUT_OF_CARDS -> MessageBox("You've seen everyone in this competition for now. Check back later.", inner, "Refresh", vm::load)
+            DeckPhase.OUT_OF_CARDS -> MessageBox("No one left to swipe, check back later.", inner, "Refresh", vm::load)
+            DeckPhase.LISTING_CLOSED -> MessageBox(
+                "Your listing is closed, so you can't swipe here anymore. If you just matched, you're on a team now: check the Teams tab.",
+                inner, "See matches", onOpenMatches,
+            )
             DeckPhase.CAP_REACHED -> MessageBox("That's your 30 swipes for today. Your matches are waiting.", inner, "See matches", onOpenMatches)
             DeckPhase.SWIPING -> SwipeDeck(
                 cards = state.cards,

@@ -66,4 +66,16 @@ class DeckViewModelTest {
         assertEquals(DeckPhase.CAP_REACHED, vm.state.value.phase)
         assertEquals(0, vm.state.value.remaining)
     }
+
+    @Test
+    fun `swiping after registration closed keeps the card and explains why`() = runTest {
+        val vm = deckVm(FakeBackend(signedIn = true, registrationClosed = true))
+        val first = vm.state.value.cards.first()
+
+        vm.swipe(first, SwipeDirection.RIGHT)
+
+        assertEquals("Registration for this competition has closed.", vm.state.value.error)
+        assertEquals(first, vm.state.value.cards.first())
+        assertEquals(DeckPhase.SWIPING, vm.state.value.phase)
+    }
 }

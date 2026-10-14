@@ -7,12 +7,18 @@ import dev.ether.app.domain.DeckCard
 import dev.ether.app.domain.Listing
 import dev.ether.app.domain.ListingId
 import dev.ether.app.domain.Match
+import dev.ether.app.domain.MyTeam
+import dev.ether.app.domain.ProfileId
+import dev.ether.app.domain.TeamId
+import dev.ether.app.domain.TeamResult
 import dev.ether.app.domain.Profile
 import dev.ether.app.domain.ProfileDraft
 import dev.ether.app.domain.ProfileSummary
 import dev.ether.app.domain.SwipeDirection
 import dev.ether.app.domain.SwipeResult
 import kotlinx.coroutines.flow.Flow
+
+// Implementations throw dev.ether.app.domain.EtherError for every failure, so callers can show its message.
 
 interface AuthRepository {
     val authState: Flow<AuthState>
@@ -39,11 +45,17 @@ interface CompetitionRepository {
 
 interface DeckRepository {
     suspend fun deck(from: ListingId, limit: Int = 20): List<DeckCard>
-    /** @throws dev.ether.app.domain.SwipeCapReachedException when the daily cap is used up. */
     suspend fun swipe(from: ListingId, to: ListingId, direction: SwipeDirection): SwipeResult
     suspend fun remainingSwipes(): Int
 }
 
 interface MatchRepository {
     suspend fun matches(competitionId: CompetitionId): List<Match>
+}
+
+interface TeamRepository {
+    suspend fun myTeams(): List<MyTeam>
+    suspend fun endorse(competitionId: CompetitionId, teammate: ProfileId)
+    suspend fun reportResult(teamId: TeamId, result: TeamResult)
+    suspend fun confirmResult(teamId: TeamId)
 }

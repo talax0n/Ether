@@ -5,11 +5,13 @@ import androidx.lifecycle.viewModelScope
 import dev.ether.app.data.AuthRepository
 import dev.ether.app.data.ProfileRepository
 import dev.ether.app.domain.AuthState
+import dev.ether.app.domain.ProfileId
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
@@ -17,7 +19,7 @@ import kotlinx.coroutines.flow.update
 sealed interface AppUiState {
     data object Loading : AppUiState
     data object SignedOut : AppUiState
-    data object NeedsProfile : AppUiState
+    data class NeedsProfile(val userId: ProfileId) : AppUiState
     data object Ready : AppUiState
     data class Failed(val message: String) : AppUiState
 }
@@ -26,7 +28,7 @@ class AppViewModel(auth: AuthRepository, private val profiles: ProfileRepository
     private val recheck = MutableStateFlow(0)
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val state: StateFlow<AppUiState> = combine(auth.authState, recheck) { authState, _ -> authState }
+    val state: StateFlow<AppUiState> = combine(auth.authState.distinctUntilChanged(), recheck) { authState, _ -> authState }
         .transformLatest { authState ->
             when (authState) {
                 AuthState.Loading -> emit(AppUiState.Loading)
@@ -35,7 +37,7 @@ class AppViewModel(auth: AuthRepository, private val profiles: ProfileRepository
                     emit(AppUiState.Loading)
                     emit(
                         runCatching { profiles.myProfile() }.fold(
-                            onSuccess = { if (it == null) AppUiState.NeedsProfile else AppUiState.Ready },
+                            onSuccess = { if (it?.isComplete == true) AppUiState.Ready else AppUiState.NeedsProfile(authState.userId) },
                             onFailure = { AppUiState.Failed(it.userMessage()) },
                         ),
                     )

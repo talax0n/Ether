@@ -5,25 +5,30 @@ import dev.ether.app.data.CompetitionRepository
 import dev.ether.app.data.DeckRepository
 import dev.ether.app.data.MatchRepository
 import dev.ether.app.data.ProfileRepository
+import dev.ether.app.data.TeamRepository
 import dev.ether.app.domain.AuthState
 import dev.ether.app.domain.Badge
 import dev.ether.app.domain.Competition
 import dev.ether.app.domain.CompetitionId
 import dev.ether.app.domain.DeckCard
+import dev.ether.app.domain.EtherError
 import dev.ether.app.domain.Listing
 import dev.ether.app.domain.ListingId
 import dev.ether.app.domain.ListingKind
 import dev.ether.app.domain.Match
 import dev.ether.app.domain.MatchId
+import dev.ether.app.domain.MyTeam
 import dev.ether.app.domain.Profile
 import dev.ether.app.domain.ProfileDraft
 import dev.ether.app.domain.ProfileId
 import dev.ether.app.domain.ProfileSummary
 import dev.ether.app.domain.Reliability
-import dev.ether.app.domain.SwipeCapReachedException
+import dev.ether.app.domain.ReportedResult
 import dev.ether.app.domain.SwipeDirection
 import dev.ether.app.domain.SwipeResult
 import dev.ether.app.domain.TeamId
+import dev.ether.app.domain.TeamResult
+import dev.ether.app.domain.Teammate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.time.Instant
@@ -36,8 +41,10 @@ class FakeBackend(
     signedIn: Boolean = false,
     private var profile: Profile? = DemoData.me,
     private var remaining: Int = 30,
+    /** Simulates every competition being past its registration deadline. */
+    private val registrationClosed: Boolean = false,
     private val clock: () -> Instant = { DemoData.now },
-) : AuthRepository, ProfileRepository, CompetitionRepository, DeckRepository, MatchRepository {
+) : AuthRepository, ProfileRepository, CompetitionRepository, DeckRepository, MatchRepository, TeamRepository {
 
     private val auth = MutableStateFlow<AuthState>(if (signedIn) AuthState.SignedIn(DemoData.me.id) else AuthState.SignedOut)
     override val authState: StateFlow<AuthState> = auth
@@ -46,6 +53,7 @@ class FakeBackend(
     private val deck = DemoData.deck.toMutableList()
     private val swiped = mutableSetOf<Pair<ListingId, ListingId>>()
     private val matches = mutableListOf<Match>()
+    private val teams = DemoData.myTeams.toMutableList()
     private var nextId = 1
 
     override suspend fun sendOtp(email: String) {
@@ -53,7 +61,7 @@ class FakeBackend(
     }
 
     override suspend fun verifyOtp(email: String, code: String) {
-        if (code != DemoData.OTP) throw IllegalArgumentException("Invalid or expired code")
+        if (code != DemoData.OTP) throw EtherError.InvalidCode()
         auth.value = AuthState.SignedIn(DemoData.me.id)
     }
 
@@ -82,18 +90,21 @@ class FakeBackend(
     override suspend fun myListing(id: CompetitionId): Listing? = listings.firstOrNull { it.competitionId == id }
 
     override suspend fun joinSolo(id: CompetitionId): Listing =
-        Listing.Solo(ListingId("l-fake-${nextId++}"), id, active = true, profileId = DemoData.me.id)
+        if (registrationClosed) throw EtherError.RegistrationClosed()
+        else Listing.Solo(ListingId("l-fake-${nextId++}"), id, active = true, profileId = DemoData.me.id)
             .also(listings::add)
 
     override suspend fun createTeam(id: CompetitionId, name: String, pitch: String, openRoles: List<String>): Listing =
-        Listing.Team(ListingId("l-fake-${nextId++}"), id, active = true, teamId = TeamId("t-fake-${nextId++}"))
+        if (registrationClosed) throw EtherError.RegistrationClosed()
+        else Listing.Team(ListingId("l-fake-${nextId++}"), id, active = true, teamId = TeamId("t-fake-${nextId++}"))
             .also(listings::add)
 
     override suspend fun deck(from: ListingId, limit: Int): List<DeckCard> =
         deck.filter { (from to it.listingId) !in swiped }.take(limit)
 
     override suspend fun swipe(from: ListingId, to: ListingId, direction: SwipeDirection): SwipeResult {
-        if (remaining <= 0) throw SwipeCapReachedException()
+        if (registrationClosed) throw EtherError.RegistrationClosed()
+        if (remaining <= 0) throw EtherError.SwipeCapReached()
         remaining--
         swiped += from to to
         val card = deck.first { it.listingId == to }
@@ -118,6 +129,33 @@ class FakeBackend(
 
     override suspend fun matches(competitionId: CompetitionId): List<Match> =
         matches.filter { it.competitionId == competitionId }.sortedByDescending { it.createdAt }
+
+    override suspend fun myTeams(): List<MyTeam> = teams.toList()
+
+    override suspend fun endorse(competitionId: CompetitionId, teammate: ProfileId) {
+        val team = teams.first { it.competition.id == competitionId }
+        if (team.competition.eventEnd > clock()) throw EtherError.EventNotEnded()
+        val mate = team.teammates.firstOrNull { it.id == teammate } ?: throw EtherError.NotTeammates()
+        if (mate.endorsedByMe) throw EtherError.AlreadyEndorsed()
+        updateTeam(team.id) { t -> t.copy(teammates = t.teammates.map { if (it.id == teammate) it.copy(endorsedByMe = true) else it }) }
+    }
+
+    override suspend fun reportResult(teamId: TeamId, result: TeamResult) {
+        val team = teams.first { it.id == teamId }
+        if (team.competition.eventEnd > clock()) throw EtherError.EventNotEnded()
+        if (team.result?.confirmed == true) throw EtherError.ResultAlreadyConfirmed()
+        updateTeam(teamId) { it.copy(result = ReportedResult(result, DemoData.me.name, reportedByMe = true, confirmed = false)) }
+    }
+
+    override suspend fun confirmResult(teamId: TeamId) {
+        val reported = teams.first { it.id == teamId }.result ?: throw EtherError.NoResultReported()
+        if (reported.reportedByMe) throw EtherError.CannotConfirmOwnResult()
+        updateTeam(teamId) { it.copy(result = reported.copy(confirmed = true)) }
+    }
+
+    private fun updateTeam(id: TeamId, transform: (MyTeam) -> MyTeam) {
+        teams.replaceAll { if (it.id == id) transform(it) else it }
+    }
 }
 
 object DemoData {
@@ -139,6 +177,7 @@ object DemoData {
 
     val gemastik = CompetitionId("c-gemastik")
     val campusHack = CompetitionId("c-campus-hack")
+    val dataChallenge = CompetitionId("c-data-challenge")
 
     val competitions = listOf(
         Competition(
@@ -150,6 +189,26 @@ object DemoData {
             campusHack, "Campus Hackathon", "48-hour build sprint on campus. Theme announced at kickoff.",
             null, Instant.parse("2026-11-20T16:59:00Z"), Instant.parse("2026-11-29T18:00:00Z"),
             minTeamSize = 3, maxTeamSize = 5,
+        ),
+        Competition(
+            dataChallenge, "Data Challenge 2026", "Finished data science challenge.",
+            null, Instant.parse("2026-09-15T16:59:00Z"), Instant.parse("2026-10-08T18:00:00Z"),
+            minTeamSize = 2, maxTeamSize = 3,
+        ),
+    )
+
+    /** The demo user's team in the finished Data Challenge: ready to endorse and report a result. */
+    val myTeams = listOf(
+        MyTeam(
+            id = TeamId("t-night-owls"),
+            name = "Night Owls",
+            competition = competitions.last(),
+            ownerId = me.id,
+            teammates = listOf(
+                Teammate(ProfileId("p-ana"), "Ana Putri", "https://wa.me/6281234567890", endorsedByMe = false),
+                Teammate(ProfileId("p-budi"), "Budi Santoso", "https://t.me/budi", endorsedByMe = false),
+            ),
+            result = ReportedResult(TeamResult.FINALIST, "Ana Putri", reportedByMe = false, confirmed = false),
         ),
     )
 

@@ -26,7 +26,7 @@ What the Android client can read, write, and call. Business rules live in the mi
 | `badges`, `profile_badges`, `team_results`, `app_config` | select | Badges are awarded by triggers only. |
 | `xp_events` | select own | XP ledger; `profiles.xp` is its sum. |
 
-**Contact visibility.** A `profile_contacts` row is visible to its owner and to anyone on the other side of a match with them. A team listing's side means every current member of that team.
+**Contact visibility.** A `profile_contacts` row is visible to its owner, to their teammates (any team they share), and to anyone on the other side of a match with them. A team listing's side means every current member of that team.
 
 ## RPCs
 
@@ -42,6 +42,12 @@ Call with `postgrest.rpc(name, params)`. Parameter names are exact.
 - New swipes fail with `registration_closed` once the competition's `registration_deadline` has passed.
 - Retrying an existing `(p_from, p_to)` swipe returns the current outcome without counting again, even if the listings have gone inactive since.
 - A right swipe when the reverse right swipe exists creates the match. Team formation runs in the same transaction (see below).
+
+### `create_team(p_competition uuid, p_name text, p_pitch text, p_open_roles text[]) → uuid`
+
+Creates a team owned by the caller, adds the caller as its first member, and lists it as an active `team` listing, in one transaction. Returns the team id. The caller's solo listing in that competition, if any, goes inactive. `p_name` is trimmed; a blank `p_pitch` is stored as null.
+
+Raises `not_authenticated`, `competition_not_found`, `registration_closed` (after `registration_deadline`), `team_name_required` (blank name), or `already_in_team` (caller already in a team in that competition). Prefer this over inserting into `teams` and `listings` yourself.
 
 ### `remaining_swipes() → int`
 
@@ -130,7 +136,7 @@ A rejected sign-up reaches the client as a GoTrue 500, `"Database error saving n
 
 Errors raised from Postgres arrive as the PostgREST `message`. They are stable strings:
 
-`not_authenticated`, `listing_not_found`, `not_listing_owner`, `self_swipe`, `different_competition`, `listing_inactive`, `team_to_team`, `swipe_cap_reached`, `already_in_team`, `team_full`, `not_teammates`, `event_not_ended`, `not_team_member`, `result_already_confirmed`, `no_result_reported`, `cannot_confirm_own_result`, `email_domain_not_allowed`, `registration_closed`, `team_formed_after_deadline`.
+`not_authenticated`, `competition_not_found`, `team_name_required`, `listing_not_found`, `not_listing_owner`, `self_swipe`, `different_competition`, `listing_inactive`, `team_to_team`, `swipe_cap_reached`, `already_in_team`, `team_full`, `not_teammates`, `event_not_ended`, `not_team_member`, `result_already_confirmed`, `no_result_reported`, `cannot_confirm_own_result`, `email_domain_not_allowed`, `registration_closed`, `team_formed_after_deadline`.
 
 ## Local dev
 

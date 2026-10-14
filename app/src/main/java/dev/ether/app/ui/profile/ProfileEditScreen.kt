@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ether.app.R
 import dev.ether.app.ui.LoadingBox
+import dev.ether.app.ui.MessageBox
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,6 +50,10 @@ fun ProfileEditScreen(isSetup: Boolean, onDone: () -> Unit, onBack: () -> Unit, 
             LoadingBox(Modifier.padding(padding))
             return@Scaffold
         }
+        state.loadError?.let {
+            MessageBox(it, Modifier.padding(padding), "Retry", vm::load)
+            return@Scaffold
+        }
         val form = state.form
         Column(
             Modifier.padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
@@ -64,7 +69,7 @@ fun ProfileEditScreen(isSetup: Boolean, onDone: () -> Unit, onBack: () -> Unit, 
                 vm.edit { copy(contactUrl = it) }
             }
             Text(
-                "Only people you match with can see your contact link.",
+                "All fields are required. Only your teammates and people you match with can see your contact link.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

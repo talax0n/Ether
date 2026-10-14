@@ -23,11 +23,11 @@ data class ProfileForm(
 ) {
     fun toDraftOrNull(): ProfileDraft? {
         val yearValue = year.trim().toIntOrNull()?.takeIf { it in 1..10 } ?: return null
-        if (name.isBlank() || major.isBlank() || !contactUrl.trim().startsWith("https://")) return null
-        return ProfileDraft(
-            name.trim(), major.trim(), yearValue, bio.trim(),
-            skills.splitTags(), roles.splitTags(), contactUrl.trim(),
-        )
+        // Everything is required: the database only counts a profile as complete with all of it.
+        if (name.isBlank() || major.isBlank() || bio.isBlank() || !contactUrl.trim().startsWith("https://")) return null
+        val skillTags = skills.splitTags().ifEmpty { return null }
+        val roleTags = roles.splitTags().ifEmpty { return null }
+        return ProfileDraft(name.trim(), major.trim(), yearValue, bio.trim(), skillTags, roleTags, contactUrl.trim())
     }
 }
 
@@ -38,6 +38,8 @@ data class ProfileEditUiState(
     val form: ProfileForm = ProfileForm(),
     val saving: Boolean = false,
     val saved: Boolean = false,
+    /** Loading the current profile failed; the form is replaced by a retry message. */
+    val loadError: String? = null,
     val error: String? = null,
 ) {
     val canSave get() = !loading && !saving && form.toDraftOrNull() != null
@@ -47,7 +49,10 @@ class ProfileEditViewModel(private val profiles: ProfileRepository) : ViewModel(
     private val _state = MutableStateFlow(ProfileEditUiState())
     val state: StateFlow<ProfileEditUiState> = _state.asStateFlow()
 
-    init {
+    init { load() }
+
+    fun load() {
+        _state.update { it.copy(loading = true, loadError = null) }
         viewModelScope.launch {
             runCatching { profiles.myProfile() }
                 .onSuccess { p ->
@@ -59,7 +64,7 @@ class ProfileEditViewModel(private val profiles: ProfileRepository) : ViewModel(
                     } ?: ProfileForm()
                     _state.update { it.copy(loading = false, form = form) }
                 }
-                .onFailure { e -> _state.update { it.copy(loading = false, error = e.userMessage()) } }
+                .onFailure { e -> _state.update { it.copy(loading = false, loadError = e.userMessage()) } }
         }
     }
 

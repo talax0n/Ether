@@ -10,8 +10,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -22,12 +20,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.ether.app.R
 import dev.ether.app.domain.ProfileSummary
 import dev.ether.app.ui.Avatar
 import dev.ether.app.ui.LoadingBox
@@ -37,7 +33,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(onEdit: () -> Unit, onBack: () -> Unit, vm: ProfileViewModel = koinViewModel()) {
+fun ProfileScreen(onEdit: () -> Unit, vm: ProfileViewModel = koinViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     // Reload on every resume so edits made on the edit screen show up when navigating back.
     LifecycleResumeEffect(Unit) {
@@ -48,7 +44,6 @@ fun ProfileScreen(onEdit: () -> Unit, onBack: () -> Unit, vm: ProfileViewModel =
         topBar = {
             TopAppBar(
                 title = { Text("Profile") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "Back") } },
                 actions = { TextButton(onClick = onEdit) { Text("Edit") } },
             )
         },

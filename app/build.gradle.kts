@@ -15,6 +15,8 @@ fun config(name: String, default: String): String =
 
 val supabaseUrl = config("SUPABASE_URL", "http://10.0.2.2:54321")
 val supabaseAnonKey = config("SUPABASE_ANON_KEY", "")
+// Must match app_config.allowed_email_domain; only used to word the sign-up error.
+val allowedEmailDomain = config("ALLOWED_EMAIL_DOMAIN", "student.example.ac.id")
 // Without a key there is no backend to talk to, so fall back to the in-memory demo data.
 val useFakeBackend = config("USE_FAKE_BACKEND", (supabaseAnonKey.isBlank()).toString()).toBoolean()
 
@@ -32,6 +34,7 @@ android {
 
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
+        buildConfigField("String", "ALLOWED_EMAIL_DOMAIN", "\"$allowedEmailDomain\"")
         buildConfigField("boolean", "USE_FAKE_BACKEND", useFakeBackend.toString())
     }
 

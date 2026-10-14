@@ -41,6 +41,15 @@ USE_FAKE_BACKEND=true                 # force the demo backend (sign in with any
 ./gradlew :app:testDebugUnitTest
 ```
 
+### Against local Supabase
+
+1. `supabase start`, then `supabase db reset` to apply the migrations and the seed.
+2. Put the `ANON_KEY` from `supabase status` into `local.properties` as `SUPABASE_ANON_KEY`, and set `USE_FAKE_BACKEND=false`.
+3. Install on the emulator. Debug builds allow cleartext HTTP to `10.0.2.2` and `localhost` only. Release builds are HTTPS-only.
+4. Sign in as `demo1@student.example.ac.id` … `demo8@…`, or any new `@student.example.ac.id` address. The 6-digit code arrives in Mailpit at http://127.0.0.1:54324. Set `ALLOWED_EMAIL_DOMAIN` if you change `app_config.allowed_email_domain`. The app only uses it to word the sign-up error.
+
+See [docs/demo](docs/demo) for a screenshot walkthrough.
+
 ## Notes
 
 - No secrets in source. `.env.example` lists the variable names. Real values stay in a gitignored `.env` or `local.properties`.

@@ -43,6 +43,7 @@ fun CompetitionDetailScreen(
     competitionId: String,
     onOpenDeck: (ListingId) -> Unit,
     onOpenMatches: () -> Unit,
+    onOpenTeams: () -> Unit,
     onBack: () -> Unit,
     vm: CompetitionDetailViewModel = koinViewModel { parametersOf(competitionId) },
 ) {
@@ -64,13 +65,13 @@ fun CompetitionDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 CompetitionInfo(competition)
-                state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                ListingActions(state.listing, state.busy, onOpenDeck, onOpenMatches, vm::joinSolo, vm::openTeamForm)
+                if (state.teamForm == null) state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                ListingActions(state, onOpenDeck, onOpenMatches, onOpenTeams, vm::joinSolo, vm::openTeamForm)
             }
         }
     }
     state.teamForm?.let { form ->
-        TeamFormDialog(form, state.busy, vm::editTeamForm, vm::createTeam, vm::closeTeamForm)
+        TeamFormDialog(form, state.busy, state.error, vm::editTeamForm, vm::createTeam, vm::closeTeamForm)
     }
 }
 
@@ -85,14 +86,28 @@ private fun CompetitionInfo(c: Competition) {
 
 @Composable
 private fun ListingActions(
-    listing: Listing?,
-    busy: Boolean,
+    state: CompetitionDetailUiState,
     onOpenDeck: (ListingId) -> Unit,
     onOpenMatches: () -> Unit,
+    onOpenTeams: () -> Unit,
     onJoinSolo: () -> Unit,
     onCreateTeam: () -> Unit,
 ) {
     val full = Modifier.fillMaxWidth().height(52.dp)
+    val listing = state.listing
+    val busy = state.busy
+    val team = state.team
+    // A member who joined through a match swipes nowhere: only the owner swipes for a team.
+    if (team != null && listing?.active != true) {
+        Text("You're on ${team.name} in this competition.", style = MaterialTheme.typography.titleMedium)
+        Button(onClick = onOpenTeams, modifier = full) { Text("See your team") }
+        OutlinedButton(onClick = onOpenMatches, modifier = full) { Text("Matches") }
+        return
+    }
+    if (listing == null && !state.registrationOpen) {
+        Text("Registration has closed. Nothing new can form in this competition.", style = MaterialTheme.typography.titleMedium)
+        return
+    }
     if (listing == null) {
         Text("How are you entering?", style = MaterialTheme.typography.titleMedium)
         Button(onClick = onJoinSolo, enabled = !busy, modifier = full) { Text("Join solo, find a team") }
@@ -114,7 +129,7 @@ private fun ListingActions(
 }
 
 @Composable
-private fun TeamFormDialog(form: TeamForm, busy: Boolean, onChange: (TeamForm) -> Unit, onSubmit: () -> Unit, onDismiss: () -> Unit) {
+private fun TeamFormDialog(form: TeamForm, busy: Boolean, error: String?, onChange: (TeamForm) -> Unit, onSubmit: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Create a team") },
@@ -126,6 +141,7 @@ private fun TeamFormDialog(form: TeamForm, busy: Boolean, onChange: (TeamForm) -
                     form.openRoles, { onChange(form.copy(openRoles = it)) },
                     label = { Text("Open roles, comma separated") }, singleLine = true,
                 )
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
         },
         confirmButton = { Button(onClick = onSubmit, enabled = form.isValid && !busy) { Text("Create") } },

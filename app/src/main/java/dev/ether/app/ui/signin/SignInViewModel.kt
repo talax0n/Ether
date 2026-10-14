@@ -3,6 +3,7 @@ package dev.ether.app.ui.signin
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.ether.app.data.AuthRepository
+import dev.ether.app.domain.AuthState
 import dev.ether.app.ui.userMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,6 +37,13 @@ private fun String.isValidEmail() = trim().let { '@' in it && it.substringAfter(
 class SignInViewModel(private val auth: AuthRepository) : ViewModel() {
     private val _state = MutableStateFlow(SignInUiState())
     val state: StateFlow<SignInUiState> = _state.asStateFlow()
+
+    init {
+        // This ViewModel outlives the session, so start clean for whoever signs in after a sign-out.
+        viewModelScope.launch {
+            auth.authState.collect { if (it is AuthState.SignedIn) _state.value = SignInUiState() }
+        }
+    }
 
     fun onEmailChange(value: String) = _state.update { it.copy(email = value, error = null) }
 

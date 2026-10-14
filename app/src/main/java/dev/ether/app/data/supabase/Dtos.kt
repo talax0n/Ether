@@ -12,6 +12,8 @@ import dev.ether.app.domain.MatchId
 import dev.ether.app.domain.Profile
 import dev.ether.app.domain.ProfileId
 import dev.ether.app.domain.Reliability
+import dev.ether.app.domain.ReportedResult
+import dev.ether.app.domain.TeamResult
 import dev.ether.app.domain.SwipeDirection
 import dev.ether.app.domain.SwipeResult
 import dev.ether.app.domain.TeamId
@@ -58,8 +60,7 @@ data class ProfileDto(
 }
 
 @Serializable
-data class ProfileUpsertDto(
-    val id: String,
+data class ProfileUpdateDto(
     val name: String,
     val major: String,
     val year: Int,
@@ -78,7 +79,7 @@ data class ProfileContactDto(
 data class CompetitionDto(
     val id: String,
     val name: String,
-    val description: String = "",
+    val description: String? = null,
     val url: String? = null,
     @SerialName("registration_deadline") val registrationDeadline: String,
     @SerialName("event_end") val eventEnd: String,
@@ -86,19 +87,10 @@ data class CompetitionDto(
     @SerialName("max_team_size") val maxTeamSize: Int,
 ) {
     fun toDomain() = Competition(
-        CompetitionId(id), name, description, url,
+        CompetitionId(id), name, description.orEmpty(), url,
         parseTimestamp(registrationDeadline), parseTimestamp(eventEnd), minTeamSize, maxTeamSize,
     )
 }
-
-@Serializable
-data class TeamInsertDto(
-    @SerialName("competition_id") val competitionId: String,
-    @SerialName("owner_id") val ownerId: String,
-    val name: String,
-    val pitch: String,
-    @SerialName("open_roles") val openRoles: List<String>,
-)
 
 @Serializable
 data class IdDto(val id: String)
@@ -125,11 +117,10 @@ data class ListingDto(
 }
 
 @Serializable
-data class ListingInsertDto(
+data class SoloListingInsertDto(
     @SerialName("competition_id") val competitionId: String,
+    @SerialName("profile_id") val profileId: String,
     val kind: ListingKindDto,
-    @SerialName("profile_id") val profileId: String? = null,
-    @SerialName("team_id") val teamId: String? = null,
 )
 
 /** One row of `deck(p_listing, p_limit)`, i.e. the `listing_cards` view. */
@@ -193,5 +184,64 @@ data class ProfileBadgeDto(
 
 @Serializable
 data class BadgeDto(val code: String, val name: String, val description: String = "")
+
+@Serializable
+data class TeamIdDto(@SerialName("team_id") val teamId: String)
+
+/** `teams` with its competition and members embedded. */
+@Serializable
+data class TeamRowDto(
+    val id: String,
+    val name: String,
+    @SerialName("owner_id") val ownerId: String,
+    val competitions: CompetitionDto,
+    @SerialName("team_members") val members: List<TeamMemberDto>,
+)
+
+@Serializable
+data class TeamMemberDto(@SerialName("profile_id") val profileId: String, val profiles: NameDto)
+
+@Serializable
+data class NameDto(val name: String)
+
+@Serializable
+data class EndorsementKeyDto(
+    @SerialName("to_profile_id") val toProfileId: String,
+    @SerialName("competition_id") val competitionId: String,
+)
+
+@Serializable
+data class EndorsementInsertDto(
+    @SerialName("from_profile_id") val fromProfileId: String,
+    @SerialName("to_profile_id") val toProfileId: String,
+    @SerialName("competition_id") val competitionId: String,
+    val positive: Boolean,
+)
+
+@Serializable
+enum class TeamResultDto {
+    @SerialName("finalist") FINALIST,
+    @SerialName("winner") WINNER;
+
+    fun toDomain() = when (this) {
+        FINALIST -> TeamResult.FINALIST
+        WINNER -> TeamResult.WINNER
+    }
+}
+
+/** Postgres `team_result` enum label. */
+val TeamResult.wire: String
+    get() = when (this) {
+        TeamResult.FINALIST -> "finalist"
+        TeamResult.WINNER -> "winner"
+    }
+
+@Serializable
+data class TeamResultRowDto(
+    @SerialName("team_id") val teamId: String,
+    val result: TeamResultDto,
+    @SerialName("reported_by") val reportedBy: String,
+    @SerialName("confirmed_by") val confirmedBy: String? = null,
+)
 
 internal fun parseTimestamp(value: String): Instant = OffsetDateTime.parse(value).toInstant()
