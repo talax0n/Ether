@@ -34,6 +34,11 @@ class AppViewModelTest {
     }
 
     @Test
+    fun `a session whose account no longer exists is signed out`() = runTest {
+        assertEquals(AppUiState.SignedOut, stateFor(FakeBackend(signedIn = true, profile = null)))
+    }
+
+    @Test
     fun `a profile missing its contact link goes to profile setup`() = runTest {
         assertEquals(AppUiState.NeedsProfile(DemoData.me.id), stateFor(FakeBackend(signedIn = true, profile = DemoData.me.copy(contactUrl = null))))
     }

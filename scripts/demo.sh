@@ -52,6 +52,8 @@ if ! adb devices | awk 'NR > 1 && $2 == "device"' | grep -q .; then
 fi
 
 ./gradlew -q :app:installDebug
+# db reset deleted every account, so any saved session on the device is dead.
+adb shell pm clear dev.ether.app >/dev/null
 adb shell am start -n dev.ether.app/.MainActivity >/dev/null
 
 mailpit=$("$SUPABASE" status -o env 2>/dev/null | sed -n 's/^MAILPIT_URL="\(.*\)"$/\1/p')
