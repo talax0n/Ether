@@ -52,6 +52,7 @@ class FakeBackend(
     private val listings = DemoData.myListings.toMutableList()
     private val deck = DemoData.deck.toMutableList()
     private val swiped = mutableSetOf<Pair<ListingId, ListingId>>()
+    private val inactive = mutableSetOf<ListingId>()
     private val matches = mutableListOf<Match>()
     private val teams = DemoData.myTeams.toMutableList()
     private var nextId = 1
@@ -100,10 +101,12 @@ class FakeBackend(
             .also(listings::add)
 
     override suspend fun deck(from: ListingId, limit: Int): List<DeckCard> =
-        deck.filter { (from to it.listingId) !in swiped }.take(limit)
+        if (from in inactive) throw EtherError.ListingInactive()
+        else deck.filter { (from to it.listingId) !in swiped }.take(limit)
 
     override suspend fun swipe(from: ListingId, to: ListingId, direction: SwipeDirection): SwipeResult {
         if (registrationClosed) throw EtherError.RegistrationClosed()
+        if (from in inactive) throw EtherError.ListingInactive()
         if (remaining <= 0) throw EtherError.SwipeCapReached()
         remaining--
         swiped += from to to
@@ -122,6 +125,8 @@ class FakeBackend(
             createdAt = clock(),
         )
         matches += match
+        // Like the DB: a match puts this solo on a team, which closes their solo listing.
+        if (listings.first { it.id == from } is Listing.Solo) inactive += from
         return SwipeResult(true, match.id, remaining)
     }
 

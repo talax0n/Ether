@@ -2,12 +2,17 @@ package dev.ether.app
 
 import dev.ether.app.data.fake.DemoData
 import dev.ether.app.data.fake.FakeBackend
+import dev.ether.app.data.DeckRepository
+import dev.ether.app.domain.EtherError
 import dev.ether.app.domain.ListingId
 import dev.ether.app.domain.SwipeDirection
 import dev.ether.app.ui.deck.DeckPhase
 import dev.ether.app.ui.deck.DeckViewModel
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
@@ -30,8 +35,8 @@ class DeckViewModelTest {
         assertEquals("Ana Putri", state.match?.name)
         assertEquals("https://wa.me/6281234567890", state.match?.contactUrl)
         assertEquals(29, state.remaining)
-        assertEquals(ListingId("l-byte-brigade"), state.cards.first().listingId)
-        assertEquals(4, state.cards.size)
+        // The match put this solo on a team, so their solo listing is closed.
+        assertEquals(DeckPhase.LISTING_CLOSED, state.phase)
 
         vm.dismissMatch()
         assertNull(vm.state.value.match)
@@ -77,5 +82,44 @@ class DeckViewModelTest {
         assertEquals("Registration for this competition has closed.", vm.state.value.error)
         assertEquals(first, vm.state.value.cards.first())
         assertEquals(DeckPhase.SWIPING, vm.state.value.phase)
+    }
+
+    @Test
+    fun `a second swipe while the first is pending is ignored and a match closes the deck`() = runTest {
+        val backend = FakeBackend(signedIn = true)
+        val gate = CompletableDeferred<Unit>()
+        var swipes = 0
+        val slow = object : DeckRepository by backend {
+            override suspend fun swipe(from: ListingId, to: ListingId, direction: SwipeDirection) =
+                gate.await().let { swipes++; backend.swipe(from, to, direction) }
+        }
+        val vm = DeckViewModel(DemoData.gemastik, ListingId("l-me-gemastik"), slow, backend)
+        val (ana, byteBrigade) = vm.state.value.cards
+
+        vm.swipe(ana, SwipeDirection.RIGHT)
+        assertTrue(vm.state.value.swiping)
+        vm.swipe(byteBrigade, SwipeDirection.LEFT)
+        gate.complete(Unit)
+
+        assertEquals(1, swipes)
+        assertEquals("Ana Putri", vm.state.value.match?.name)
+        assertEquals(DeckPhase.LISTING_CLOSED, vm.state.value.phase)
+        assertFalse(vm.state.value.swiping)
+    }
+
+    @Test
+    fun `a failed refill shows the error with retry, not an empty deck`() = runTest {
+        val backend = FakeBackend(signedIn = true)
+        var deckCalls = 0
+        val flaky = object : DeckRepository by backend {
+            override suspend fun deck(from: ListingId, limit: Int) =
+                if (++deckCalls > 1) throw EtherError.Offline() else backend.deck(from, limit).drop(4)
+        }
+        val vm = DeckViewModel(DemoData.gemastik, ListingId("l-me-gemastik"), flaky, backend)
+
+        vm.swipe(vm.state.value.cards.single(), SwipeDirection.LEFT)
+
+        assertEquals(DeckPhase.FAILED, vm.state.value.phase)
+        assertEquals("Can't reach Ether. Check your connection and try again.", vm.state.value.error)
     }
 }
