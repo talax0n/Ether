@@ -54,14 +54,35 @@ $$;
 
 -- ---------------------------------------------------------------- sign-up
 
-create function public.handle_new_user() returns trigger
+create function public.email_domain_allowed(p_email text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select p_email ~ '^[^@]+@[^@]+$'
+     and lower(split_part(p_email, '@', 2)) = (select lower(value) from app_config where key = 'allowed_email_domain')
+$$;
+
+-- email_change holds a pending address until GoTrue confirms it, so it is checked too.
+-- Unchanged values are skipped so existing users are not locked out if the domain setting changes.
+create function public.check_email_domain() returns trigger
 language plpgsql security definer set search_path = public as $$
-declare
-  domain text := (select value from app_config where key = 'allowed_email_domain');
 begin
-  if new.email is null or lower(new.email) not like '%@' || lower(domain) then
+  if (tg_op = 'INSERT' or new.email is distinct from old.email)
+     and not coalesce(email_domain_allowed(new.email), false) then
     raise exception 'email_domain_not_allowed' using errcode = '42501';
   end if;
+  if coalesce(new.email_change, '') <> ''
+     and (tg_op = 'INSERT' or new.email_change is distinct from old.email_change)
+     and not email_domain_allowed(new.email_change) then
+    raise exception 'email_domain_not_allowed' using errcode = '42501';
+  end if;
+  return new;
+end $$;
+
+create trigger email_domain_guard before insert or update of email, email_change on auth.users
+  for each row execute function public.check_email_domain();
+
+create function public.handle_new_user() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
   insert into profiles (id, name)
   values (new.id, coalesce(nullif(new.raw_user_meta_data ->> 'name', ''), split_part(new.email, '@', 1)));
   return new;
@@ -104,6 +125,19 @@ create trigger contact_completed after insert or update on public.profile_contac
 
 -- ---------------------------------------------------------------- teams and listings
 
+-- Checks created_at, not now(): clients cannot set it, and fixtures can backdate a team.
+create function public.check_team_registration() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.created_at > (select registration_deadline from competitions where id = new.competition_id) then
+    raise exception 'registration_closed';
+  end if;
+  return new;
+end $$;
+
+create trigger team_registration_guard before insert on public.teams
+  for each row execute function public.check_team_registration();
+
 create function public.on_team_created() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
@@ -113,6 +147,22 @@ end $$;
 
 create trigger team_owner_is_member after insert on public.teams
   for each row execute function public.on_team_created();
+
+-- The unique (profile_id, competition_id) constraint is the real guard; this check only gives
+-- the common case a stable error message.
+create function public.check_team_member() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  new.competition_id := (select competition_id from teams where id = new.team_id);
+  if exists (select 1 from team_members
+             where profile_id = new.profile_id and competition_id = new.competition_id) then
+    raise exception 'already_in_team';
+  end if;
+  return new;
+end $$;
+
+create trigger team_member_guard before insert on public.team_members
+  for each row execute function public.check_team_member();
 
 create function public.on_team_member_added() returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -124,13 +174,6 @@ begin
   -- Row lock serializes concurrent joins so the size check below cannot be raced.
   select c.* into comp from teams t join competitions c on c.id = t.competition_id
   where t.id = new.team_id for update of t;
-
-  if exists (
-    select 1 from team_members tm join teams t on t.id = tm.team_id
-    where tm.profile_id = new.profile_id and t.competition_id = comp.id and tm.team_id <> new.team_id
-  ) then
-    raise exception 'already_in_team';
-  end if;
 
   select count(*) into member_count from team_members where team_id = new.team_id;
   if member_count > comp.max_team_size then
@@ -159,17 +202,18 @@ create trigger team_member_added after insert on public.team_members
 
 create function public.check_listing_active() returns trigger
 language plpgsql security definer set search_path = public as $$
+declare
+  deadline timestamptz := (select registration_deadline from competitions where id = new.competition_id);
 begin
-  if not new.active then
-    return new;
+  if (tg_op = 'INSERT' and new.created_at > deadline) or (new.active and now() > deadline) then
+    raise exception 'registration_closed';
   end if;
-  if new.kind = 'solo' and exists (
-    select 1 from team_members tm join teams t on t.id = tm.team_id
-    where tm.profile_id = new.profile_id and t.competition_id = new.competition_id
+  if new.kind = 'solo' and (tg_op = 'INSERT' or new.active) and exists (
+    select 1 from team_members where profile_id = new.profile_id and competition_id = new.competition_id
   ) then
     raise exception 'already_in_team';
   end if;
-  if new.kind = 'team' and (select count(*) from team_members where team_id = new.team_id)
+  if new.active and new.kind = 'team' and (select count(*) from team_members where team_id = new.team_id)
       >= (select max_team_size from competitions where id = new.competition_id) then
     raise exception 'team_full';
   end if;
@@ -237,6 +281,12 @@ begin
   if me is null then
     raise exception 'not_authenticated' using errcode = '42501';
   end if;
+  -- Lock both listings in id order before reading them. Any two swipes sharing a listing
+  -- serialize here, so the second sees the first's match (the solo's listing already inactive)
+  -- and opposite right swipes cannot miss each other. The caller lock keeps the daily cap exact.
+  perform 1 from listings where id in (p_from, p_to) order by id for update;
+  perform pg_advisory_xact_lock(hashtext(me::text));
+
   select * into f from listings where id = p_from;
   select * into t from listings where id = p_to;
   if f.id is null or t.id is null then
@@ -246,11 +296,6 @@ begin
     raise exception 'not_listing_owner' using errcode = '42501';
   end if;
 
-  -- Serialize the pair so two opposite right swipes cannot both miss each other,
-  -- and the caller so the daily cap cannot be raced.
-  perform pg_advisory_xact_lock(hashtext(least(p_from, p_to)::text || greatest(p_from, p_to)::text));
-  perform pg_advisory_xact_lock(hashtext(me::text));
-
   -- Retry of an existing swipe returns the original outcome, even if listings went inactive since.
   if not exists (select 1 from swipes where from_listing_id = p_from and to_listing_id = p_to) then
     if p_from = p_to or listing_actor(t.id) = me then
@@ -258,6 +303,9 @@ begin
     end if;
     if f.competition_id <> t.competition_id then
       raise exception 'different_competition';
+    end if;
+    if now() > (select registration_deadline from competitions where id = f.competition_id) then
+      raise exception 'registration_closed';
     end if;
     if not f.active or not t.active then
       raise exception 'listing_inactive';
@@ -343,12 +391,15 @@ begin
   if me.id is null or listing_actor(me.id) is distinct from auth.uid() then
     raise exception 'not_listing_owner' using errcode = '42501';
   end if;
+  if not me.active then
+    raise exception 'listing_inactive';
+  end if;
   return query
     select c.* from listing_cards c
     where c.competition_id = me.competition_id
       and c.active
       and c.listing_id <> me.id
-      and c.owner_id <> auth.uid()
+      and not is_listing_member(c.listing_id, auth.uid())
       and not (me.kind = 'team' and c.kind = 'team')
       and not exists (select 1 from swipes s where s.from_listing_id = me.id and s.to_listing_id = c.listing_id)
     order by c.created_at desc, c.listing_id
@@ -458,17 +509,24 @@ begin
   if (select c.event_end from teams t join competitions c on c.id = t.competition_id where t.id = p_team) > now() then
     raise exception 'event_not_ended';
   end if;
+  if (select t.created_at > c.registration_deadline from teams t join competitions c on c.id = t.competition_id
+      where t.id = p_team) then
+    raise exception 'team_formed_after_deadline';
+  end if;
 end $$;
 
 create function public.report_result(p_team uuid, p_result team_result) returns void
 language plpgsql security definer set search_path = public as $$
 begin
   perform assert_team_member_after_event(p_team);
-  if exists (select 1 from team_results where team_id = p_team and confirmed_by is not null) then
+  -- One statement: the upsert locks the existing row and re-evaluates the WHERE after any
+  -- concurrent confirm_result commits, so a confirmed result is never overwritten.
+  insert into team_results (team_id, result, reported_by) values (p_team, p_result, auth.uid())
+  on conflict (team_id) do update set result = excluded.result, reported_by = excluded.reported_by
+    where team_results.confirmed_by is null;
+  if not found then
     raise exception 'result_already_confirmed';
   end if;
-  insert into team_results (team_id, result, reported_by) values (p_team, p_result, auth.uid())
-  on conflict (team_id) do update set result = excluded.result, reported_by = excluded.reported_by;
 end $$;
 
 create function public.confirm_result(p_team uuid) returns void

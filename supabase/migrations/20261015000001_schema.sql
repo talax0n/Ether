@@ -53,15 +53,19 @@ create table public.teams (
   pitch          text,
   open_roles     text[] not null default '{}',
   created_at     timestamptz not null default now(),
-  -- target of the composite FK that keeps listings.competition_id consistent with the team
+  -- target of the composite FKs that keep listings/team_members.competition_id consistent with the team
   unique (id, competition_id)
 );
 
 create table public.team_members (
-  team_id    uuid not null references public.teams (id) on delete cascade,
-  profile_id uuid not null references public.profiles (id) on delete cascade,
-  joined_at  timestamptz not null default now(),
-  primary key (team_id, profile_id)
+  team_id        uuid not null,
+  -- filled from the team by a trigger; denormalized so one-team-per-competition is a unique constraint
+  competition_id uuid not null,
+  profile_id     uuid not null references public.profiles (id) on delete cascade,
+  joined_at      timestamptz not null default now(),
+  primary key (team_id, profile_id),
+  foreign key (team_id, competition_id) references public.teams (id, competition_id) on delete cascade,
+  unique (profile_id, competition_id)
 );
 
 create table public.listings (

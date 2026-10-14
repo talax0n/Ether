@@ -46,15 +46,18 @@ insert into public.competitions (id, name, description, url, registration_deadli
    'Finished data science challenge, used to test endorsements.', 'https://example.ac.id/data',
    now() - interval '30 days', now() - interval '7 days', 2, 3);
 
--- Finished competition: one full team, so its members can endorse each other.
-insert into public.teams (id, competition_id, owner_id, name, pitch, open_roles) values
+-- Finished competition: one full team, so its members can endorse each other. Team and listing
+-- are backdated to before the registration deadline, as if formed during registration.
+insert into public.teams (id, competition_id, owner_id, name, pitch, open_roles, created_at) values
   ('a0000000-0000-0000-0000-000000000002', 'c0000000-0000-0000-0000-000000000002',
-   'd0000000-0000-0000-0000-000000000001', 'Night Owls', 'We predict campus bus delays.', '{}');
+   'd0000000-0000-0000-0000-000000000001', 'Night Owls', 'We predict campus bus delays.', '{}',
+   now() - interval '40 days');
 insert into public.team_members (team_id, profile_id) values
   ('a0000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-000000000002'),
   ('a0000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-000000000003');
-insert into public.listings (competition_id, kind, team_id, active) values
-  ('c0000000-0000-0000-0000-000000000002', 'team', 'a0000000-0000-0000-0000-000000000002', false);
+insert into public.listings (competition_id, kind, team_id, active, created_at) values
+  ('c0000000-0000-0000-0000-000000000002', 'team', 'a0000000-0000-0000-0000-000000000002', false,
+   now() - interval '40 days');
 select public.finish_competition('c0000000-0000-0000-0000-000000000002');
 
 -- Upcoming competition: six solos and one team with open slots.

@@ -18,6 +18,21 @@ select throws_ok(
 select throws_ok(
   $$ insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000fe', 'x@evil.student.example.ac.id.com') $$,
   '42501', 'email_domain_not_allowed', 'domain must be a suffix match');
+select throws_ok(
+  $$ insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000fd', 'x@evil.student.example.ac.id') $$,
+  '42501', 'email_domain_not_allowed', 'subdomain of the allowed domain is rejected');
+select throws_ok(
+  $$ insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000fc', 'x@student.example.ac.id@evil.com') $$,
+  '42501', 'email_domain_not_allowed', 'email with two @ is rejected');
+select lives_ok(
+  $$ insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000fb', 'Upper@STUDENT.Example.AC.ID') $$,
+  'domain match is case-insensitive');
+select throws_ok(
+  $$ update auth.users set email = 'upper@external.example' where id = '00000000-0000-0000-0000-0000000000fb' $$,
+  '42501', 'email_domain_not_allowed', 'changing email to another domain is rejected');
+select throws_ok(
+  $$ update auth.users set email_change = 'upper@external.example' where id = '00000000-0000-0000-0000-0000000000fb' $$,
+  '42501', 'email_domain_not_allowed', 'pending email change to another domain is rejected');
 
 insert into auth.users (id, email)
 select ('00000000-0000-0000-0000-0000000000' || x)::uuid, 'user' || x || '@student.example.ac.id'
@@ -120,6 +135,22 @@ select is((select xp from profiles where id = '00000000-0000-0000-0000-000000000
 select is((select array_agg(badge_code) from profile_badges where profile_id = '00000000-0000-0000-0000-00000000000b'),
   array['first_team'], 'First Team badge awarded');
 
+-- B joined a team owned by A, and never swiped its new team listing.
+select pg_temp.login('00000000-0000-0000-0000-00000000000b');
+select throws_ok(
+  $$ select * from deck('10000000-0000-0000-0000-00000000000b') $$,
+  'P0001', 'listing_inactive', 'deck rejects an inactive source listing');
+reset role;
+alter table listings disable trigger listing_active_guard;
+update listings set active = true where id = '10000000-0000-0000-0000-00000000000b';
+select pg_temp.login('00000000-0000-0000-0000-00000000000b');
+select is(
+  (select count(*)::int from deck('10000000-0000-0000-0000-00000000000b') where kind = 'team' and name = 'user0a & user0b'),
+  0, 'deck never shows a team the caller is a member of');
+reset role;
+update listings set active = false where id = '10000000-0000-0000-0000-00000000000b';
+alter table listings enable trigger listing_active_guard;
+
 select pg_temp.login('00000000-0000-0000-0000-00000000000a');
 select is((select contact_url from profile_contacts where profile_id = '00000000-0000-0000-0000-00000000000b'),
   'https://wa.me/b', 'contact_url visible after match');
@@ -132,6 +163,52 @@ select is(
   (select count(*)::int from profile_contacts where profile_id = '00000000-0000-0000-0000-00000000000a'), 0,
   'unmatched profile cannot read contact_url');
 select is((select count(*)::int from matches), 0, 'unmatched profile cannot read other matches');
+
+-- ---------------------------------------------------------------- one team per competition, listing creation
+
+reset role;
+select throws_ok(
+  $$ insert into team_members (team_id, profile_id) values
+     ('20000000-0000-0000-0000-00000000000d', '00000000-0000-0000-0000-00000000000a') $$,
+  'P0001', 'already_in_team', 'profile cannot join a second team in the same competition');
+select col_is_unique('public', 'team_members', array['profile_id', 'competition_id'],
+  'one team per profile per competition is a unique constraint (concurrency backstop)');
+
+select pg_temp.login('00000000-0000-0000-0000-00000000000d');
+select throws_ok(
+  $$ insert into listings (competition_id, kind, profile_id, active) values
+     ('30000000-0000-0000-0000-000000000001', 'solo', '00000000-0000-0000-0000-00000000000d', false) $$,
+  'P0001', 'already_in_team', 'team member cannot create a solo listing, even inactive');
+
+-- ---------------------------------------------------------------- registration deadline
+
+select throws_ok(
+  $$ insert into listings (competition_id, kind, profile_id) values
+     ('30000000-0000-0000-0000-000000000002', 'solo', '00000000-0000-0000-0000-00000000000d') $$,
+  'P0001', 'registration_closed', 'listing rejected after registration_deadline');
+select throws_ok(
+  $$ insert into teams (competition_id, owner_id, name) values
+     ('30000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-00000000000d', 'Late') $$,
+  'P0001', 'registration_closed', 'team rejected after registration_deadline');
+reset role;
+
+-- Listings left active from before the deadline (fixture inserts with a past created_at).
+insert into listings (id, competition_id, kind, profile_id, active, created_at) values
+  ('10000000-0000-0000-0000-0000000000e1', '30000000-0000-0000-0000-000000000002', 'solo', '00000000-0000-0000-0000-00000000000e', false, now() - interval '20 days'),
+  ('10000000-0000-0000-0000-0000000000e2', '30000000-0000-0000-0000-000000000002', 'solo', '00000000-0000-0000-0000-00000000000f', false, now() - interval '20 days');
+alter table listings disable trigger listing_active_guard;
+update listings set active = true where id in ('10000000-0000-0000-0000-0000000000e1', '10000000-0000-0000-0000-0000000000e2');
+alter table listings enable trigger listing_active_guard;
+
+select pg_temp.login('00000000-0000-0000-0000-00000000000e');
+select throws_ok(
+  $$ select swipe('10000000-0000-0000-0000-0000000000e1', '10000000-0000-0000-0000-0000000000e2', 'right') $$,
+  'P0001', 'registration_closed', 'swipe rejected after registration_deadline');
+select throws_ok(
+  $$ update listings set active = true where id = '10000000-0000-0000-0000-0000000000e1' $$,
+  'P0001', 'registration_closed', 'listing cannot be reactivated after registration_deadline');
+reset role;
+select pg_temp.login('00000000-0000-0000-0000-00000000000d');
 
 -- ---------------------------------------------------------------- TEAM rules and SOLO↔TEAM
 
@@ -209,8 +286,8 @@ reset role;
 
 -- ---------------------------------------------------------------- endorsements, finish, results
 
-insert into teams (id, competition_id, owner_id, name) values
-  ('20000000-0000-0000-0000-00000000000e', '30000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-00000000000a', 'Done');
+insert into teams (id, competition_id, owner_id, name, created_at) values
+  ('20000000-0000-0000-0000-00000000000e', '30000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-00000000000a', 'Done', now() - interval '20 days');
 insert into team_members (team_id, profile_id) values
   ('20000000-0000-0000-0000-00000000000e', '00000000-0000-0000-0000-00000000000b');
 
@@ -235,6 +312,19 @@ select throws_ok($$ select confirm_result('20000000-0000-0000-0000-00000000000e'
 reset role;
 select pg_temp.login('00000000-0000-0000-0000-00000000000b');
 select lives_ok($$ select confirm_result('20000000-0000-0000-0000-00000000000e') $$, 'teammate confirms result');
+select throws_ok($$ select report_result('20000000-0000-0000-0000-00000000000e', 'finalist') $$,
+  'P0001', 'result_already_confirmed', 'confirmed result cannot be re-reported');
+reset role;
+select is((select result from team_results where team_id = '20000000-0000-0000-0000-00000000000e'), 'winner'::team_result,
+  'confirmed result is unchanged');
+
+-- A team formed after the deadline (admin moved the deadline earlier) cannot claim a result.
+insert into teams (id, competition_id, owner_id, name, created_at) values
+  ('20000000-0000-0000-0000-0000000000e3', '30000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-00000000000c', 'Late', now() - interval '20 days');
+update teams set created_at = now() - interval '10 days' where id = '20000000-0000-0000-0000-0000000000e3';
+select pg_temp.login('00000000-0000-0000-0000-00000000000c');
+select throws_ok($$ select report_result('20000000-0000-0000-0000-0000000000e3', 'winner') $$,
+  'P0001', 'team_formed_after_deadline', 'team formed after registration_deadline cannot report a result');
 reset role;
 
 select finish_competition('30000000-0000-0000-0000-000000000002');
