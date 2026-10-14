@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ether · Direction 1 · Arcade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ------------------------------------------------------------------ tokens */
+:root{
+  --ink:#1E1B2E; --cream:#FFF7EA; --paper:#FFFFFF;
+  --coral:#FF5A36; --coral-d:#D93E1C; --sun:#FFC233; --sun-d:#E0A100;
+  --mint:#2BD47D; --mint-d:#16A85C; --sky:#3BA7FF; --sky-d:#1E7FD6;
+  --grape:#8B5CF6; --grape-d:#6A3BE0; --cloud:#ECE6DA; --muted:#5B5670;
+  --r-s:12px; --r-m:20px; --r-l:28px; --line:3px;
+  --pop:cubic-bezier(.34,1.56,.64,1); /* spring-ish overshoot, = spring(dampingRatio .5, stiffness Medium) */
+  --font:"Nunito",ui-rounded,"SF Pro Rounded","Segoe UI",system-ui,sans-serif;
+}
+@property --n{syntax:"<integer>";inherits:false;initial-value:0}
+@property --fill{syntax:"<percentage>";inherits:false;initial-value:0%}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:#F3EBDD;color:var(--ink);padding:32px;min-width:1720px}
+svg{display:block}
+
+/* ------------------------------------------------------------------ spec block */
+.spec{background:var(--paper);border:var(--line) solid var(--ink);border-radius:var(--r-l);box-shadow:0 6px 0 var(--ink);padding:24px 28px;margin-bottom:32px;max-width:1660px}
+.spec h1{font-size:34px;font-weight:900;letter-spacing:-.5px}
+.spec h1 small{font-size:16px;font-weight:800;color:var(--muted);margin-left:10px}
+.spec .pitch{font-size:17px;font-weight:700;margin:6px 0 16px;color:var(--muted)}
+.spec dl{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 28px;font-size:14px;line-height:1.45}
+.spec dt{font-weight:900;text-transform:uppercase;font-size:12px;letter-spacing:1px;color:var(--coral-d)}
+.spec dd{font-weight:600}
+.sw{display:inline-block;width:14px;height:14px;border-radius:4px;border:2px solid var(--ink);vertical-align:-2px;margin-right:3px}
+.spec code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px}
+
+/* ------------------------------------------------------------------ phone */
+.row{display:flex;gap:28px;flex-wrap:wrap}
+.shot h2{font-size:15px;font-weight:900;margin:0 0 10px 6px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.phone{width:390px;height:844px;border-radius:44px;background:var(--cream);border:var(--line) solid var(--ink);box-shadow:0 8px 0 var(--ink);position:relative;overflow:hidden;isolation:isolate}
+.status{height:32px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-weight:800;font-size:14px}
+.status i{display:inline-block;width:22px;height:11px;border:2px solid currentColor;border-radius:3px;position:relative}
+.status i::after{content:"";position:absolute;inset:1px;right:4px;background:currentColor;border-radius:1px}
+.gesture{position:absolute;bottom:9px;left:50%;width:120px;height:5px;margin-left:-60px;border-radius:3px;background:var(--ink);opacity:.8;z-index:30}
+
+/* ------------------------------------------------------------------ shared pieces */
+.chip{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 12px;border:2px solid var(--ink);border-radius:999px;font-weight:800;font-size:13.5px;background:var(--paper)}
+.chip.sun{background:#FFE7A8}.chip.mint{background:#C9F5DD}.chip.sky{background:#CFE7FF}.chip.grape{background:#E4D8FF}.chip.coral{background:#FFD6CB}
+.btn3d{border:var(--line) solid var(--ink);border-radius:var(--r-m);font:900 17px var(--font);color:var(--ink);box-shadow:0 5px 0 var(--ink);display:flex;align-items:center;justify-content:center;gap:8px;min-height:56px}
+.avatar{border:var(--line) solid var(--ink);border-radius:50%;display:grid;place-items:center;font-weight:900;box-shadow:0 4px 0 var(--ink)}
+.ico{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.topbar{display:flex;align-items:center;gap:10px;padding:6px 16px 0 10px;height:64px}
+.iconbtn{width:48px;height:48px;border-radius:16px;display:grid;place-items:center}
+.ttl{flex:1;min-width:0}
+.ttl b{display:block;font-size:20px;font-weight:900;line-height:1.1}
+.ttl span{font-size:13px;font-weight:800;color:var(--muted)}
+
+/* energy (daily swipe cap as a game resource) */
+.energy{display:flex;align-items:center;gap:6px;height:44px;padding:0 12px 0 8px;border:var(--line) solid var(--ink);border-radius:999px;background:var(--paper);box-shadow:0 3px 0 var(--ink)}
+.energy .bolt{width:26px;height:26px;border-radius:50%;background:var(--sun);border:2px solid var(--ink);display:grid;place-items:center}
+.energy .bolt svg{width:15px;height:15px;fill:var(--ink);stroke:none}
+.energy b{font-size:17px;font-weight:900}
+.energy small{font-size:12px;font-weight:800;color:var(--muted)}
+
+/* ------------------------------------------------------------------ A: deck */
+.deck{position:absolute;left:20px;right:20px;top:110px;height:548px}
+.card{position:absolute;inset:0;background:var(--paper);border:var(--line) solid var(--ink);border-radius:var(--r-l);box-shadow:0 6px 0 var(--ink);overflow:hidden}
+.card.back{transform:translateY(16px) scale(.94);background:#DFF3FF;animation:backcard 6s var(--pop) infinite}
+.card.back .hd{background:var(--sky)}
+.card.top{transform:translateX(46px) rotate(6deg);transform-origin:50% 100%;animation:drag 6s cubic-bezier(.45,.05,.3,1) infinite;z-index:2}
+.hd{height:214px;background:var(--coral);position:relative;border-bottom:var(--line) solid var(--ink);
+    background-image:radial-gradient(rgba(255,255,255,.28) 2.5px,transparent 3px);background-size:18px 18px}
+.hd .avatar{position:absolute;left:24px;bottom:-46px;width:116px;height:116px;background:#FFE1D6;font-size:40px}
+.hd .kind{position:absolute;left:20px;top:18px}
+.hd .lvl{position:absolute;right:18px;top:16px;width:58px;height:64px;display:grid;place-items:center;background:var(--sun);border:var(--line) solid var(--ink);
+         clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);font-weight:900;font-size:13px;line-height:1;text-align:center}
+.hd .lvl-wrap{position:absolute;right:16px;top:14px;width:62px;height:68px;background:var(--ink);clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.hd .lvl-wrap .lvl{right:3px;top:3px;width:56px;height:62px;border:0}
+.lvl em{display:block;font-style:normal;font-size:22px}
+.bd{padding:56px 22px 0}
+.bd h3{font-size:30px;font-weight:900;letter-spacing:-.5px;line-height:1.05}
+.bd .sub{font-size:15px;font-weight:700;color:var(--muted);margin:4px 0 12px}
+.bd .chips{display:flex;flex-wrap:wrap;gap:8px}
+.bd p{font-size:16px;font-weight:700;line-height:1.4;margin:14px 0 12px}
+.lbl{font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:10px 0 6px}
+.stamp{position:absolute;top:70px;left:22px;z-index:3;font-size:40px;font-weight:900;letter-spacing:2px;padding:2px 14px;border:5px solid var(--mint-d);color:var(--mint-d);border-radius:14px;
+       transform:rotate(-14deg);background:rgba(255,255,255,.85);opacity:1;animation:stampLike 6s linear infinite}
+.stamp.nope{left:auto;right:20px;border-color:var(--coral-d);color:var(--coral-d);transform:rotate(14deg);opacity:0;animation-name:stampNope}
+.actions{position:absolute;left:0;right:0;top:690px;display:flex;justify-content:center;align-items:center;gap:28px}
+.round{border-radius:50%;width:76px;height:76px;min-height:0}
+.round.pass{background:var(--paper);color:var(--coral-d)}
+.round.like{width:88px;height:88px;background:var(--mint);animation:likePulse 6s var(--pop) infinite}
+.round .ico{width:34px;height:34px;stroke-width:3.4}
+.round.like .ico{fill:var(--ink);stroke:var(--ink)}
+.hint{position:absolute;top:796px;left:0;right:0;text-align:center;font-size:13px;font-weight:800;color:var(--muted)}
+@keyframes drag{
+  0%,6%{transform:translateX(0) rotate(0)}
+  26%,40%{transform:translateX(46px) rotate(6deg)}       /* mid-drag right: LIKE */
+  50%{transform:translateX(-10px) rotate(-1.2deg)}         /* spring back w/ overshoot */
+  56%{transform:translateX(0) rotate(0)}
+  72%,82%{transform:translateX(-46px) rotate(-6deg)}      /* drag left: NOPE */
+  92%{transform:translateX(8px) rotate(1deg)}
+  100%{transform:translateX(0) rotate(0)}}
+@keyframes stampLike{0%,8%{opacity:0;transform:rotate(-14deg) scale(1.4)}26%,40%{opacity:1;transform:rotate(-14deg) scale(1)}48%,100%{opacity:0}}
+@keyframes stampNope{0%,58%{opacity:0;transform:rotate(14deg) scale(1.4)}72%,82%{opacity:1;transform:rotate(14deg) scale(1)}90%,100%{opacity:0}}
+@keyframes backcard{0%,8%,48%,58%,90%,100%{transform:translateY(16px) scale(.94)}26%,40%,72%,82%{transform:translateY(8px) scale(.97)}}
+@keyframes likePulse{0%,20%,44%,100%{transform:scale(1)}30%,38%{transform:scale(1.1)}}
+
+/* ------------------------------------------------------------------ B: match */
+.matchbg{position:absolute;inset:0;background:var(--grape);overflow:hidden}
+.rays{position:absolute;left:50%;top:330px;width:1100px;height:1100px;margin:-550px 0 0 -550px;
+      background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.14) 0 10deg,transparent 10deg 20deg);animation:spin 18s linear infinite;border-radius:50%}
+.match{position:absolute;inset:0;color:var(--paper);text-align:center;z-index:1}
+.match .status{color:var(--paper)}
+.headline{margin-top:58px;font-size:52px;font-weight:900;line-height:.95;letter-spacing:-1px;color:var(--sun);
+          -webkit-text-stroke:3px var(--ink);paint-order:stroke fill;text-shadow:0 5px 0 var(--ink);animation:slam 3.6s var(--pop) infinite}
+.match .lead{font-size:17px;font-weight:800;margin-top:12px}
+.duo{position:relative;height:190px;margin-top:26px}
+.duo .avatar{position:absolute;top:24px;width:136px;height:136px;font-size:44px;color:var(--ink)}
+.duo .a1{left:58px;background:#FFE1D6;animation:inL 3.6s var(--pop) infinite}
+.duo .a2{right:58px;background:#CFE7FF;animation:inR 3.6s var(--pop) infinite}
+.duo .heart{position:absolute;left:50%;top:66px;width:62px;height:62px;margin-left:-31px;border-radius:50%;background:var(--coral);border:var(--line) solid var(--ink);display:grid;place-items:center;z-index:2;
+            box-shadow:0 4px 0 var(--ink);animation:heartPop 3.6s var(--pop) infinite}
+.duo .heart svg{width:30px;height:30px;fill:var(--paper);stroke:var(--ink);stroke-width:2}
+.rewards{margin:18px 24px 0;background:var(--paper);color:var(--ink);border:var(--line) solid var(--ink);border-radius:var(--r-l);box-shadow:0 6px 0 var(--ink);padding:14px 16px;text-align:left}
+.rw{display:flex;align-items:center;gap:12px;padding:8px 0}
+.rw + .rw{border-top:2px dashed var(--cloud)}
+.coin{width:44px;height:44px;border-radius:50%;background:var(--sun);border:var(--line) solid var(--ink);display:grid;place-items:center;font-weight:900;font-size:13px;flex:none;animation:coin 3.6s var(--pop) infinite}
+.coin.b{background:var(--mint);border-radius:12px;transform:rotate(45deg)}
+.coin.b svg{transform:rotate(-45deg);width:22px;height:22px}
+.rw b{font-size:17px;font-weight:900;display:block}
+.rw span{font-size:14px;font-weight:700;color:var(--muted)}
+.rw .amt{margin-left:auto;font-size:20px;font-weight:900;color:var(--mint-d)}
+.cta{position:absolute;left:24px;right:24px;top:676px;display:grid;gap:14px}
+.cta .wa{background:var(--mint)}
+.cta .ghost{background:transparent;color:var(--paper);border-color:var(--paper);box-shadow:0 5px 0 rgba(30,27,46,.6)}
+.confetti{position:absolute;inset:0;pointer-events:none;z-index:0}
+.confetti i{position:absolute;top:-20px;width:12px;height:18px;border:2px solid var(--ink);border-radius:3px;animation:fall 3.6s cubic-bezier(.2,.6,.4,1) infinite;opacity:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes slam{0%{transform:scale(2.2);opacity:0}12%{transform:scale(.92);opacity:1}18%,100%{transform:scale(1)}}
+@keyframes inL{0%,8%{transform:translateX(-200px) rotate(-30deg)}26%{transform:translateX(14px) rotate(6deg)}34%,100%{transform:translateX(0) rotate(-4deg)}}
+@keyframes inR{0%,8%{transform:translateX(200px) rotate(30deg)}26%{transform:translateX(-14px) rotate(-6deg)}34%,100%{transform:translateX(0) rotate(4deg)}}
+@keyframes heartPop{0%,26%{transform:scale(0)}36%{transform:scale(1.35)}44%,100%{transform:scale(1)}}
+@keyframes coin{0%,40%{transform:scale(0) rotate(-90deg)}52%{transform:scale(1.2)}60%,100%{transform:scale(1)}}
+@keyframes fall{0%,22%{opacity:0;transform:translate(0,0) rotate(0)}26%{opacity:1}100%{opacity:1;transform:translate(var(--dx),880px) rotate(var(--r))}}
+
+/* ------------------------------------------------------------------ C: profile */
+.scroll{position:absolute;top:32px;left:0;right:0;bottom:84px;overflow:hidden;padding:0 18px}
+.ph{display:flex;align-items:center;justify-content:space-between;height:56px}
+.ph b{font-size:26px;font-weight:900}
+.hero{display:flex;gap:16px;align-items:center;margin-top:4px}
+.hero .avatar{width:92px;height:92px;font-size:32px;background:#FFE1D6;flex:none}
+.hero h3{font-size:26px;font-weight:900;line-height:1.05}
+.hero span{font-size:14px;font-weight:700;color:var(--muted)}
+.xpcard{margin-top:16px;background:var(--paper);border:var(--line) solid var(--ink);border-radius:var(--r-m);box-shadow:0 5px 0 var(--ink);padding:14px 16px}
+.xptop{display:flex;align-items:center;gap:12px}
+.hex{width:54px;height:60px;background:var(--ink);clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);display:grid;place-items:center;flex:none}
+.hex span{width:48px;height:54px;background:var(--sun);clip-path:inherit;display:grid;place-items:center;font-weight:900;font-size:24px}
+.xptop b{font-size:18px;font-weight:900;display:block}
+.xptop small{font-size:13.5px;font-weight:700;color:var(--muted)}
+.xpnum{margin-left:auto;font-size:22px;font-weight:900;text-align:right;line-height:1}
+.xpnum small{display:block;font-size:12px}
+.count{--n:545;counter-reset:n var(--n)}
+.count::after{content:counter(n)}
+.bar{margin-top:12px;height:26px;border:var(--line) solid var(--ink);border-radius:999px;background:var(--cloud);overflow:hidden;position:relative}
+.bar .fill{--fill:72%;width:var(--fill);height:100%;background:var(--sun);border-right:var(--line) solid var(--ink);border-radius:999px;position:relative;
+           box-shadow:inset 0 -6px 0 var(--sun-d)}
+.bar .fill::after{content:"";position:absolute;left:10px;right:10px;top:4px;height:5px;border-radius:3px;background:rgba(255,255,255,.65)}
+.bar .ticks{position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 calc(20% - 2px),rgba(30,27,46,.25) calc(20% - 2px) 20%)}
+.anim .fill{animation:fillUp 5s var(--pop) infinite}
+.anim .count{animation:countUp 5s cubic-bezier(.2,.8,.2,1) infinite}
+@keyframes fillUp{0%,8%{--fill:0%}40%{--fill:76%}48%,100%{--fill:72%}}
+@keyframes countUp{0%,8%{--n:0}44%,100%{--n:545}}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.stat{background:var(--paper);border:var(--line) solid var(--ink);border-radius:var(--r-m);box-shadow:0 4px 0 var(--ink);padding:12px 14px;display:flex;align-items:center;gap:10px}
+.ring{width:50px;height:50px;border-radius:50%;background:conic-gradient(var(--mint) 0 92%,var(--cloud) 92% 100%);border:var(--line) solid var(--ink);display:grid;place-items:center;flex:none}
+.ring::after{content:"";width:28px;height:28px;border-radius:50%;background:var(--paper);border:2px solid var(--ink)}
+.stat b{font-size:22px;font-weight:900;display:block;line-height:1}
+.stat span{font-size:13px;font-weight:800;color:var(--muted)}
+.stack{display:flex}
+.stack .avatar{width:34px;height:34px;font-size:12px;border-width:2px;box-shadow:none;margin-left:-10px;background:#CFE7FF}
+.stack .avatar:first-child{margin-left:0;background:#FFE7A8}
+.sec{display:flex;justify-content:space-between;align-items:baseline;margin:18px 2px 10px}
+.sec b{font-size:18px;font-weight:900}.sec span{font-size:13px;font-weight:800;color:var(--muted)}
+.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.badge{position:relative;background:var(--paper);border:var(--line) solid var(--ink);border-radius:var(--r-m);box-shadow:0 4px 0 var(--ink);padding:12px 6px 10px;text-align:center;overflow:hidden}
+.badge .medal{width:56px;height:56px;margin:0 auto 6px;border-radius:50%;border:var(--line) solid var(--ink);display:grid;place-items:center}
+.badge .medal svg{width:28px;height:28px;stroke:var(--ink);stroke-width:2.6;fill:none}
+.badge b{font-size:13.5px;font-weight:900;display:block;line-height:1.15}
+.badge small{font-size:12px;font-weight:800;color:var(--muted)}
+.badge.locked{background:#F4F0E8;box-shadow:0 4px 0 #A9A3B6;border-color:#A9A3B6}
+.badge.locked .medal{background:#E3DDD1;border-color:#A9A3B6}
+.badge.locked .medal svg{stroke:#6F6A80}
+.badge.locked b{color:#4A4560}
+.mini{height:8px;border-radius:4px;background:#E3DDD1;margin:6px 10px 0;overflow:hidden}
+.mini i{display:block;height:100%;background:var(--grape);border-radius:4px}
+.badge .new{position:absolute;top:6px;right:6px;font-size:10px;font-weight:900;background:var(--coral);color:var(--paper);border:2px solid var(--ink);border-radius:6px;padding:0 5px;line-height:16px;animation:newPop 5s var(--pop) infinite}
+.badge.shine::after{content:"";position:absolute;top:-20%;bottom:-20%;width:40px;left:-60px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.95),transparent);transform:skewX(-20deg);animation:sweep 5s ease-in-out infinite}
+.badge.unlock{animation:unlock 5s var(--pop) infinite}
+@keyframes sweep{0%,52%{left:-60px}72%,100%{left:140%}}
+@keyframes unlock{0%,44%{transform:scale(1)}50%{transform:scale(.86) rotate(-4deg)}58%{transform:scale(1.1) rotate(3deg)}66%,100%{transform:scale(1) rotate(0)}}
+@keyframes newPop{0%,48%{transform:scale(0)}58%{transform:scale(1.3)}66%,100%{transform:scale(1)}}
+.nav{position:absolute;left:0;right:0;bottom:0;height:84px;background:var(--paper);border-top:var(--line) solid var(--ink);display:flex;padding:8px 6px 18px;z-index:10}
+.nav a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:900;color:var(--muted);border-radius:16px;min-height:52px}
+.nav a.on{color:var(--ink);background:#FFE7A8;border:2px solid var(--ink)}
+.nav .ico{width:24px;height:24px}
+
+/* ------------------------------------------------------------------ D: competitions */
+.hud{display:flex;gap:10px;margin:2px 0 14px}
+.comp{background:var(--paper);border:var(--line) solid var(--ink);border-radius:var(--r-l);box-shadow:0 6px 0 var(--ink);overflow:hidden;margin-bottom:18px}
+.comp .ch{padding:14px 16px 12px;background:var(--sky);border-bottom:var(--line) solid var(--ink);position:relative}
+.comp .ch .chip{position:absolute;right:14px;top:14px}
+.comp h3{font-size:22px;font-weight:900;line-height:1.1;padding-right:96px}
+.comp .ch p{font-size:14.5px;font-weight:700;margin-top:4px}
+.comp .cb{padding:14px 16px 16px}
+.cd{display:flex;gap:8px;align-items:flex-end}
+.cd div{width:58px;text-align:center}
+.cd b{display:block;height:50px;line-height:44px;border:var(--line) solid var(--ink);border-radius:12px;background:var(--ink);color:var(--sun);font-size:26px;font-weight:900;box-shadow:0 4px 0 #000;position:relative;overflow:hidden}
+.cd b::after{content:"";position:absolute;left:0;right:0;top:50%;height:2px;background:rgba(255,255,255,.18)}
+.cd small{font-size:11px;font-weight:900;color:var(--muted);letter-spacing:1px}
+.cd .sec-tile b{animation:flip 1s steps(1) infinite}
+.cdlbl{font-size:13px;font-weight:800;color:var(--muted);margin-bottom:8px}
+.slots{display:flex;align-items:center;gap:8px;margin-top:14px}
+.seat{width:38px;height:38px;border-radius:12px;border:var(--line) solid var(--ink);display:grid;place-items:center;font-size:12px;font-weight:900;background:#FFE1D6}
+.seat.empty{background:transparent;border-style:dashed;color:var(--muted)}
+.slots .meta{margin-left:6px;font-size:13.5px;font-weight:800;line-height:1.25}
+.slots .meta span{color:var(--muted);display:block}
+.comp .go{margin-top:14px;background:var(--coral);color:var(--ink)}
+.comp.ended .ch{background:#D9D3C7}
+.comp.ended .chip{background:#F4F0E8}
+.stagger > *{animation:rise 6s var(--pop) infinite;animation-delay:calc(var(--i) * 110ms)}
+@keyframes rise{0%{opacity:0;transform:translateY(40px) scale(.96)}12%,100%{opacity:1;transform:none}}
+@keyframes flip{0%{transform:rotateX(0)}50%{transform:rotateX(0)}}
+
+/* ------------------------------------------------------------------ reduced motion: everything rests on its representative frame */
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-9.2-9A5 5 0 0 1 12 6a5 5 0 0 1 9.2 5C19 15.6 12 20 12 20z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3 6"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 20l1.5-4A8 8 0 1 1 9 19.5z"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"/></symbol>
+</svg>
+
+<section class="spec">
+  <h1>Arcade <small>Direction 1 of 3</small></h1>
+  <p class="pitch">Chunky, outlined, tactile. Every surface looks pressable, every reward lands with a bounce. Duolingo energy for a campus crowd.</p>
+  <dl>
+    <div><dt>Palette</dt><dd>
+      <span class="sw" style="background:#1E1B2E"></span>Ink #1E1B2E (outlines, text) · <span class="sw" style="background:#FFF7EA"></span>Cream #FFF7EA (bg) ·
+      <span class="sw" style="background:#FF5A36"></span>Coral #FF5A36 (brand, kept from current app) · <span class="sw" style="background:#FFC233"></span>Sun #FFC233 (XP, energy) ·
+      <span class="sw" style="background:#2BD47D"></span>Mint #2BD47D (like, success) · <span class="sw" style="background:#3BA7FF"></span>Sky #3BA7FF (events) · <span class="sw" style="background:#8B5CF6"></span>Grape #8B5CF6 (match, badges) · Muted #5B5670.
+      Text is always Ink on bright fills (≥ 7:1). Never white on mint/sun.</dd></div>
+    <div><dt>Type</dt><dd>Nunito 700–900 (fallback system rounded). Scale: 52 display / 30 card name / 22 title / 17 body-bold / 15 body / 13 label caps +1 letter-spacing. Weight carries hierarchy; no light weights.</dd></div>
+    <div><dt>Shape</dt><dd>Radii 12 / 20 / 28, pills for chips. 3dp Ink outline on every container. Elevation = solid offset "ledge" (0 5dp 0 Ink), no blur shadows. Hex for level, circle medals for badges, dashed outline = empty slot.</dd></div>
+    <div><dt>Motion</dt><dd>Springy. Press: ledge collapses 5→1dp in 80 ms. Entrances: <code>spring(dampingRatio 0.5, stiffness Medium)</code> ≈ CSS <code>cubic-bezier(.34,1.56,.64,1)</code>, 350–500 ms. Rewards stack: headline slam → avatars collide → heart pop → coins, 120 ms apart. Background rays rotate 18 s linear.</dd></div>
+    <div><dt>Iconography</dt><dd>Rounded 2.6 stroke icons (Material Symbols Rounded, weight 700, grade 200). Filled heart for like. Icons sit inside outlined "stickers" when they represent rewards.</dd></div>
+    <div><dt>Inspired by</dt><dd>Duolingo (3D ledge buttons, XP chest, streak flame), Duolingo level-up / league promo screens, Tinder stamp overlays, chunky "neo-brutalist" Dribbble shots. See <code>../references.md</code> [Arcade].</dd></div>
+    <div><dt>Compose build</dt><dd>Ledge = two stacked <code>Box</code>es or <code>drawBehind</code> offset rect; press via <code>animateDpAsState</code>. Card drag: <code>Modifier.pointerInput</code> + <code>Animatable</code> offset, rotation = offset/20. Rays = <code>Canvas</code> + <code>rotate()</code>. Confetti = <code>Canvas</code> particle list driven by <code>withFrameNanos</code>. XP bar = <code>animateFloatAsState(spring)</code> + count via <code>animateIntAsState</code>. Shine = <code>Brush.linearGradient</code> with animated offset.</dd></div>
+    <div><dt>Android risk</dt><dd>Low. No blur anywhere. Text stroke on headline: use <code>drawText</code> twice (stroke style then fill) or <code>TextStyle(drawStyle = Stroke)</code> (Compose 1.5+). Confetti capped at ~40 particles.</dd></div>
+    <div><dt>A11y</dt><dd>Body text Ink on Cream 15:1, Muted on Cream 6.4:1. Touch targets ≥ 48dp (action buttons 76/88dp). Swipe actions mirrored by buttons. Reduced motion: no rays, no confetti, no tilt loop; rewards appear in final state.</dd></div>
+  </dl>
+</section>
+
+<div class="row">
+<!-- ============================================================ A: deck -->
+<div class="shot" data-t="2000"><h2>a · Swipe deck</h2>
+<div class="phone">
+  <div class="status"><span>14:20</span><i></i></div>
+  <div class="topbar">
+    <div class="iconbtn"><svg class="ico"><use href="#i-back"/></svg></div>
+    <div class="ttl"><b>Swipe</b><span>Campus Hackathon 2026</span></div>
+    <div class="energy" aria-label="23 of 30 swipes left today"><div class="bolt"><svg><use href="#i-bolt"/></svg></div><b>23</b><small>/30</small></div>
+  </div>
+  <div class="deck">
+    <div class="card back"><div class="hd"></div><div class="bd" style="padding-top:20px"><h3>Byte Club</h3></div></div>
+    <div class="card top">
+      <div class="stamp">LIKE</div><div class="stamp nope">NOPE</div>
+      <div class="hd">
+        <span class="chip kind sun">SOLO</span>
+        <div class="lvl-wrap"><div class="lvl">LV<em>4</em></div></div>
+        <div class="avatar">AP</div>
+      </div>
+      <div class="bd">
+        <h3>Ana Putri</h3>
+        <div class="sub">Computer Science · Year 3</div>
+        <div class="chips"><span class="chip mint"><svg class="ico" style="width:16px;height:16px"><use href="#i-shield"/></svg>92% reliable</span><span class="chip sun">545 XP</span><span class="chip grape">2 badges</span></div>
+        <p>Designs in Figma, ships in Kotlin, pitches on stage.</p>
+        <div class="lbl">Skills</div>
+        <div class="chips"><span class="chip sky">Figma</span><span class="chip sky">Kotlin</span><span class="chip sky">Pitching</span></div>
+        <div class="lbl">Roles</div>
+        <div class="chips"><span class="chip coral">Designer</span><span class="chip coral">Mobile</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="actions">
+    <div class="btn3d round pass" aria-label="Pass"><svg class="ico"><use href="#i-x"/></svg></div>
+    <div class="btn3d round like" aria-label="Like"><svg class="ico"><use href="#i-heart"/></svg></div>
+  </div>
+  <div class="hint">23 swipes left · refills at midnight</div>
+  <div class="gesture"></div>
+</div></div>
+
+<!-- ============================================================ B: match -->
+<div class="shot" data-t="2100"><h2>b · It's a match</h2>
+<div class="phone">
+  <div class="matchbg"><div class="rays"></div></div>
+  <div class="confetti" id="confetti"></div>
+  <div class="match">
+    <div class="status"><span>14:21</span><i></i></div>
+    <div class="headline">IT'S A<br>MATCH!</div>
+    <div class="lead">You and Byte Club both swiped right.</div>
+    <div class="duo">
+      <div class="avatar a1">AP</div>
+      <div class="heart"><svg><use href="#i-heart"/></svg></div>
+      <div class="avatar a2">BC</div>
+    </div>
+    <div class="rewards">
+      <div class="rw"><div class="coin">XP</div><div><b>First match</b><span>Your first mutual swipe</span></div><div class="amt">+25</div></div>
+      <div class="rw"><div class="coin" style="animation-delay:.12s">XP</div><div><b>Joined Byte Club</b><span>Team now 3 / 4</span></div><div class="amt">+100</div></div>
+      <div class="rw"><div class="coin b" style="animation-delay:.24s"><svg class="ico"><use href="#i-users"/></svg></div><div><b>Badge unlocked</b><span>First Team</span></div></div>
+    </div>
+    <div class="cta">
+      <div class="btn3d wa"><svg class="ico"><use href="#i-chat"/></svg>Message on WhatsApp</div>
+      <div class="btn3d ghost">Keep swiping</div>
+    </div>
+  </div>
+  <div class="gesture" style="background:#fff"></div>
+</div></div>
+
+<!-- ============================================================ C: profile -->
+<div class="shot" data-t="3300"><h2>c · Profile</h2>
+<div class="phone">
+  <div class="status"><span>14:22</span><i></i></div>
+  <div class="scroll anim">
+    <div class="ph"><b>Profile</b><div class="iconbtn" style="border:3px solid var(--ink);box-shadow:0 3px 0 var(--ink);background:#fff"><svg class="ico"><use href="#i-edit"/></svg></div></div>
+    <div class="hero">
+      <div class="avatar">AP</div>
+      <div><h3>Ana Putri</h3><span>Computer Science · Year 3</span><div class="chips" style="display:flex;gap:6px;margin-top:6px"><span class="chip sky">Figma</span><span class="chip sky">Kotlin</span><span class="chip sky">Pitching</span></div></div>
+    </div>
+    <div class="xpcard">
+      <div class="xptop">
+        <div class="hex"><span>4</span></div>
+        <div><b>Level 4 · Builder</b><small>55 XP to Level 5</small></div>
+        <div class="xpnum"><span class="count"></span><small>/ 600 XP</small></div>
+      </div>
+      <div class="bar"><div class="fill"></div><div class="ticks"></div></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="ring"></div><div><b>92%</b><span>Reliability</span></div></div>
+      <div class="stat"><div class="stack"><div class="avatar">BS</div><div class="avatar">CD</div></div><div><b>4</b><span>Endorsements</span></div></div>
+    </div>
+    <div class="sec"><b>Badges</b><span>2 of 5</span></div>
+    <div class="badges">
+      <div class="badge shine"><div class="medal" style="background:var(--mint)"><svg><use href="#i-users"/></svg></div><b>First Team</b><small>Unlocked</small></div>
+      <div class="badge shine unlock"><span class="new">NEW</span><div class="medal" style="background:var(--grape)"><svg style="stroke:#fff"><use href="#i-flag"/></svg></div><b>Finalist</b><small>Data Challenge</small></div>
+      <div class="badge locked"><div class="medal"><svg><use href="#i-shield"/></svg></div><b>Reliable</b><small>4 / 5</small><div class="mini"><i style="width:80%"></i></div></div>
+      <div class="badge locked"><div class="medal"><svg><use href="#i-trophy"/></svg></div><b>3 Hackathons</b><small>1 / 3</small><div class="mini"><i style="width:33%"></i></div></div>
+      <div class="badge locked"><div class="medal"><svg><use href="#i-star"/></svg></div><b>Winner</b><small>Win one</small></div>
+      <div class="badge locked"><div class="medal"><svg><use href="#i-lock"/></svg></div><b>???</b><small>Keep going</small></div>
+    </div>
+  </div>
+  <nav class="nav"><a><svg class="ico"><use href="#i-trophy"/></svg>Compete</a><a><svg class="ico"><use href="#i-heart"/></svg>Matches</a><a><svg class="ico"><use href="#i-users"/></svg>Teams</a><a class="on"><svg class="ico"><use href="#i-user"/></svg>Profile</a></nav>
+  <div class="gesture"></div>
+</div></div>
+
+<!-- ============================================================ D: competitions -->
+<div class="shot" data-t="1500"><h2>d · Competitions</h2>
+<div class="phone">
+  <div class="status"><span>14:22</span><i></i></div>
+  <div class="scroll stagger">
+    <div class="ph" style="--i:0"><b>Competitions</b></div>
+    <div class="hud" style="--i:1">
+      <div class="energy"><div class="bolt"><svg><use href="#i-bolt"/></svg></div><b>23</b><small>/30 today</small></div>
+      <div class="energy"><div class="bolt" style="background:var(--grape)"><svg style="fill:#fff"><use href="#i-star"/></svg></div><b>Lv 4</b><small>545 XP</small></div>
+    </div>
+    <div class="comp" style="--i:2">
+      <div class="ch"><span class="chip mint">● OPEN</span><h3>Campus Hackathon 2026</h3><p>48-hour hackathon on campus. Theme: tools for students.</p></div>
+      <div class="cb">
+        <div class="cdlbl">Registration closes 29 Oct</div>
+        <div class="cd" id="cd-arcade">
+          <div><b data-u="d">14</b><small>DAYS</small></div><div><b data-u="h">09</b><small>HRS</small></div><div><b data-u="m">41</b><small>MIN</small></div><div class="sec-tile"><b data-u="s">22</b><small>SEC</small></div>
+        </div>
+        <div class="slots">
+          <div class="seat">AP</div><div class="seat" style="background:#CFE7FF">GM</div><div class="seat" style="background:#FFE7A8">HW</div><div class="seat empty">+</div>
+          <div class="meta">Byte Club · 3 / 4<span>Teams of 2–4</span></div>
+        </div>
+        <div class="btn3d go"><svg class="ico"><use href="#i-heart"/></svg>Swipe · 6 solos waiting</div>
+      </div>
+    </div>
+    <div class="comp ended" style="--i:3">
+      <div class="ch"><span class="chip">ENDED</span><h3>Data Challenge 2026</h3><p>Finished 8 Oct · Teams of 2–3</p></div>
+      <div class="cb">
+        <div class="slots" style="margin-top:0">
+          <div class="seat">AP</div><div class="seat" style="background:#CFE7FF">BS</div><div class="seat" style="background:#FFE7A8">CD</div>
+          <div class="meta">Night Owls · 3 / 3<span>Finalist · 2 teammates to endorse</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <nav class="nav"><a class="on"><svg class="ico"><use href="#i-trophy"/></svg>Compete</a><a><svg class="ico"><use href="#i-heart"/></svg>Matches</a><a><svg class="ico"><use href="#i-users"/></svg>Teams</a><a><svg class="ico"><use href="#i-user"/></svg>Profile</a></nav>
+  <div class="gesture"></div>
+</div></div>
+</div>
+
+<script>
+// confetti pieces (CSS-animated; JS only seeds positions)
+const colors=["#FF5A36","#FFC233","#2BD47D","#3BA7FF","#FFFFFF"];
+const box=document.getElementById("confetti");
+for(let k=0;k<34;k++){const i=document.createElement("i");
+  i.style.left=(5+Math.random()*90)+"%";i.style.background=colors[k%colors.length];
+  i.style.setProperty("--dx",(Math.random()*120-60)+"px");i.style.setProperty("--r",(Math.random()*720-360)+"deg");
+  i.style.animationDelay=(Math.random()*.5)+"s";if(k%3==0){i.style.borderRadius="50%";i.style.width=i.style.height="12px"}
+  box.appendChild(i)}
+// live countdown from a fixed demo clock (15 Oct 2026 14:18:38) to 29 Oct 23:59:59
+const q=new URLSearchParams(location.search), freeze=q.has("still");
+let left=(14*86400)+(9*3600)+(41*60)+22;
+const pad=n=>String(n).padStart(2,"0");
+function tick(){const d=Math.floor(left/86400),h=Math.floor(left%86400/3600),m=Math.floor(left%3600/60),s=left%60;
+  document.querySelectorAll("[data-u]").forEach(b=>b.textContent=pad({d,h,m,s}[b.dataset.u]))}
+if(!freeze&&!matchMedia("(prefers-reduced-motion:reduce)").matches)setInterval(()=>{left--;tick()},1000);
+// ?only=a|b|c|d shows a single phone (used by index.html)
+const only=q.get("only");
+if(only){document.body.style.cssText="padding:12px 10px 20px;min-width:0";document.querySelector(".spec").remove();
+  document.querySelectorAll(".shot").forEach((s,k)=>{if("abcd"[k]!==only)s.remove();else s.querySelector("h2").remove()})}
+// ?still freezes each phone on its representative frame (data-t, ms) for PNG export
+if(freeze)addEventListener("load",()=>document.getAnimations().forEach(a=>{a.pause();a.currentTime=+(a.effect.target.closest(".shot")?.dataset.t||0)}));
+</script>
+</body>
+</html>
