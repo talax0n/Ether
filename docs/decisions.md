@@ -6,15 +6,15 @@ Operator granted full autonomy and went to sleep. Each entry: decision, why, and
 
 The run is finished only when all of these hold on the emulator against local Supabase (real backend, not fakes):
 
-- [ ] `supabase db reset` + `supabase test db` green
-- [ ] `./gradlew assembleDebug testDebugUnitTest` green
-- [ ] Maestro flow: sign in with email OTP (code read from Mailpit) → profile setup → pick competition → join solo → swipe deck
-- [ ] Maestro flow: two seeded accounts swipe right on each other → both see the match with the contact link → team formed
-- [ ] Create team → team listing appears in another user's deck
-- [ ] Endorse a teammate on the ended competition → XP, badge, and reliability score visible on the profile
-- [ ] Empty, loading, and error states render (no blank screens or crashes)
-- [ ] Screenshots and a screen recording of the full flow saved to `docs/demo/`
-- [ ] One-command demo start script (`scripts/demo.sh`): starts Supabase, boots the emulator, installs the app
+- [x] `supabase db reset` + `supabase test db` green
+- [x] `./gradlew assembleDebug testDebugUnitTest` green
+- [x] Maestro flow: sign in with email OTP (code read from Mailpit) → profile setup → pick competition → join solo → swipe deck
+- [x] Maestro flow: two seeded accounts swipe right on each other → both see the match with the contact link → team formed
+- [x] Create team → team listing appears in another user's deck
+- [x] Endorse a teammate on the ended competition → XP, badge, and reliability score visible on the profile
+- [x] Empty, loading, and error states render (no blank screens or crashes)
+- [x] Screenshots and a screen recording of the full flow saved to `docs/demo/`
+- [x] One-command demo start script (`scripts/demo.sh`): starts Supabase, boots the emulator, installs the app
 
 1. **Placeholder email domain `student.example.ac.id`.** The real university domain was not provided. To change it, update the `allowed_email_domain` row in `app_config`.
 2. **Local Supabase only (Docker).** No cloud credentials were provided. Moving to cloud means creating a project, running `supabase link` + `supabase db push`, and setting `SUPABASE_URL`/`SUPABASE_ANON_KEY`.
@@ -37,3 +37,6 @@ The run is finished only when all of these hold on the emulator against local Su
 19. **Track D merged (a306fb0).** The coordinator reran it: Maestro 5/5 flows green twice. The coordinator's cold-boot test of `demo.sh` found a **stale-session bug**: after a DB reset, the app trusted a token for a deleted account and showed profile setup. Fix: sign out when the profile row is missing, and `demo.sh` runs `pm clear` after reset. Done test-first (failing unit test, then the fix) and verified on the emulator. Unit tests 35/35, e2e 5/5 after the fix.
 20. **The BACK-exits-app report was not reproducible.** Track D tried many timings, and the flow now asserts the correct BACK sequence. Left open, unverified for edge-swipe gestures.
 21. **The GitHub remote `talax0n/Ether` is PUBLIC and empty.** A final GPT review checks for secrets and script safety before `main` is pushed.
+22. **Final GPT review: 5 findings.** Fixed: scripts could hit a remote backend (now refused, verified with fake remote URLs) or wipe a plugged-in phone (now emulator-only via `ANDROID_SERIAL`). Sign-out falls back to `clearSession()`. A personal-looking `t.me/theo` was replaced in the fake data. **Deferred:** a swipe can drop if the user leaves the deck within 220 ms of tapping Like, because the RPC starts after the fly-away animation. Low demo risk, and a delicate gesture change.
+23. **Not pushed to GitHub.** `talax0n/Ether` is public and every commit carries the operator's personal Gmail as author/committer. Pushing publishes it, so that call is left to the operator.
+24. **Final verification on `main`:** cold-boot `scripts/demo.sh` from the main checkout lands on sign-in. Unit 35/35, pgTAP 79/79, Maestro 5/5.
