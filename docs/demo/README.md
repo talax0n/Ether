@@ -22,6 +22,8 @@ Captured on the `ether` emulator (Android 16) running the debug build (Arcade UI
 | `15-swipe-cap.png` | The `swipe_cap_reached` error mapped to the daily-cap screen |
 | `16-error-email-domain.png` | A non-university email rejected at sign-up |
 | `17-error-registration-closed.png` | `registration_closed` from the database: Campus Hackathon's deadline was moved into the past after the screen loaded, then Rani tapped Join solo |
+| `18-dark-competitions.png` | The dark Arcade variant (system night mode) |
+| `19-dark-profile-reduced-motion.png` | Dark profile with animations off (`animator_duration_scale 0`), captured 0.6 s after opening the tab: the XP bar and count are already final. The account is the one `signin_and_onboard` created |
 | `ether-demo.mp4` | 86-second screen recording (720×1600) of the happy path as demo3: sign in with a Mailpit code, competitions, deck skeleton, drag two cards left (NOPE stamp), pass to Byte Club, drag right, match celebration with confetti, Keep swiping, Matches, Teams, and Profile with the XP bar filling. Sign-in is typed with `adb shell input`, the rest is driven by Maestro after `scripts/e2e-setup.sh` |
 
 **How the match was set up.** Byte Club's right swipe on Rani was created beforehand in SQL, by calling `swipe()` as demo7 (the team owner) under an `authenticated` JWT claim. Rani then swiped right on Byte Club in the app, and the database created the match.
