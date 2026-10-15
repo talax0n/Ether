@@ -96,34 +96,32 @@ private fun ProfileContent(summary: ProfileSummary, onSignOut: () -> Unit) {
                 listOfNotNull(p.major, p.year?.let { "Year $it" }).takeIf { it.isNotEmpty() }?.let {
                     Text(it.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = Arcade.colors.muted)
                 }
+                TagRow(p.skills, SkySoft, Modifier.padding(top = 6.dp), maxLines = 1)
             }
         }
         XpCard(p.xp, Modifier.staggerIn(1))
         Row(Modifier.staggerIn(2), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             val endorsements = summary.reliability.endorsements
-            StatCard("$endorsements", "Endorsements", Modifier.weight(1f)) {
+            StatCard("$endorsements", if (endorsements == 1) "Endorsement" else "Endorsements", Modifier.weight(1f)) {
                 ProgressRing(endorsements / RELIABLE_AT.toFloat())
             }
-            StatCard("${summary.badges.size}", "Badges", Modifier.weight(1f)) {
+            StatCard("${summary.badges.size}", if (summary.badges.size == 1) "Badge" else "Badges", Modifier.weight(1f)) {
                 Box(Modifier.size(50.dp).ledge(CircleShape, Grape, Arcade.colors.line, Arcade.colors.ledge, 0.dp), contentAlignment = Alignment.Center) {
                     Icon(ArcadeIcons.Star, contentDescription = null, tint = Paper, modifier = Modifier.size(26.dp))
                 }
             }
         }
+        BadgeGrid(summary, Modifier.staggerIn(3))
         if (p.bio.isNotBlank()) {
-            Column(Modifier.staggerIn(3), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.staggerIn(4), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SectionHeader("About")
                 Text(p.bio, style = MaterialTheme.typography.bodyLarge, color = text)
             }
         }
-        Column(Modifier.staggerIn(4), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SectionHeader("Skills")
-            TagRow(p.skills, SkySoft)
-            Spacer(Modifier.size(4.dp))
+        Column(Modifier.staggerIn(5), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SectionHeader("Roles")
             TagRow(p.roles, CoralSoft)
         }
-        BadgeGrid(summary, Modifier.staggerIn(5))
         LedgeButton(
             "Sign out", onSignOut, Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 20.dp),
             color = Color.Transparent, contentColor = text, icon = ArcadeIcons.Logout,

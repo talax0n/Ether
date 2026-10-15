@@ -167,12 +167,12 @@ private fun TeammateRow(mate: Teammate, eventEnded: Boolean, busy: Boolean, onEn
             Text(mate.name, style = MaterialTheme.typography.titleSmall, color = Arcade.colors.text)
             mate.contactUrl?.let { url ->
                 Row(
-                    Modifier.heightIn(min = 32.dp).clickable(role = Role.Button) { openContact(context, url) },
+                    Modifier.heightIn(min = 48.dp).clickable(role = Role.Button) { openContact(context, url) },
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Icon(ArcadeIcons.Chat, contentDescription = null, tint = Arcade.colors.muted, modifier = Modifier.size(16.dp))
-                    Text(contactLabel(url), style = MaterialTheme.typography.bodySmall, color = Arcade.colors.muted)
+                    Text(contactLabel(url).removePrefix("Message on "), style = MaterialTheme.typography.bodySmall, color = Arcade.colors.muted)
                 }
             }
         }

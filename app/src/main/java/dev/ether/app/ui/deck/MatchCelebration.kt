@@ -53,7 +53,6 @@ import dev.ether.app.ui.contactLabel
 import dev.ether.app.ui.openContact
 import dev.ether.app.ui.theme.Arcade
 import dev.ether.app.ui.theme.Coral
-import dev.ether.app.ui.theme.Grape
 import dev.ether.app.ui.theme.Ink
 import dev.ether.app.ui.theme.Mint
 import dev.ether.app.ui.theme.MintDeep
@@ -66,6 +65,9 @@ import dev.ether.app.ui.theme.SkySoft
 import dev.ether.app.ui.theme.Sun
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+// Grape a shade deeper than the mockup so white text over the rays keeps ~4.5:1.
+private val MatchGrape = Color(0xFF7A4AF0)
 
 private class Reward(val icon: ImageVector, val color: Color, val title: String, val detail: String, val amount: String?)
 
@@ -111,8 +113,8 @@ fun MatchCelebration(match: Match, onDismiss: () -> Unit) {
         launch { delay(1050); cta.animateTo(1f, Motion.settle()) }
     }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        Box(Modifier.fillMaxSize().background(Grape)) {
-            Rays(Modifier.fillMaxSize(), centerY = 0.36f)
+        Box(Modifier.fillMaxSize().background(MatchGrape)) {
+            Rays(Modifier.fillMaxSize(), color = Color.White.copy(alpha = 0.1f), centerY = 0.36f)
             Confetti(Modifier.fillMaxSize())
             Column(
                 Modifier.fillMaxSize().systemBarsPadding().padding(horizontal = 24.dp, vertical = 12.dp),
@@ -191,7 +193,7 @@ private fun Duo(match: Match, duo: () -> Float, heart: () -> Float) {
                     rotationZ = -30f + 26f * p
                 },
                 color = Peach,
-                label = "YOU",
+                label = "ME",
             )
             Avatar(
                 match.name, match.avatarUrl, 128.dp,

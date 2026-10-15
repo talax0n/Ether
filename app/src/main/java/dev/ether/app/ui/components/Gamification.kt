@@ -63,7 +63,6 @@ import dev.ether.app.ui.theme.Ink
 import dev.ether.app.ui.theme.Mint
 import dev.ether.app.ui.theme.Motion
 import dev.ether.app.ui.theme.NumberStyle
-import dev.ether.app.ui.theme.Paper
 import dev.ether.app.ui.theme.Sun
 import dev.ether.app.ui.theme.SunDeep
 import kotlinx.coroutines.delay
@@ -200,12 +199,13 @@ fun ProgressRing(progress: Float, modifier: Modifier = Modifier, size: Dp = 50.d
     LaunchedEffect(progress) { anim.animateTo(progress, tween(900, 200, FastOutSlowInEasing)) }
     val line = Arcade.colors.line
     val track = Arcade.colors.track
+    val hole = Arcade.colors.surface
     Canvas(modifier.size(size)) {
         val stroke = 3.dp.toPx()
         drawCircle(track)
         drawArc(color, -90f, 360f * anim.value, useCenter = true)
         drawCircle(line, radius = this.size.minDimension / 2 - stroke / 2, style = Stroke(stroke))
-        drawCircle(Paper, radius = this.size.minDimension * 0.28f)
+        drawCircle(hole, radius = this.size.minDimension * 0.28f)
         drawCircle(line, radius = this.size.minDimension * 0.28f, style = Stroke(2.dp.toPx()))
     }
 }
@@ -330,6 +330,8 @@ fun Countdown(deadline: Instant, modifier: Modifier = Modifier) {
     }
 }
 
+private const val TICK_MS = 220
+
 @Composable
 private fun CountdownTile(value: Int, label: String) {
     val reduced = Arcade.reducedMotion
@@ -350,7 +352,7 @@ private fun CountdownTile(value: Int, label: String) {
             } else {
                 AnimatedContent(
                     value,
-                    transitionSpec = { (slideInVertically { -it / 2 } + fadeIn()) togetherWith (slideOutVertically { it / 2 } + fadeOut()) },
+                    transitionSpec = { (slideInVertically(tween(TICK_MS)) { -it / 2 } + fadeIn(tween(TICK_MS))) togetherWith (slideOutVertically(tween(TICK_MS)) { it / 2 } + fadeOut(tween(TICK_MS / 2))) },
                     label = "tick",
                 ) { Text(it.toString().padStart(2, '0'), style = style, color = Sun) }
             }

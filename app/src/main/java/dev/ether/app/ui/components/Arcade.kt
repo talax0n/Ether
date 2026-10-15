@@ -42,11 +42,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.addOutline
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -94,7 +98,10 @@ fun Modifier.ledge(
     .drawBehind {
         if (ledge > 0.dp) {
             val outline = shape.createOutline(size, layoutDirection, this)
-            translate(top = ledge.toPx()) { drawOutline(outline, ledgeColor) }
+            // Only the part peeking out below the surface, so see-through (ghost) fills stay see-through.
+            clipPath(Path().apply { addOutline(outline) }, ClipOp.Difference) {
+                translate(top = ledge.toPx()) { drawOutline(outline, ledgeColor) }
+            }
         }
     }
     .graphicsLayer { translationY = depth() }
@@ -253,7 +260,7 @@ fun Avatar(
         if (url != null) {
             AsyncImage(url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.size(size))
         } else {
-            Text(label, color = Ink, style = MaterialTheme.typography.titleLarge.copy(fontSize = (size.value * (if (label.length > 2) 0.28f else 0.36f)).sp))
+            Text(label, color = Ink, style = MaterialTheme.typography.titleLarge.copy(fontSize = (size.value * (if (label.length > 2) 0.24f else 0.36f)).sp))
         }
     }
 }

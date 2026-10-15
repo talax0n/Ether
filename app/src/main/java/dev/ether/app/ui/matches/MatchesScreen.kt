@@ -100,22 +100,24 @@ private fun MatchRow(match: Match, modifier: Modifier) {
     val context = LocalContext.current
     val team = match.otherKind == ListingKind.TEAM
     LedgeCard(modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, ledge = 5.dp) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Avatar(match.name, match.avatarUrl, 52.dp, color = if (team) SkySoft else Peach, ledge = 3.dp)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(match.name, style = MaterialTheme.typography.titleMedium, color = Arcade.colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Chip(if (team) "Team" else "Solo", color = if (team) GrapeSoft else SunSoft)
-                    Text("matched ${match.createdAt.shortDate()}", style = MaterialTheme.typography.bodySmall, color = Arcade.colors.muted, maxLines = 1)
-                }
-                match.contactUrl?.let {
-                    Text(it.removePrefix("https://"), style = MaterialTheme.typography.bodySmall, color = Arcade.colors.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Avatar(match.name, match.avatarUrl, 52.dp, color = if (team) SkySoft else Peach, ledge = 3.dp)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(match.name, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.titleMedium, color = Arcade.colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Chip(if (team) "Team" else "Solo", color = if (team) GrapeSoft else SunSoft)
+                    }
+                    Text("Matched ${match.createdAt.shortDate()}", style = MaterialTheme.typography.bodySmall, color = Arcade.colors.muted, maxLines = 1)
+                    match.contactUrl?.let {
+                        Text(it.removePrefix("https://"), style = MaterialTheme.typography.bodySmall, color = Arcade.colors.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
             }
             match.contactUrl?.let { url ->
                 LedgeButton(
-                    contactLabel(url).removePrefix("Message on "), { openContact(context, url) },
-                    color = Mint, icon = ArcadeIcons.Chat, height = 44.dp, shape = RoundedCornerShape(14.dp),
+                    contactLabel(url).removePrefix("Message on "), { openContact(context, url) }, Modifier.fillMaxWidth(),
+                    color = Mint, icon = ArcadeIcons.Chat, height = 48.dp, shape = RoundedCornerShape(14.dp),
                 )
             }
         }

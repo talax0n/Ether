@@ -1,7 +1,6 @@
 package dev.ether.app.ui.competitions
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,6 +42,7 @@ import dev.ether.app.ui.components.SectionHeader
 import dev.ether.app.ui.components.Seats
 import dev.ether.app.ui.components.Tone
 import dev.ether.app.ui.components.initials
+import dev.ether.app.ui.components.ledge
 import dev.ether.app.ui.components.staggerIn
 import dev.ether.app.ui.dayMonth
 import dev.ether.app.ui.openContact
@@ -104,7 +104,7 @@ private fun CompetitionInfo(c: Competition, modifier: Modifier) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(ArcadeIcons.Calendar, contentDescription = null, tint = Arcade.colors.text, modifier = Modifier.size(20.dp))
                 Text(
-                    "Event ends ${c.eventEnd.shortDate()} · Teams of ${c.minTeamSize}–${c.maxTeamSize}",
+                    "Event ${if (status == EventStatus.ENDED) "ended" else "ends"} ${c.eventEnd.shortDate()} · Teams of ${c.minTeamSize}–${c.maxTeamSize}",
                     style = MaterialTheme.typography.titleSmall, color = Arcade.colors.text,
                 )
             }
@@ -140,7 +140,14 @@ private fun ListingActions(
         return
     }
     if (listing == null && !state.registrationOpen) {
-        Text("Registration has closed. Nothing new can form in this competition.", style = MaterialTheme.typography.titleMedium, color = text)
+        Row(
+            Modifier.fillMaxWidth().ledge(MaterialTheme.shapes.medium, Arcade.colors.locked, Arcade.colors.lockedLine, Arcade.colors.lockedLine, 4.dp).padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Icon(ArcadeIcons.Lock, contentDescription = null, tint = Arcade.colors.muted, modifier = Modifier.size(28.dp))
+            Text("Registration has closed. Nothing new can form in this competition.", style = MaterialTheme.typography.titleMedium, color = text)
+        }
         return
     }
     if (listing == null) {
