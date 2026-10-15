@@ -11,21 +11,19 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,11 +36,12 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
@@ -50,21 +49,39 @@ import androidx.compose.ui.input.pointer.util.addPointerInputChange
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.ether.app.R
 import dev.ether.app.domain.DeckCard
 import dev.ether.app.domain.SwipeDirection
-import dev.ether.app.ui.Avatar
-import dev.ether.app.ui.TagRow
-import dev.ether.app.ui.theme.LikeGreen
-import dev.ether.app.ui.theme.NopeRed
+import dev.ether.app.domain.levelFor
+import dev.ether.app.ui.components.ArcadeIcons
+import dev.ether.app.ui.components.Avatar
+import dev.ether.app.ui.components.CapsLabel
+import dev.ether.app.ui.components.Chip
+import dev.ether.app.ui.components.LevelHex
+import dev.ether.app.ui.components.LineWidth
+import dev.ether.app.ui.components.TagRow
+import dev.ether.app.ui.components.ledge
+import dev.ether.app.ui.components.pressableLedge
+import dev.ether.app.ui.theme.Arcade
+import dev.ether.app.ui.theme.Coral
+import dev.ether.app.ui.theme.CoralDeep
+import dev.ether.app.ui.theme.CoralSoft
+import dev.ether.app.ui.theme.GrapeSoft
+import dev.ether.app.ui.theme.Ink
+import dev.ether.app.ui.theme.Mint
+import dev.ether.app.ui.theme.MintDeep
+import dev.ether.app.ui.theme.MintSoft
+import dev.ether.app.ui.theme.Peach
+import dev.ether.app.ui.theme.Sky
+import dev.ether.app.ui.theme.SkySoft
+import dev.ether.app.ui.theme.SunSoft
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -74,7 +91,8 @@ import kotlin.math.sign
 private const val COMMIT_FRACTION = 0.35f
 private const val MAX_ROTATION_DEG = 14f
 private val FlingVelocity = 1100.dp
-private const val NEXT_CARD_SCALE = 0.93f
+private const val NEXT_CARD_SCALE = 0.94f
+private val NEXT_CARD_DROP = 16.dp
 
 private class SwipeCardState {
     val offset = Animatable(Offset.Zero, Offset.VectorConverter)
@@ -120,16 +138,18 @@ fun SwipeDeck(
         }
     }
 
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (next != null) key(next.listingId) {
                 CardFace(
                     next,
                     stampProgress = { 0f },
                     modifier = Modifier.fillMaxSize().graphicsLayer {
-                        val scale = NEXT_CARD_SCALE + (1f - NEXT_CARD_SCALE) * abs(state.progress)
+                        val p = abs(state.progress)
+                        val scale = NEXT_CARD_SCALE + (1f - NEXT_CARD_SCALE) * p
                         scaleX = scale
                         scaleY = scale
+                        translationY = (1f - p) * NEXT_CARD_DROP.toPx()
                     },
                 )
             }
@@ -186,122 +206,165 @@ fun SwipeDeck(
                 )
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(40.dp, Alignment.CenterHorizontally)) {
-            FilledIconButton(
-                onClick = { commit(SwipeDirection.LEFT) },
-                enabled = enabled,
-                modifier = Modifier.size(68.dp).testTag("pass"),
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    contentColor = NopeRed,
-                ),
-            ) { Icon(painterResource(R.drawable.ic_close), "Pass on ${top.name}", Modifier.size(32.dp)) }
-            FilledIconButton(
-                onClick = { commit(SwipeDirection.RIGHT) },
-                enabled = enabled,
-                modifier = Modifier.size(68.dp).testTag("like"),
-                colors = IconButtonDefaults.filledIconButtonColors(containerColor = LikeGreen, contentColor = Color.White),
-            ) { Icon(painterResource(R.drawable.ic_favorite), "Like ${top.name}", Modifier.size(32.dp)) }
-        }
-    }
-}
-
-@Composable
-private fun CardFace(card: DeckCard, stampProgress: () -> Float, modifier: Modifier = Modifier) {
-    Card(
-        modifier,
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-    ) {
-        Box(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxSize()) {
-                CardHeader(card)
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    when (card) {
-                        is DeckCard.Solo -> SoloBody(card)
-                        is DeckCard.Team -> TeamBody(card)
-                    }
-                }
-            }
-            Stamp("LIKE", LikeGreen, -16f, Modifier.align(Alignment.TopStart)) { stampProgress().coerceAtLeast(0f) }
-            Stamp("NOPE", NopeRed, 16f, Modifier.align(Alignment.TopEnd)) { (-stampProgress()).coerceAtLeast(0f) }
-        }
-    }
-}
-
-@Composable
-private fun CardHeader(card: DeckCard) {
-    val scheme = MaterialTheme.colorScheme
-    val brush = when (card) {
-        is DeckCard.Solo -> Brush.linearGradient(listOf(scheme.primary, scheme.tertiary))
-        is DeckCard.Team -> Brush.linearGradient(listOf(scheme.secondary, scheme.primary))
-    }
-    Box(Modifier.fillMaxWidth().height(170.dp).background(brush), contentAlignment = Alignment.Center) {
-        Avatar(card.name, card.avatarUrl, 104.dp)
-        Surface(
-            shape = RoundedCornerShape(50),
-            color = Color.Black.copy(alpha = 0.35f),
-            contentColor = Color.White,
-            modifier = Modifier.align(Alignment.BottomStart).padding(14.dp),
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                if (card is DeckCard.Team) "TEAM" else "SOLO",
-                Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
+            // Each button swells as the card is dragged towards it; read in the draw phase.
+            RoundAction(
+                ArcadeIcons.Close, "Pass on ${top.name}", { commit(SwipeDirection.LEFT) }, enabled,
+                size = 72.dp, color = Arcade.colors.surface, tint = CoralDeep, swell = { (-state.progress).coerceAtLeast(0f) },
+                modifier = Modifier.testTag("pass"),
+            )
+            RoundAction(
+                ArcadeIcons.HeartFilled, "Like ${top.name}", { commit(SwipeDirection.RIGHT) }, enabled,
+                size = 84.dp, color = Mint, tint = Ink, swell = { state.progress.coerceAtLeast(0f) },
+                modifier = Modifier.testTag("like"),
             )
         }
     }
 }
 
 @Composable
-private fun SoloBody(card: DeckCard.Solo) {
-    Text(card.name, style = MaterialTheme.typography.headlineSmall)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Pill("${card.xp} XP")
-        Pill(card.reliability.label)
+private fun RoundAction(
+    icon: ImageVector,
+    description: String,
+    onClick: () -> Unit,
+    enabled: Boolean,
+    size: Dp,
+    color: Color,
+    tint: Color,
+    swell: () -> Float,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier
+            .graphicsLayer {
+                val s = 1f + 0.12f * swell()
+                scaleX = s
+                scaleY = s
+            }
+            .size(size + 5.dp)
+            .pressableLedge(CircleShape, color, 5.dp, onClick, enabled)
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(size * 0.42f)) }
+}
+
+private val HeaderHeight = 156.dp
+private val AvatarSize = 104.dp
+
+@Composable
+private fun CardFace(card: DeckCard, stampProgress: () -> Float, modifier: Modifier = Modifier) {
+    val team = card is DeckCard.Team
+    val xp = when (card) {
+        is DeckCard.Solo -> card.xp
+        is DeckCard.Team -> card.xp
     }
-    Text(card.headline, maxLines = 4, overflow = TextOverflow.Ellipsis)
-    TagRow(card.roles, container = MaterialTheme.colorScheme.tertiaryContainer)
-    TagRow(card.skills)
+    Box(modifier.ledge(MaterialTheme.shapes.large, Arcade.colors.surface, 6.dp)) {
+        Column(Modifier.fillMaxSize()) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(HeaderHeight)
+                    .background(if (team) Sky else Coral)
+                    .drawBehind {
+                        // Halftone dots, the mockup's radial-gradient pattern.
+                        val step = 18.dp.toPx()
+                        val r = 2.5.dp.toPx()
+                        val dot = Color.White.copy(alpha = 0.28f)
+                        var y = step / 2
+                        while (y < size.height) {
+                            var x = step / 2
+                            while (x < size.width) {
+                                drawCircle(dot, r, Offset(x, y))
+                                x += step
+                            }
+                            y += step
+                        }
+                        drawRect(Ink, Offset(0f, size.height - LineWidth.toPx()), androidx.compose.ui.geometry.Size(size.width, LineWidth.toPx()))
+                    },
+            ) {
+                Chip(if (team) "TEAM" else "SOLO", Modifier.align(Alignment.TopStart).padding(16.dp), color = if (team) GrapeSoft else SunSoft)
+                LevelHex(levelFor(xp).number, Modifier.align(Alignment.TopEnd).padding(14.dp), width = 56.dp, caption = true)
+            }
+            Column(
+                Modifier.padding(start = 22.dp, end = 22.dp, top = AvatarSize / 2 + 8.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                when (card) {
+                    is DeckCard.Solo -> SoloBody(card)
+                    is DeckCard.Team -> TeamBody(card)
+                }
+            }
+        }
+        Avatar(
+            card.name, card.avatarUrl, AvatarSize,
+            Modifier.offset(x = 22.dp, y = HeaderHeight - AvatarSize / 2 - 4.dp),
+            color = if (team) SkySoft else Peach,
+        )
+        Stamp("LIKE", MintDeep, -14f, Modifier.align(Alignment.TopStart).padding(start = 20.dp, top = 62.dp)) { stampProgress().coerceAtLeast(0f) }
+        Stamp("NOPE", CoralDeep, 14f, Modifier.align(Alignment.TopEnd).padding(end = 20.dp, top = 62.dp)) { (-stampProgress()).coerceAtLeast(0f) }
+    }
+}
+
+@Composable
+private fun Name(text: String) {
+    Text(text, style = MaterialTheme.typography.headlineLarge, color = Arcade.colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Stats(xp: Int, reliability: String, extra: String) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), maxLines = 1) {
+        Chip(reliability, color = MintSoft, icon = ArcadeIcons.Shield)
+        Chip("$xp XP", color = SunSoft, numeric = true)
+        Chip(extra, color = GrapeSoft)
+    }
+}
+
+@Composable
+private fun SoloBody(card: DeckCard.Solo) {
+    Name(card.name)
+    Stats(card.xp, card.reliability.label, levelFor(card.xp).title)
+    Text(card.headline, style = MaterialTheme.typography.bodyLarge, color = Arcade.colors.text, maxLines = 3, overflow = TextOverflow.Ellipsis)
+    CapsLabel("Skills")
+    TagRow(card.skills, SkySoft, maxLines = 1)
+    CapsLabel("Roles")
+    TagRow(card.roles, CoralSoft, maxLines = 1)
 }
 
 @Composable
 private fun TeamBody(card: DeckCard.Team) {
-    Text(card.name, style = MaterialTheme.typography.headlineSmall)
-    Text(if (card.memberCount == 1) "1 member" else "${card.memberCount} members", color = MaterialTheme.colorScheme.onSurfaceVariant)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Pill("${card.xp} XP")
-        Pill(card.reliability.label)
-    }
-    Text(card.pitch, maxLines = 5, overflow = TextOverflow.Ellipsis)
-    Spacer(Modifier.height(4.dp))
-    Text("Looking for", style = MaterialTheme.typography.titleSmall)
-    TagRow(card.openRoles, container = MaterialTheme.colorScheme.tertiaryContainer)
-}
-
-@Composable
-private fun Pill(text: String) {
-    Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.primaryContainer) {
-        Text(text, Modifier.padding(horizontal = 10.dp, vertical = 4.dp), style = MaterialTheme.typography.labelMedium)
-    }
+    Name(card.name)
+    Stats(card.xp, card.reliability.label, if (card.memberCount == 1) "1 member" else "${card.memberCount} members")
+    Text(card.pitch, style = MaterialTheme.typography.bodyLarge, color = Arcade.colors.text, maxLines = 4, overflow = TextOverflow.Ellipsis)
+    CapsLabel("Looking for")
+    TagRow(card.openRoles, CoralSoft, maxLines = 2)
 }
 
 @Composable
 private fun Stamp(text: String, color: Color, rotation: Float, modifier: Modifier, alpha: () -> Float) {
+    val shape = RoundedCornerShape(14.dp)
     Text(
         text,
         color = color,
         fontSize = 40.sp,
-        fontWeight = FontWeight.Black,
+        letterSpacing = 2.sp,
+        style = MaterialTheme.typography.displayMedium,
         modifier = modifier
-            .padding(top = 36.dp, start = 24.dp, end = 24.dp)
             .graphicsLayer {
-                this.alpha = alpha()
+                val a = alpha()
+                this.alpha = a
                 rotationZ = rotation
+                // Lands like a rubber stamp: starts big, settles to 1 as the drag nears the commit line.
+                val s = 1.4f - 0.4f * a
+                scaleX = s
+                scaleY = s
             }
-            .border(4.dp, color, RoundedCornerShape(8.dp))
-            .padding(horizontal = 12.dp, vertical = 2.dp),
+            .background(Color.White.copy(alpha = 0.85f), shape)
+            .border(5.dp, color, shape)
+            .padding(horizontal = 14.dp, vertical = 0.dp),
     )
 }

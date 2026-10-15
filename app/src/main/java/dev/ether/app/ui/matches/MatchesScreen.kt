@@ -4,41 +4,48 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.ether.app.R
 import dev.ether.app.domain.ListingKind
 import dev.ether.app.domain.Match
-import dev.ether.app.ui.Avatar
-import dev.ether.app.ui.LoadingBox
-import dev.ether.app.ui.MessageBox
+import dev.ether.app.ui.components.ArcadeIcons
+import dev.ether.app.ui.components.ArcadeTopBar
+import dev.ether.app.ui.components.Avatar
+import dev.ether.app.ui.components.Chip
+import dev.ether.app.ui.components.LedgeButton
+import dev.ether.app.ui.components.LedgeCard
+import dev.ether.app.ui.components.LoadingBox
+import dev.ether.app.ui.components.MessageBox
+import dev.ether.app.ui.components.ScreenHeader
+import dev.ether.app.ui.components.SectionHeader
+import dev.ether.app.ui.components.Tone
+import dev.ether.app.ui.components.staggerIn
 import dev.ether.app.ui.contactLabel
 import dev.ether.app.ui.openContact
 import dev.ether.app.ui.shortDate
+import dev.ether.app.ui.theme.Arcade
+import dev.ether.app.ui.theme.GrapeSoft
+import dev.ether.app.ui.theme.Mint
+import dev.ether.app.ui.theme.Peach
+import dev.ether.app.ui.theme.SkySoft
+import dev.ether.app.ui.theme.SunSoft
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MatchesScreen(
     competitionId: String?,
@@ -53,35 +60,34 @@ fun MatchesScreen(
         vm.load()
         onPauseOrDispose {}
     }
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Matches") },
-                navigationIcon = {
-                    onBack?.let { IconButton(onClick = it) { Icon(painterResource(R.drawable.ic_arrow_back), "Back") } }
-                },
-            )
-        },
-    ) { padding ->
+    Column(Modifier.fillMaxSize()) {
+        if (onBack == null) ScreenHeader("Matches") else ArcadeTopBar("Matches", onBack = onBack)
         when (val s = state) {
-            MatchesUiState.Loading -> LoadingBox(Modifier.padding(padding))
-            is MatchesUiState.Failed -> MessageBox(s.message, Modifier.padding(padding), "Retry", vm::load)
+            MatchesUiState.Loading -> LoadingBox()
+            is MatchesUiState.Failed -> MessageBox(s.message, action = "Retry", tone = Tone.ERROR, onAction = vm::load)
             is MatchesUiState.Loaded ->
                 if (s.isEmpty) {
-                    MessageBox("No matches yet. Swipe right in a competition and they'll show up here.", Modifier.padding(padding))
+                    MessageBox(
+                        "No matches yet. Swipe right in a competition and they'll show up here.",
+                        tone = Tone.EMPTY, icon = ArcadeIcons.Heart,
+                    )
                 } else {
                     LazyColumn(
-                        Modifier.padding(padding),
-                        contentPadding = PaddingValues(16.dp),
+                        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 24.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
+                        var index = 0
                         s.sections.forEach { section ->
                             if (competitionId == null) {
+                                val i = index++
                                 item(key = section.competitionName) {
-                                    Text(section.competitionName, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                                    SectionHeader(section.competitionName, Modifier.staggerIn(i), trailing = "${section.matches.size}")
                                 }
                             }
-                            items(section.matches, key = { it.id.value }) { MatchRow(it) }
+                            section.matches.forEach { match ->
+                                val i = index++
+                                item(key = match.id.value) { MatchRow(match, Modifier.staggerIn(i)) }
+                            }
                         }
                     }
                 }
@@ -90,22 +96,27 @@ fun MatchesScreen(
 }
 
 @Composable
-private fun MatchRow(match: Match) {
+private fun MatchRow(match: Match, modifier: Modifier) {
     val context = LocalContext.current
-    Card(Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Avatar(match.name, match.avatarUrl, 52.dp)
-            Column(Modifier.weight(1f)) {
-                Text(match.name, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "${if (match.otherKind == ListingKind.TEAM) "Team" else "Solo"} · matched ${match.createdAt.shortDate()}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                match.contactUrl?.let { Text(it.removePrefix("https://"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
+    val team = match.otherKind == ListingKind.TEAM
+    LedgeCard(modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, ledge = 5.dp) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Avatar(match.name, match.avatarUrl, 52.dp, color = if (team) SkySoft else Peach, ledge = 3.dp)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(match.name, style = MaterialTheme.typography.titleMedium, color = Arcade.colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Chip(if (team) "Team" else "Solo", color = if (team) GrapeSoft else SunSoft)
+                    Text("matched ${match.createdAt.shortDate()}", style = MaterialTheme.typography.bodySmall, color = Arcade.colors.muted, maxLines = 1)
+                }
+                match.contactUrl?.let {
+                    Text(it.removePrefix("https://"), style = MaterialTheme.typography.bodySmall, color = Arcade.colors.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
             }
             match.contactUrl?.let { url ->
-                FilledTonalButton(onClick = { openContact(context, url) }) { Text(contactLabel(url).removePrefix("Message on ")) }
+                LedgeButton(
+                    contactLabel(url).removePrefix("Message on "), { openContact(context, url) },
+                    color = Mint, icon = ArcadeIcons.Chat, height = 44.dp, shape = RoundedCornerShape(14.dp),
+                )
             }
         }
     }

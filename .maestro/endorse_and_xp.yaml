@@ -42,6 +42,9 @@ name: Endorse, report Winner, teammate confirms, XP and badge show
 - extendedWaitUntil:
     visible: "530"
     timeout: 10000
+# Locked badges are listed too, so assert the unlocked tiles by their test tags.
 - scrollUntilVisible:
-    element: "Winner"
-- assertVisible: "First Team"
+    element:
+      id: "badge-unlocked Winner"
+- assertVisible:
+    id: "badge-unlocked First Team"
