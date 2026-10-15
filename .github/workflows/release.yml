@@ -1,0 +1,68 @@
+name: Release APK
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to create the release under (e.g. v0.2.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Unit tests
+        run: ./gradlew :app:testDebugUnitTest
+
+      - name: Build signed release APK
+        env:
+          # Hosted backend if these secrets exist; otherwise the app runs on its built-in demo data.
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          ALLOWED_EMAIL_DOMAIN: ${{ secrets.ALLOWED_EMAIL_DOMAIN || 'student.example.ac.id' }}
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          RELEASE_KEY_ALIAS: ether
+        run: |
+          [ -n "$RELEASE_KEYSTORE_BASE64" ] || { echo "::error::RELEASE_KEYSTORE_BASE64 secret is missing"; exit 1; }
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          export RELEASE_KEYSTORE="$RUNNER_TEMP/release.jks"
+          export VERSION_NAME="${TAG#v}" VERSION_CODE="${{ github.run_number }}"
+          [ -n "$SUPABASE_ANON_KEY" ] || export SUPABASE_URL=https://demo.invalid
+          ./gradlew :app:assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk "ether-$TAG.apk"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -n "${{ secrets.SUPABASE_ANON_KEY }}" ]; then
+            backend="Connects to the hosted Supabase backend."
+          else
+            backend="**Demo mode:** runs on built-in sample data with no server. Sign in with any email and the code \`123456\`."
+          fi
+          notes="Download \`ether-$TAG.apk\` below and open it on an Android 8.0+ phone (allow installs from your browser or file manager when asked).
+
+          $backend"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "ether-$TAG.apk" --clobber
+          else
+            gh release create "$TAG" "ether-$TAG.apk" --title "Ether $TAG" --notes "$notes" --target "$GITHUB_SHA"
+          fi

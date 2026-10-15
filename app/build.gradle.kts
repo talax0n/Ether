@@ -29,8 +29,9 @@ android {
         applicationId = "dev.ether.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        // CI sets these from the run number and the git tag.
+        versionCode = config("VERSION_CODE", "1").toInt()
+        versionName = config("VERSION_NAME", "0.1.0")
 
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
@@ -38,9 +39,21 @@ android {
         buildConfigField("boolean", "USE_FAKE_BACKEND", useFakeBackend.toString())
     }
 
+    // Release signing comes from the environment (CI secrets); without it, release builds stay unsigned.
+    val keystore = config("RELEASE_KEYSTORE", "")
+    signingConfigs {
+        if (keystore.isNotBlank()) create("release") {
+            storeFile = file(keystore)
+            storePassword = config("RELEASE_KEYSTORE_PASSWORD", "")
+            keyAlias = config("RELEASE_KEY_ALIAS", "ether")
+            keyPassword = config("RELEASE_KEY_PASSWORD", "")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 

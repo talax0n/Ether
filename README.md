@@ -199,6 +199,14 @@ scripts/           demo.sh, e2e.sh, e2e-setup.sh
 docs/              decisions log, design research and mockups, demo screenshots
 ```
 
+## Download
+
+Get the latest APK from **[Releases](https://github.com/talax0n/Ether/releases/latest)** and open it on an Android 8.0+ phone. Allow installs from your browser or file manager when asked.
+
+Release builds run in **demo mode** on built-in sample data: sign in with any email and the code `123456`. To point releases at a hosted Supabase instead, add the `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `ALLOWED_EMAIL_DOMAIN` repo secrets.
+
+**Publishing a release:** push a tag (`git tag v0.2.0 && git push origin v0.2.0`), or run the *Release APK* workflow from the Actions tab. [`release.yml`](.github/workflows/release.yml) runs the unit tests, builds an APK signed with the release key (stored in repo secrets), and attaches it to a GitHub Release.
+
 ## Getting started
 
 **Requirements:** macOS or Linux, Docker, the [Supabase CLI](https://supabase.com/docs/guides/cli), JDK 17, and the Android SDK (platform 36 and an emulator image).
