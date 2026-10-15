@@ -12,7 +12,12 @@ name: Sign in with a new address and set up a profile
     visible: "Save"
     timeout: 15000
 - tapOn: "Name"
+# The signup trigger prefills the name with the email's local part and the tap lands mid-text.
+# Move the cursor to the end so the erase clears all of it, then type the real name.
+- pressKey: Remote Dpad Down
+- eraseText: 60
 - inputText: "Rani Maestro"
+- assertVisible: "Rani Maestro"
 - tapOn: "Major"
 - inputText: "Informatics"
 - tapOn: "Year (1-10)"
