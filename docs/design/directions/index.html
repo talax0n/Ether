@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ether · Three UI directions</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:#E9E7E1;color:#141414;padding:32px;min-width:1400px}
+header{max-width:1290px;margin:0 auto 24px}
+h1{font-size:30px;letter-spacing:-.5px}
+header p{color:#55554F;max-width:820px;margin-top:6px}
+.grid{display:grid;grid-template-columns:80px repeat(3,410px);gap:0 20px;max-width:1310px;margin:0 auto;align-items:start}
+.col{border-radius:18px;padding:16px 18px;margin-bottom:12px}
+.col h2{font-size:20px}
+.col p{font-size:13.5px;margin:2px 0 8px}
+.col a{font-size:13px;font-weight:600;color:inherit}
+.c1{background:#FFF7EA;border:3px solid #1E1B2E;box-shadow:0 4px 0 #1E1B2E}
+.c2{background:#12122A;color:#EDEBFF;border:1px solid #2A2A48}
+.c3{background:#FAFAF7;border:1px solid #D6D3C9}
+.lbl{position:sticky;top:20px;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#55554F;padding-top:24px}
+iframe{width:410px;height:880px;border:0;border-radius:24px;display:block;margin-bottom:20px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Ether · three UI directions</h1>
+  <p>Same four screens with real seed content, in three different directions. Each row is one screen, each column is one direction. All animations loop and stop when <code>prefers-reduced-motion</code> is on. Open a direction to read its spec block (palette, type, shape, motion, Compose notes). Research: <a href="../references.md">references.md</a>.</p>
+</header>
+<div class="grid">
+  <div></div>
+  <div class="col c1"><h2>1 · Arcade</h2><p>Chunky outlines, 3D ledge buttons, bouncy rewards.</p><a href="arcade.html">Open full spec →</a></div>
+  <div class="col c2"><h2>2 · Neon Night</h2><p>Dark glass HUD, neon glow, mono stats.</p><a href="neon-night.html">Open full spec →</a></div>
+  <div class="col c3"><h2>3 · Editorial Clean</h2><p>Paper, serif numerals, one electric accent.</p><a href="editorial-clean.html">Open full spec →</a></div>
+</div>
+<div class="grid" id="rows"></div>
+<script>
+const rows=[["a","Swipe deck"],["b","Match"],["c","Profile"],["d","Competitions"]],files=["arcade","neon-night","editorial-clean"];
+const g=document.getElementById("rows");
+for(const [k,name] of rows){
+  const l=document.createElement("div");l.className="lbl";l.textContent=k+" · "+name;g.appendChild(l);
+  for(const f of files){const i=document.createElement("iframe");i.title=f+" "+name;i.src=f+".html?only="+k;g.appendChild(i)}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ether · Direction 2 · Neon Night</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+/* ------------------------------------------------------------------ tokens */
+:root{
+  --void:#0A0A16; --deep:#12122A; --glass:rgba(255,255,255,.06); --glass-hi:rgba(255,255,255,.10); --edge:rgba(255,255,255,.14);
+  --text:#EDEBFF; --muted:#A3A6C9; --dim:#6E7196;
+  --cyan:#22D3EE; --magenta:#FF3DAA; --violet:#8B5CF6; --lime:#B6FF3B; --amber:#FFB547;
+  --r-s:12px; --r-m:18px; --r-l:26px;
+  --ease:cubic-bezier(.22,1,.36,1); /* expo-out, = spring(dampingRatio .9, stiffness Low) feel */
+  --font:"Space Grotesk",ui-sans-serif,"Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@property --n{syntax:"<integer>";inherits:false;initial-value:0}
+@property --fill{syntax:"<percentage>";inherits:false;initial-value:0%}
+@property --ang{syntax:"<angle>";inherits:false;initial-value:0deg}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:#05050C;color:var(--text);padding:32px;min-width:1720px}
+svg{display:block}
+.mono{font-family:var(--mono)}
+
+/* ------------------------------------------------------------------ spec */
+.spec{background:var(--deep);border:1px solid var(--edge);border-radius:var(--r-l);padding:24px 28px;margin-bottom:32px;max-width:1660px;
+      box-shadow:0 0 0 1px rgba(139,92,246,.2),0 30px 80px -30px rgba(139,92,246,.45)}
+.spec h1{font-size:34px;font-weight:700;letter-spacing:-.5px;background:linear-gradient(90deg,var(--cyan),var(--violet) 50%,var(--magenta));-webkit-background-clip:text;background-clip:text;color:transparent;display:inline-block}
+.spec h1 + small{font:500 14px var(--mono);color:var(--muted);margin-left:12px;letter-spacing:1px}
+.spec .pitch{font-size:17px;color:var(--muted);margin:6px 0 16px}
+.spec dl{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 28px;font-size:14px;line-height:1.5}
+.spec dt{font:700 11.5px var(--mono);letter-spacing:2px;text-transform:uppercase;color:var(--cyan)}
+.spec dd{color:#D6D5F0}
+.spec code{font-family:var(--mono);font-size:12.5px;color:var(--lime)}
+.sw{display:inline-block;width:13px;height:13px;border-radius:4px;vertical-align:-2px;margin-right:3px;box-shadow:0 0 8px currentColor}
+
+/* ------------------------------------------------------------------ phone */
+.row{display:flex;gap:28px;flex-wrap:wrap}
+.shot h2{font:700 13px var(--mono);margin:0 0 10px 6px;color:var(--muted);text-transform:uppercase;letter-spacing:2px}
+.phone{width:390px;height:844px;border-radius:44px;background:var(--void);border:1px solid #2A2A48;position:relative;overflow:hidden;isolation:isolate;
+       box-shadow:0 0 0 6px #111122,0 40px 80px -20px rgba(0,0,0,.8)}
+.aura{position:absolute;inset:0;z-index:-1;
+      background:radial-gradient(420px 320px at 85% 8%,rgba(139,92,246,.35),transparent 70%),radial-gradient(380px 300px at 0% 70%,rgba(34,211,238,.18),transparent 70%),radial-gradient(300px 260px at 100% 100%,rgba(255,61,170,.18),transparent 70%)}
+.grid-bg{position:absolute;inset:0;z-index:-1;opacity:.35;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:28px 28px;
+         mask-image:linear-gradient(180deg,#000,transparent 60%);-webkit-mask-image:linear-gradient(180deg,#000,transparent 60%)}
+.status{height:32px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font:600 13px var(--mono)}
+.status i{display:inline-block;width:22px;height:11px;border:1.5px solid currentColor;border-radius:3px;position:relative}
+.status i::after{content:"";position:absolute;inset:1.5px;right:5px;background:var(--lime);border-radius:1px}
+.gesture{position:absolute;bottom:9px;left:50%;width:120px;height:4px;margin-left:-60px;border-radius:3px;background:var(--text);opacity:.7;z-index:30}
+
+/* ------------------------------------------------------------------ primitives */
+.glass{background:var(--glass);border:1px solid var(--edge);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%)}
+.ico{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:999px;font:500 13px var(--font);border:1px solid var(--edge);background:var(--glass);color:var(--text)}
+.chip.c{border-color:rgba(34,211,238,.5);color:#BDF4FF;box-shadow:inset 0 0 12px rgba(34,211,238,.15)}
+.chip.m{border-color:rgba(255,61,170,.5);color:#FFC6E6;box-shadow:inset 0 0 12px rgba(255,61,170,.15)}
+.label{font:700 11px var(--mono);letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.iconbtn{width:48px;height:48px;border-radius:16px;display:grid;place-items:center}
+.topbar{display:flex;align-items:center;gap:8px;padding:6px 16px 0 8px;height:62px}
+.ttl{flex:1}
+.ttl b{display:block;font-size:22px;font-weight:700;line-height:1.1}
+.avatar{border-radius:50%;display:grid;place-items:center;font-weight:700;color:var(--text);
+        background:radial-gradient(circle at 30% 25%,#3B2B7A,#17153A)}
+.btn{height:56px;border-radius:var(--r-m);display:flex;align-items:center;justify-content:center;gap:10px;font:700 16px var(--font)}
+.btn.lime{background:var(--lime);color:#0A0A16;box-shadow:0 0 0 1px rgba(182,255,59,.6),0 10px 34px -6px rgba(182,255,59,.6)}
+
+/* energy HUD: 30 ticks = the daily swipe cap */
+.energy{margin:4px 16px 0;padding:10px 14px;border-radius:var(--r-m);display:flex;align-items:center;gap:12px}
+.ticks{flex:1;display:grid;grid-template-columns:repeat(30,1fr);gap:2px;height:14px}
+.ticks i{border-radius:2px;background:rgba(255,255,255,.1)}
+.ticks i.on{background:linear-gradient(180deg,#E8FF9E,var(--lime));box-shadow:0 0 6px rgba(182,255,59,.7)}
+.ticks i.spent{animation:drain 6s linear infinite}
+.energy b{font:800 16px var(--mono)}
+.energy small{font:500 11px var(--mono);color:var(--muted);display:block}
+@keyframes drain{0%,40%{background:linear-gradient(180deg,#E8FF9E,var(--lime));box-shadow:0 0 6px rgba(182,255,59,.7)}48%,100%{background:rgba(255,255,255,.1);box-shadow:none}}
+
+/* ------------------------------------------------------------------ A: deck */
+.deck{position:absolute;left:18px;right:18px;top:166px;height:520px}
+.card{position:absolute;inset:0;border-radius:var(--r-l);overflow:hidden}
+.card.back{transform:translateY(14px) scale(.94);opacity:.55;background:linear-gradient(160deg,#103448,#0F1230);border:1px solid var(--edge);animation:backcard 6s var(--ease) infinite}
+.card.top{transform:translateX(46px) rotate(6deg);transform-origin:50% 100%;animation:drag 6s cubic-bezier(.45,.05,.3,1) infinite;z-index:2;padding:1.5px;
+          background:conic-gradient(from var(--ang),var(--cyan),var(--violet),var(--magenta),var(--lime),var(--cyan))}
+.card.top{animation:drag 6s cubic-bezier(.45,.05,.3,1) infinite,holo 6s linear infinite}
+.card .inner{position:absolute;inset:1.5px;border-radius:calc(var(--r-l) - 1.5px);overflow:hidden;
+             background:radial-gradient(240px 220px at 75% 22%,rgba(255,61,170,.75),transparent 70%),radial-gradient(260px 240px at 15% 35%,rgba(34,211,238,.6),transparent 70%),radial-gradient(300px 300px at 50% 0%,#5B3BD6,transparent 75%),#14102E}
+.card .glyph{position:absolute;top:46px;left:50%;margin-left:-60px;width:120px;height:120px;font-size:44px;letter-spacing:-1px;
+             background:rgba(10,10,22,.35);border:1px solid rgba(255,255,255,.3);box-shadow:0 0 0 8px rgba(255,255,255,.05),0 0 60px rgba(255,61,170,.5)}
+.kind{position:absolute;top:16px;left:16px;font:800 11px var(--mono);letter-spacing:2px;padding:6px 10px;border-radius:8px;background:rgba(10,10,22,.55);border:1px solid var(--edge)}
+.lvl{position:absolute;top:16px;right:16px;text-align:right;font:800 11px var(--mono);letter-spacing:2px;color:var(--muted)}
+.lvl b{display:block;font-size:26px;color:var(--text);letter-spacing:0;text-shadow:0 0 18px rgba(34,211,238,.9)}
+.panel{position:absolute;left:10px;right:10px;bottom:10px;border-radius:20px;padding:16px 16px 14px;background:rgba(14,12,34,.72)}
+.panel h3{font-size:30px;font-weight:700;letter-spacing:-.6px;line-height:1}
+.panel .sub{color:var(--muted);font-size:15px;margin:4px 0 12px}
+.statline{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--edge);border-radius:12px;margin-bottom:12px}
+.statline div{padding:8px 10px}
+.statline div + div{border-left:1px solid var(--edge)}
+.statline b{display:block;font:800 17px var(--mono)}
+.statline span{font:600 10px var(--mono);letter-spacing:1.5px;color:var(--muted)}
+.panel p{font-size:14.5px;line-height:1.4;margin-bottom:10px;color:#DCDAF5}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.stamp{position:absolute;top:58px;left:20px;z-index:3;font:800 38px var(--mono);letter-spacing:4px;padding:2px 14px;border:3px solid var(--lime);color:var(--lime);border-radius:12px;
+       transform:rotate(-14deg);text-shadow:0 0 14px rgba(182,255,59,.9);box-shadow:0 0 22px rgba(182,255,59,.55),inset 0 0 18px rgba(182,255,59,.35);background:rgba(10,10,22,.4);animation:stampLike 6s linear infinite}
+.stamp.nope{left:auto;right:20px;border-color:var(--magenta);color:var(--magenta);transform:rotate(14deg);text-shadow:0 0 14px rgba(255,61,170,.9);box-shadow:0 0 22px rgba(255,61,170,.55),inset 0 0 18px rgba(255,61,170,.35);opacity:0;animation-name:stampNope}
+.actions{position:absolute;left:0;right:0;top:712px;display:flex;justify-content:center;align-items:center;gap:30px}
+.orb{width:72px;height:72px;border-radius:50%;display:grid;place-items:center}
+.orb.pass{color:var(--magenta);box-shadow:0 0 0 1px rgba(255,61,170,.5),0 0 26px -4px rgba(255,61,170,.7)}
+.orb.like{width:84px;height:84px;background:var(--lime);color:#0A0A16;box-shadow:0 0 0 6px rgba(182,255,59,.15),0 0 40px rgba(182,255,59,.7);animation:likeGlow 6s var(--ease) infinite}
+.orb .ico{width:32px;height:32px;stroke-width:2.4}
+.orb.like .ico{fill:#0A0A16;stroke:#0A0A16}
+@keyframes holo{to{--ang:360deg}}
+@keyframes drag{0%,6%{transform:translateX(0) rotate(0)}26%,40%{transform:translateX(46px) rotate(6deg)}50%{transform:translateX(-8px) rotate(-1deg)}56%{transform:none}72%,82%{transform:translateX(-46px) rotate(-6deg)}92%{transform:translateX(6px) rotate(.8deg)}100%{transform:none}}
+@keyframes stampLike{0%,8%{opacity:0;transform:rotate(-14deg) scale(1.3)}26%,40%{opacity:1;transform:rotate(-14deg) scale(1)}48%,100%{opacity:0}}
+@keyframes stampNope{0%,58%{opacity:0;transform:rotate(14deg) scale(1.3)}72%,82%{opacity:1;transform:rotate(14deg) scale(1)}90%,100%{opacity:0}}
+@keyframes backcard{0%,8%,48%,58%,90%,100%{transform:translateY(14px) scale(.94);opacity:.55}26%,40%,72%,82%{transform:translateY(6px) scale(.97);opacity:.8}}
+@keyframes likeGlow{0%,20%,44%,100%{box-shadow:0 0 0 6px rgba(182,255,59,.15),0 0 40px rgba(182,255,59,.7)}32%{box-shadow:0 0 0 14px rgba(182,255,59,.12),0 0 70px rgba(182,255,59,1)}}
+
+/* ------------------------------------------------------------------ B: match */
+.flash{position:absolute;inset:0;z-index:-1;background:radial-gradient(360px 360px at 50% 310px,rgba(255,61,170,.55),rgba(139,92,246,.25) 50%,transparent 75%),var(--void);animation:flash 3.6s var(--ease) infinite}
+.pulse{position:absolute;left:50%;top:310px;width:180px;height:180px;margin:-90px 0 0 -90px;border-radius:50%;border:2px solid var(--cyan);box-shadow:0 0 24px var(--cyan),inset 0 0 24px var(--cyan);opacity:0;animation:pulse 3.6s var(--ease) infinite}
+.pulse.p2{border-color:var(--magenta);box-shadow:0 0 24px var(--magenta),inset 0 0 24px var(--magenta);animation-delay:.25s}
+.pulse.p3{animation-delay:.5s}
+.burst{position:absolute;left:50%;top:310px;width:0;height:0;z-index:1}
+.burst i{position:absolute;width:6px;height:6px;margin:-3px;border-radius:50%;animation:spark 3.6s var(--ease) infinite;opacity:0}
+.mtitle{text-align:center;margin-top:46px}
+.mtitle .label{color:var(--cyan)}
+.mtitle h3{font-size:58px;font-weight:700;letter-spacing:-2px;line-height:1;margin-top:6px;
+           background:linear-gradient(90deg,#9FF4FF,#fff 45%,#FFB3DE);-webkit-background-clip:text;background-clip:text;color:transparent;
+           filter:drop-shadow(2px 0 0 rgba(255,61,170,.8)) drop-shadow(-2px 0 0 rgba(34,211,238,.8));animation:glitch 3.6s steps(1) infinite}
+.mtitle p{color:var(--muted);font-size:16px;margin-top:8px}
+.link{position:absolute;top:248px;left:0;right:0;height:124px;z-index:2}
+.link .avatar{position:absolute;top:0;width:124px;height:124px;font-size:38px;border:1.5px solid}
+.link .a1{left:46px;border-color:var(--cyan);box-shadow:0 0 30px rgba(34,211,238,.6),inset 0 0 20px rgba(34,211,238,.35);animation:inL 3.6s var(--ease) infinite}
+.link .a2{right:46px;border-color:var(--magenta);box-shadow:0 0 30px rgba(255,61,170,.6),inset 0 0 20px rgba(255,61,170,.35);background:radial-gradient(circle at 30% 25%,#5A1F4D,#1E0F2A);animation:inR 3.6s var(--ease) infinite}
+.beam{position:absolute;top:60px;left:170px;right:170px;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--cyan),#fff,var(--magenta));box-shadow:0 0 16px #fff;transform-origin:center;animation:beam 3.6s var(--ease) infinite}
+.log{position:absolute;left:18px;right:18px;top:410px;border-radius:var(--r-l);padding:6px 16px;z-index:2}
+.log .row2{display:flex;align-items:center;gap:12px;padding:12px 0;animation:logIn 3.6s var(--ease) infinite;animation-delay:calc(var(--i)*120ms)}
+.log .row2 + .row2{border-top:1px solid var(--edge)}
+.log .amt{font:800 20px var(--mono);color:var(--lime);text-shadow:0 0 12px rgba(182,255,59,.6);min-width:66px}
+.log b{display:block;font-weight:700;font-size:16px}
+.log span{font-size:13.5px;color:var(--muted)}
+.hexb{width:52px;height:58px;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);display:grid;place-items:center;flex:none;
+      background:conic-gradient(from var(--ang),var(--cyan),var(--violet),var(--magenta),var(--cyan));animation:holo 4s linear infinite}
+.hexb span{width:46px;height:52px;clip-path:inherit;background:#17153A;display:grid;place-items:center}
+.hexb .ico{width:22px;height:22px;color:var(--cyan)}
+.mcta{position:absolute;left:18px;right:18px;top:690px;display:grid;gap:12px;z-index:2}
+.mcta .ghost{border:1px solid var(--edge);color:var(--text)}
+@keyframes flash{0%{filter:brightness(2.2)}14%,100%{filter:brightness(1)}}
+@keyframes pulse{0%,18%{opacity:0;transform:scale(.4)}22%{opacity:1}70%,100%{opacity:0;transform:scale(2.6)}}
+@keyframes spark{0%,18%{opacity:0;transform:rotate(var(--a)) translateX(0)}22%{opacity:1}75%,100%{opacity:0;transform:rotate(var(--a)) translateX(var(--d))}}
+@keyframes inL{0%{transform:translateX(-160px);opacity:0}22%,100%{transform:none;opacity:1}}
+@keyframes inR{0%{transform:translateX(160px);opacity:0}22%,100%{transform:none;opacity:1}}
+@keyframes beam{0%,20%{transform:scaleX(0)}30%,100%{transform:scaleX(1)}}
+@keyframes glitch{0%,100%{transform:none}4%{transform:translate(3px,-1px) skewX(-6deg)}7%{transform:translate(-2px,1px)}10%{transform:none}}
+@keyframes logIn{0%,30%{opacity:0;transform:translateX(24px)}40%,100%{opacity:1;transform:none}}
+
+/* ------------------------------------------------------------------ C: profile */
+.scroll{position:absolute;top:32px;left:0;right:0;bottom:92px;overflow:hidden;padding:0 18px}
+.ph{display:flex;align-items:center;justify-content:space-between;height:54px}
+.ph b{font-size:24px;font-weight:700}
+.me{display:flex;flex-direction:column;align-items:center;text-align:center;margin-top:2px}
+.ringwrap{position:relative;width:148px;height:148px}
+.ringwrap svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.ringwrap .track{stroke:rgba(255,255,255,.08)}
+.ringwrap .prog{stroke:url(#g-xp);stroke-dasharray:440;stroke-dashoffset:123;filter:drop-shadow(0 0 6px rgba(34,211,238,.9))}
+.ringwrap .avatar{position:absolute;inset:16px;font-size:40px}
+.ringwrap .lv{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);font:800 12px var(--mono);letter-spacing:1.5px;padding:5px 10px;border-radius:999px;background:var(--void);border:1px solid var(--cyan);color:var(--cyan);box-shadow:0 0 14px rgba(34,211,238,.6)}
+.me h3{font-size:26px;font-weight:700;margin-top:14px}
+.me span{color:var(--muted);font-size:14.5px}
+.xp{margin-top:14px;border-radius:var(--r-m);padding:14px 16px}
+.xp .top{display:flex;justify-content:space-between;align-items:baseline}
+.xp .num{font:800 24px var(--mono)}
+.xp .num small{font-size:13px;color:var(--muted);font-weight:500}
+.count{--n:545;counter-reset:n var(--n)}
+.count::after{content:counter(n)}
+.xbar{height:10px;border-radius:5px;background:rgba(255,255,255,.08);margin-top:10px;position:relative}
+.xbar .fill{--fill:72%;width:var(--fill);height:100%;border-radius:5px;background:linear-gradient(90deg,var(--violet),var(--cyan));box-shadow:0 0 14px rgba(34,211,238,.7);position:relative}
+.xbar .fill::after{content:"";position:absolute;right:-5px;top:-5px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 0 18px 4px var(--cyan)}
+.xp .foot{display:flex;justify-content:space-between;margin-top:8px;font:500 12px var(--mono);color:var(--muted)}
+.anim .fill{animation:fillUp 5s var(--ease) infinite}
+.anim .count{animation:countUp 5s var(--ease) infinite}
+.anim .prog{animation:ring 5s var(--ease) infinite}
+@keyframes fillUp{0%,8%{--fill:0%}44%,100%{--fill:72%}}
+@keyframes countUp{0%,8%{--n:0}44%,100%{--n:545}}
+@keyframes ring{0%,8%{stroke-dashoffset:440}44%,100%{stroke-dashoffset:123}}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.tile{border-radius:var(--r-m);padding:12px 14px}
+.tile b{font:800 24px var(--mono);display:block}
+.tile b small{font-size:13px;color:var(--muted)}
+.tile .meter{display:flex;gap:3px;margin-top:8px}
+.tile .meter i{flex:1;height:6px;border-radius:2px;background:rgba(255,255,255,.1)}
+.tile .meter i.on{background:var(--lime);box-shadow:0 0 6px rgba(182,255,59,.6)}
+.tile .meter i.onm{background:var(--magenta);box-shadow:0 0 6px rgba(255,61,170,.6)}
+.sec{display:flex;justify-content:space-between;align-items:baseline;margin:16px 2px 10px}
+.sec b{font-size:17px;font-weight:700}
+.bgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.bdg{border-radius:var(--r-m);padding:12px 6px 10px;text-align:center;position:relative;overflow:hidden}
+.bdg .hexb{margin:0 auto 6px;width:56px;height:62px}
+.bdg .hexb span{width:50px;height:56px}
+.bdg b{display:block;font-size:13.5px;font-weight:700}
+.bdg small{font:500 11.5px var(--mono);color:var(--muted)}
+.bdg.locked .hexb{background:rgba(255,255,255,.14);animation:none}
+.bdg.locked .hexb .ico{color:var(--dim)}
+.bdg.locked b{color:#C2C3DE}
+.bdg.shine::after{content:"";position:absolute;top:-30%;bottom:-30%;width:46px;left:-70px;transform:skewX(-20deg);
+                  background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);animation:sweep 5s ease-in-out infinite}
+.bdg.unlock{animation:unlock 5s var(--ease) infinite}
+.bdg.unlock .hexb{box-shadow:none;filter:drop-shadow(0 0 10px rgba(255,61,170,.9))}
+@keyframes sweep{0%,50%{left:-70px}72%,100%{left:140%}}
+@keyframes unlock{0%,46%{box-shadow:0 0 0 0 rgba(255,61,170,0)}54%{box-shadow:0 0 0 2px var(--magenta),0 0 40px rgba(255,61,170,.8)}80%,100%{box-shadow:0 0 0 1px rgba(255,61,170,.5),0 0 20px rgba(255,61,170,.3)}}
+.nav{position:absolute;left:14px;right:14px;bottom:22px;height:64px;border-radius:22px;display:flex;padding:6px;z-index:10;background:rgba(18,18,42,.85)}
+.nav a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:500 11.5px var(--font);color:var(--muted);border-radius:16px;position:relative;min-height:52px}
+.nav a.on{color:var(--text);background:rgba(34,211,238,.1)}
+.nav a.on::before{content:"";position:absolute;top:-6px;width:26px;height:3px;border-radius:2px;background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
+
+/* ------------------------------------------------------------------ D: competitions */
+.comp{border-radius:var(--r-l);padding:16px;margin-bottom:14px;position:relative;overflow:hidden}
+.comp.live{border-color:rgba(34,211,238,.35);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 20px 50px -24px rgba(34,211,238,.6)}
+.comp .st{display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 0 rgba(182,255,59,.6);animation:ping 1.6s ease-out infinite}
+.comp h3{font-size:22px;font-weight:700;margin:8px 0 4px;letter-spacing:-.3px}
+.comp p{color:var(--muted);font-size:14.5px;line-height:1.4}
+.clock{display:flex;align-items:flex-end;gap:4px;margin:14px 0 4px}
+.clock b{font:800 34px var(--mono);letter-spacing:-1px;text-shadow:0 0 18px rgba(34,211,238,.55)}
+.clock i{font:700 26px var(--mono);color:var(--dim);font-style:normal;padding-bottom:3px}
+.clock .u{display:flex;flex-direction:column;align-items:center}
+.clock .u small{font:600 10px var(--mono);letter-spacing:2px;color:var(--muted)}
+.pips{display:flex;align-items:center;gap:6px;margin-top:14px}
+.pip{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font:700 11px var(--mono);border:1px solid var(--cyan);color:#BDF4FF;box-shadow:0 0 10px rgba(34,211,238,.4),inset 0 0 10px rgba(34,211,238,.25)}
+.pip.open{border:1px dashed var(--dim);color:var(--dim);box-shadow:none}
+.pips .meta{margin-left:8px;font-size:13.5px;line-height:1.3}
+.pips .meta span{display:block;color:var(--muted);font-size:12.5px}
+.comp .btn{margin-top:14px}
+.comp.ended{opacity:1}
+.comp.ended h3{color:#C9C9E6}
+.comp.ended .pip{border-color:var(--violet);color:#DCCFFF;box-shadow:0 0 10px rgba(139,92,246,.35)}
+.stagger > *{animation:rise 6s var(--ease) infinite;animation-delay:calc(var(--i)*110ms)}
+@keyframes rise{0%{opacity:0;transform:translateY(30px);filter:blur(6px)}14%,100%{opacity:1;transform:none;filter:none}}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(182,255,59,.7)}100%{box-shadow:0 0 0 10px rgba(182,255,59,0)}}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs><linearGradient id="g-xp" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8B5CF6"/><stop offset="1" stop-color="#22D3EE"/></linearGradient></defs>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-9.2-9A5 5 0 0 1 12 6a5 5 0 0 1 9.2 5C19 15.6 12 20 12 20z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3 6"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 20l1.5-4A8 8 0 1 1 9 19.5z"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></symbol>
+  <symbol id="i-cog" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></symbol>
+</svg>
+
+<section class="spec">
+  <h1>Neon Night</h1><small>DIRECTION 2 / 3</small>
+  <p class="pitch">A late-night hackathon rendered as a game HUD. Dark glass panels, neon edges and mono numerals. Every number looks like a stat you can raise.</p>
+  <dl>
+    <div><dt>Palette</dt><dd>
+      <span class="sw" style="background:#0A0A16;color:#333"></span>Void #0A0A16 (bg) · <span class="sw" style="background:#12122A;color:#333"></span>Deep #12122A (surfaces) · glass = white 6% + 14% edge ·
+      <span class="sw" style="background:#22D3EE;color:#22D3EE"></span>Cyan #22D3EE (XP, info) · <span class="sw" style="background:#FF3DAA;color:#FF3DAA"></span>Magenta #FF3DAA (pass, badges) ·
+      <span class="sw" style="background:#8B5CF6;color:#8B5CF6"></span>Violet #8B5CF6 (ambient) · <span class="sw" style="background:#B6FF3B;color:#B6FF3B"></span>Lime #B6FF3B (like, energy, CTA) · Text #EDEBFF · Muted #A3A6C9.</dd></div>
+    <div><dt>Type</dt><dd>Space Grotesk 400/500/700 for words, JetBrains Mono 500–800 for every number, timer and label. Scale: 58 match / 30 name / 24 title / 15 body / 11 mono caps +2 tracking.</dd></div>
+    <div><dt>Shape</dt><dd>Radii 12 / 18 / 26. No outlines except 1dp hairline edges (white 14%). Elevation = glow, not shadow: colored outer blur 20–40dp at 50–70% alpha. Holo border = 1.5dp rotating sweep gradient. Hex = badges, ring = level.</dd></div>
+    <div><dt>Motion</dt><dd>Smooth and fast-out: <code>tween(450, EaseOutExpo)</code> ≈ <code>cubic-bezier(.22,1,.36,1)</code>; springs only on drag release (<code>dampingRatio .75</code>). Light is motion: glows pulse 1.6 s, holo border rotates 6 s, match = flash → 3 pulse rings → 24 sparks → beam draws → log lines slide in 120 ms apart.</dd></div>
+    <div><dt>Iconography</dt><dd>Thin 1.8 stroke icons (Material Symbols Outlined, weight 300). Icons tinted with the accent of their meaning and given a 6–12dp glow when active.</dd></div>
+    <div><dt>Inspired by</dt><dd>Game HUD / esports stat screens, dark glassmorphism dating concepts on Dribbble, fitness ring progress (Apple Fitness / Strava-like rings), cyberpunk glitch titles. See <code>../references.md</code> [Neon].</dd></div>
+    <div><dt>Compose build</dt><dd>Aura = layered <code>Brush.radialGradient</code> on <code>drawBehind</code> (no blur needed). Holo border = <code>Brush.sweepGradient</code> + <code>rotate</code> in <code>drawWithContent</code>. Glow = <code>drawBehind</code> with <code>Paint.asFrameworkPaint().setShadowLayer</code> or stacked translucent strokes. XP ring = <code>Canvas.drawArc</code> with animated sweep. Sparks / pulse rings = <code>Canvas</code> + <code>withFrameNanos</code>. Mono digits use <code>FontFeatureSettings("tnum")</code> so timers don't jitter.</dd></div>
+    <div><dt>Android risk</dt><dd><b>Medium.</b> Backdrop blur: Compose has no native backdrop blur; <code>Modifier.blur</code> (RenderEffect) is API 31+ and blurs the node itself, not what's behind. Fallback: opaque-ish glass (<code>#12122A</code> at 85%) over pre-drawn radial gradients, which looks 90% the same. Glow via <code>setShadowLayer</code> is hardware-accelerated on API 28+; below that, use stacked alpha strokes. Keep animated glows off the scrolling list to save GPU on low-end phones.</dd></div>
+    <div><dt>A11y</dt><dd>Text #EDEBFF on Void 16:1, Muted #A3A6C9 on Void 8.2:1, Muted on glass ≥ 6.5:1. Lime CTA uses Void text (16:1). Never neon text for body copy, only for numbers ≥ 17sp. Targets ≥ 48dp. Reduced motion: glows static, no flash, no glitch, no sparks.</dd></div>
+  </dl>
+</section>
+
+<div class="row">
+<!-- ============================================================ A: deck -->
+<div class="shot" data-t="2000"><h2>a · Swipe deck</h2>
+<div class="phone"><div class="aura"></div><div class="grid-bg"></div>
+  <div class="status"><span>14:20</span><i></i></div>
+  <div class="topbar">
+    <div class="iconbtn"><svg class="ico"><use href="#i-back"/></svg></div>
+    <div class="ttl"><div class="label">Campus Hackathon 2026</div><b>Swipe</b></div>
+    <div class="iconbtn glass" style="border-radius:14px"><svg class="ico"><use href="#i-heart"/></svg></div>
+  </div>
+  <div class="energy glass" aria-label="23 of 30 swipes left today">
+    <svg class="ico" style="color:var(--lime);filter:drop-shadow(0 0 6px var(--lime))"><use href="#i-bolt"/></svg>
+    <div class="ticks" id="ticks"></div>
+    <div style="text-align:right"><b>23</b><b style="color:var(--dim)">/30</b><small>refill 09:41</small></div>
+  </div>
+  <div class="deck">
+    <div class="card back"></div>
+    <div class="card top"><div class="inner">
+      <div class="stamp">LIKE</div><div class="stamp nope">NOPE</div>
+      <span class="kind">SOLO</span>
+      <div class="lvl">LEVEL<b>04</b></div>
+      <div class="avatar glyph">AP</div>
+      <div class="panel glass">
+        <h3>Ana Putri</h3>
+        <div class="sub">Computer Science · Year 3</div>
+        <div class="statline"><div><b>545</b><span>XP</span></div><div><b style="color:var(--lime)">92%</b><span>RELIABLE</span></div><div><b>4</b><span>ENDORSED</span></div></div>
+        <p>Designs in Figma, ships in Kotlin, pitches on stage.</p>
+        <div class="chips"><span class="chip c">Figma</span><span class="chip c">Kotlin</span><span class="chip c">Pitching</span><span class="chip m">Designer</span><span class="chip m">Mobile</span></div>
+      </div>
+    </div></div>
+  </div>
+  <div class="actions">
+    <div class="orb pass glass" aria-label="Pass"><svg class="ico"><use href="#i-x"/></svg></div>
+    <div class="orb like" aria-label="Like"><svg class="ico"><use href="#i-heart"/></svg></div>
+  </div>
+  <div class="gesture"></div>
+</div></div>
+
+<!-- ============================================================ B: match -->
+<div class="shot" data-t="2300"><h2>b · It's a match</h2>
+<div class="phone"><div class="flash"></div>
+  <div class="pulse"></div><div class="pulse p2"></div><div class="pulse p3"></div>
+  <div class="burst" id="burst"></div>
+  <div class="status"><span>14:21</span><i></i></div>
+  <div class="mtitle"><div class="label">Campus Hackathon 2026</div><h3>MATCH</h3><p>You and Byte Club both swiped right.</p></div>
+  <div class="link"><div class="beam"></div><div class="avatar a1">AP</div><div class="avatar a2">BC</div></div>
+  <div class="log glass">
+    <div class="row2" style="--i:0"><div class="amt">+25</div><div><b>First match</b><span class="mono">XP · first_match</span></div></div>
+    <div class="row2" style="--i:1"><div class="amt">+100</div><div><b>Joined Byte Club</b><span class="mono">XP · team 3/4</span></div></div>
+    <div class="row2" style="--i:2"><div class="hexb"><span><svg class="ico"><use href="#i-users"/></svg></span></div><div><b>Badge unlocked</b><span>First Team</span></div></div>
+  </div>
+  <div class="mcta">
+    <div class="btn lime"><svg class="ico" style="stroke-width:2.2"><use href="#i-chat"/></svg>Message on WhatsApp</div>
+    <div class="btn ghost glass">Keep swiping</div>
+  </div>
+  <div class="gesture"></div>
+</div></div>
+
+<!-- ============================================================ C: profile -->
+<div class="shot" data-t="3300"><h2>c · Profile</h2>
+<div class="phone"><div class="aura"></div><div class="grid-bg"></div>
+  <div class="status"><span>14:22</span><i></i></div>
+  <div class="scroll anim">
+    <div class="ph"><b>Profile</b><div class="iconbtn glass"><svg class="ico"><use href="#i-cog"/></svg></div></div>
+    <div class="me">
+      <div class="ringwrap">
+        <svg viewBox="0 0 148 148"><circle class="track" cx="74" cy="74" r="70" fill="none" stroke-width="6"/><circle class="prog" cx="74" cy="74" r="70" fill="none" stroke-width="6" stroke-linecap="round"/></svg>
+        <div class="avatar">AP</div><div class="lv">LV 04</div>
+      </div>
+      <h3>Ana Putri</h3><span>Computer Science · Year 3 · Builder</span>
+    </div>
+    <div class="xp glass">
+      <div class="top"><span class="label">Experience</span><span class="num"><span class="count"></span><small> / 600</small></span></div>
+      <div class="xbar"><div class="fill"></div></div>
+      <div class="foot"><span>LV 04</span><span>55 XP → LV 05</span></div>
+    </div>
+    <div class="tiles">
+      <div class="tile glass"><span class="label">Reliability</span><b style="color:var(--lime)">92<small>%</small></b><div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div></div>
+      <div class="tile glass"><span class="label">Endorsed</span><b>4<small> / 5 to Reliable</small></b><div class="meter"><i class="onm"></i><i class="onm"></i><i class="onm"></i><i class="onm"></i><i></i></div></div>
+    </div>
+    <div class="sec"><b>Badges</b><span class="label">2 / 5</span></div>
+    <div class="bgrid">
+      <div class="bdg glass shine"><div class="hexb"><span><svg class="ico"><use href="#i-users"/></svg></span></div><b>First Team</b><small>UNLOCKED</small></div>
+      <div class="bdg glass shine unlock"><div class="hexb"><span><svg class="ico" style="color:var(--magenta)"><use href="#i-flag"/></svg></span></div><b>Finalist</b><small style="color:var(--magenta)">NEW</small></div>
+      <div class="bdg glass locked"><div class="hexb"><span><svg class="ico"><use href="#i-shield"/></svg></span></div><b>Reliable</b><small>4 / 5</small></div>
+      <div class="bdg glass locked"><div class="hexb"><span><svg class="ico"><use href="#i-trophy"/></svg></span></div><b>3 Hackathons</b><small>1 / 3</small></div>
+      <div class="bdg glass locked"><div class="hexb"><span><svg class="ico"><use href="#i-star"/></svg></span></div><b>Winner</b><small>LOCKED</small></div>
+      <div class="bdg glass locked"><div class="hexb"><span><svg class="ico"><use href="#i-lock"/></svg></span></div><b>???</b><small>HIDDEN</small></div>
+    </div>
+  </div>
+  <nav class="nav glass"><a><svg class="ico"><use href="#i-trophy"/></svg>Compete</a><a><svg class="ico"><use href="#i-heart"/></svg>Matches</a><a><svg class="ico"><use href="#i-users"/></svg>Teams</a><a class="on"><svg class="ico"><use href="#i-user"/></svg>Profile</a></nav>
+  <div class="gesture"></div>
+</div></div>
+
+<!-- ============================================================ D: competitions -->
+<div class="shot" data-t="1500"><h2>d · Competitions</h2>
+<div class="phone"><div class="aura"></div><div class="grid-bg"></div>
+  <div class="status"><span>14:22</span><i></i></div>
+  <div class="scroll stagger">
+    <div class="ph" style="--i:0"><b>Competitions</b><span class="chip" style="font-family:var(--mono)"><svg class="ico" style="width:15px;height:15px;color:var(--lime)"><use href="#i-bolt"/></svg>23/30</span></div>
+    <div class="comp glass live" style="--i:1">
+      <div class="st"><span class="dot"></span><span class="label" style="color:var(--lime)">Registration open</span></div>
+      <h3>Campus Hackathon 2026</h3>
+      <p>48-hour hackathon on campus. Theme: tools for students.</p>
+      <div class="clock">
+        <div class="u"><b data-u="d">14</b><small>DAYS</small></div><i>:</i><div class="u"><b data-u="h">09</b><small>HRS</small></div><i>:</i><div class="u"><b data-u="m">41</b><small>MIN</small></div><i>:</i><div class="u"><b data-u="s" style="color:var(--cyan)">22</b><small>SEC</small></div>
+      </div>
+      <div class="pips"><div class="pip">AP</div><div class="pip">GM</div><div class="pip">HW</div><div class="pip open">+</div><div class="meta">Byte Club · 3/4<span>Teams of 2–4</span></div></div>
+      <div class="btn lime">Enter deck · 6 solos waiting</div>
+    </div>
+    <div class="comp glass ended" style="--i:2">
+      <div class="st"><span class="dot" style="background:var(--dim);animation:none"></span><span class="label">Ended 8 Oct</span></div>
+      <h3>Data Challenge 2026</h3>
+      <p>Finished data challenge · Teams of 2–3</p>
+      <div class="pips"><div class="pip">AP</div><div class="pip">BS</div><div class="pip">CD</div><div class="meta">Night Owls · 3/3<span>Finalist · 2 to endorse</span></div></div>
+    </div>
+  </div>
+  <nav class="nav glass"><a class="on"><svg class="ico"><use href="#i-trophy"/></svg>Compete</a><a><svg class="ico"><use href="#i-heart"/></svg>Matches</a><a><svg class="ico"><use href="#i-users"/></svg>Teams</a><a><svg class="ico"><use href="#i-user"/></svg>Profile</a></nav>
+  <div class="gesture"></div>
+</div></div>
+</div>
+
+<script>
+// 30 energy ticks: 23 lit, the 23rd drains as the card is liked
+const t=document.getElementById("ticks");
+for(let k=0;k<30;k++){const i=document.createElement("i");if(k<23)i.className="on";if(k===22)i.className="on spent";t.appendChild(i)}
+// sparks
+const b=document.getElementById("burst"),cols=["#22D3EE","#FF3DAA","#B6FF3B","#FFFFFF","#8B5CF6"];
+for(let k=0;k<24;k++){const i=document.createElement("i");i.style.background=cols[k%5];i.style.boxShadow="0 0 10px "+cols[k%5];
+  i.style.setProperty("--a",(k*15+Math.random()*8)+"deg");i.style.setProperty("--d",(120+Math.random()*90)+"px");i.style.animationDelay=(Math.random()*.15)+"s";b.appendChild(i)}
+// countdown on a fixed demo clock (15 Oct 2026 14:18:38 → 29 Oct 23:59:59)
+const q=new URLSearchParams(location.search),freeze=q.has("still");
+let left=14*86400+9*3600+41*60+22;const pad=n=>String(n).padStart(2,"0");
+function tick(){const v={d:Math.floor(left/86400),h:Math.floor(left%86400/3600),m:Math.floor(left%3600/60),s:left%60};document.querySelectorAll("[data-u]").forEach(e=>e.textContent=pad(v[e.dataset.u]))}
+if(!freeze&&!matchMedia("(prefers-reduced-motion:reduce)").matches)setInterval(()=>{left--;tick()},1000);
+// ?only=a|b|c|d shows a single phone (used by index.html)
+const only=q.get("only");
+if(only){document.body.style.cssText="padding:12px 10px 20px;min-width:0";document.querySelector(".spec").remove();
+  document.querySelectorAll(".shot").forEach((s,k)=>{if("abcd"[k]!==only)s.remove();else s.querySelector("h2").remove()})}
+// ?still freezes each phone on its representative frame (data-t, ms) for PNG export
+if(freeze)addEventListener("load",()=>document.getAnimations().forEach(a=>{a.pause();a.currentTime=+(a.effect.target.closest(".shot")?.dataset.t||0)}));
+</script>
+</body>
+</html>
