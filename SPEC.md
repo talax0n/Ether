@@ -67,6 +67,23 @@ ProfileBadge (profileId, badgeCode, awardedAt)          unique(profileId, badgeC
 
 XP is computed by database triggers so clients cannot grant themselves points. No leaderboard in the MVP.
 
+**Levels** are display-only and derived from total XP on the client. No column or trigger stores them, so the database stays the single source of truth for XP.
+
+| Level | Title | Total XP |
+|-------|-------|----------|
+| 1 | Rookie | 0 |
+| 2 | Hacker | 100 |
+| 3 | Maker | 250 |
+| 4 | Builder | 400 |
+| 5 | Captain | 600 |
+| 6 | Architect | 850 |
+| 7 | Mentor | 1150 |
+| 8 | Legend | 1500 |
+
+The profile shows the level, its title, and progress to the next threshold. Level 8 is the cap.
+
+**Visual direction:** Arcade with two Neon Night elements (monospace numerals, a 30-tick swipe meter). See `docs/design/directions/arcade.html` and `docs/design/references.md`.
+
 ## 5. MVP features (YAGNI-tight)
 
 **In scope:**
