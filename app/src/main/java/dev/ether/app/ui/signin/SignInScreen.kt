@@ -32,6 +32,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import dev.ether.app.ui.components.Etha
+import dev.ether.app.ui.components.EthaMove
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.heightIn
@@ -125,6 +129,9 @@ fun SignInContent(
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp)) {
                 when (step) {
                     SignInStep.EMAIL -> {
+                        // Etha waves hello once, then idles.
+                        var etha by remember { mutableStateOf(EthaMove.WAVE) }
+                        Etha(etha, Modifier.padding(bottom = 8.dp), size = 112.dp, onFinished = { etha = EthaMove.IDLE })
                         Heading("Sign in or\ncreate an account", "Enter your email and we'll send a 6-digit code. New here? The code creates your account.")
                         ArcadeTextField(
                             value = state.email,

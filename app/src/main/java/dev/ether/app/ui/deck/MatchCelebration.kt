@@ -10,11 +10,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -23,7 +21,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import dev.ether.app.ui.components.Etha
+import dev.ether.app.ui.components.EthaMove
 import androidx.compose.ui.Alignment
+import dev.ether.app.ui.theme.Cream
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeJoin
@@ -54,7 +61,6 @@ import dev.ether.app.ui.contactApp
 import dev.ether.app.ui.contactLabel
 import dev.ether.app.ui.openContact
 import dev.ether.app.ui.theme.Arcade
-import dev.ether.app.ui.theme.Coral
 import dev.ether.app.ui.theme.Ink
 import dev.ether.app.ui.theme.Mint
 import dev.ether.app.ui.theme.MintDeep
@@ -188,41 +194,43 @@ private fun Headline(modifier: Modifier) {
 
 @Composable
 private fun Duo(match: Match, duo: () -> Float, heart: () -> Float) {
-    Box(Modifier.fillMaxWidth().height(176.dp), contentAlignment = Alignment.Center) {
-        // A small gap, not an overlap, and the heart sits low on the seam so neither set of initials is covered.
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Avatar(
-                "You", null, 116.dp,
-                Modifier.graphicsLayer {
-                    val p = duo()
-                    translationX = (1f - p) * -200.dp.toPx()
-                    rotationZ = -30f + 26f * p
-                },
-                color = Peach,
-                label = "ME",
-            )
-            Avatar(
-                match.name, match.avatarUrl, 116.dp,
-                Modifier.graphicsLayer {
-                    val p = duo()
-                    translationX = (1f - p) * 200.dp.toPx()
-                    rotationZ = 30f - 26f * p
-                },
-                color = SkySoft,
-            )
-        }
+    // Etha takes the heart's place on the seam: it cheers once, then idles while the user reads the rewards.
+    var move by remember { mutableStateOf(EthaMove.IDLE) }
+    // The disc pops in after the avatars collide; cheer only once it is on screen, or the jump plays unseen.
+    LaunchedEffect(Unit) {
+        snapshotFlow { heart() }.first { it > 0.6f }
+        move = EthaMove.CELEBRATE
+    }
+    Row(
+        Modifier.fillMaxWidth().height(176.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Avatar(
+            "You", null, 92.dp,
+            Modifier.graphicsLayer {
+                val p = duo()
+                translationX = (1f - p) * -200.dp.toPx()
+                rotationZ = -30f + 26f * p
+            },
+            color = Peach,
+            label = "ME",
+        )
+        // A Cream disc keeps Etha's Grape hoodie from sinking into the Grape backdrop.
         Box(
-            Modifier
-                .offset(y = 46.dp)
-                .graphicsLayer {
-                    val s = heart()
-                    scaleX = s
-                    scaleY = s
-                }
-                .size(62.dp)
-                .ledge(CircleShape, Coral, Ink, Ink, 4.dp),
+            Modifier.graphicsLayer { val s = heart(); scaleX = s; scaleY = s }
+                .size(132.dp).ledge(CircleShape, Cream, Ink, Ink, 5.dp),
             contentAlignment = Alignment.Center,
-        ) { Icon(ArcadeIcons.HeartFilled, contentDescription = null, tint = Paper, modifier = Modifier.size(28.dp)) }
+        ) { Etha(move, size = 118.dp, onFinished = { if (move == EthaMove.CELEBRATE) move = EthaMove.IDLE }) }
+        Avatar(
+            match.name, match.avatarUrl, 92.dp,
+            Modifier.graphicsLayer {
+                val p = duo()
+                translationX = (1f - p) * 200.dp.toPx()
+                rotationZ = 30f - 26f * p
+            },
+            color = SkySoft,
+        )
     }
 }
 

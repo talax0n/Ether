@@ -28,5 +28,5 @@ supabase/.temp/
 .vscode/
 
 # sprite-gen working files; the deliverables sit next to them
-docs/brand/mascot/run/
-docs/brand/mascot/.run.sg-rwlock
+docs/brand/etha/run/
+docs/brand/etha/.run.sg-rwlock

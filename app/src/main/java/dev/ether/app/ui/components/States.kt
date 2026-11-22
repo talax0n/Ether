@@ -144,12 +144,13 @@ fun Wordmark(modifier: Modifier = Modifier) {
     }
 }
 
-enum class Tone(val fill: Color, val icon: ImageVector) {
-    EMPTY(SunSoft, ArcadeIcons.Star),
-    ERROR(Coral, ArcadeIcons.WifiOff),
-    DONE(Mint, ArcadeIcons.Check),
-    WAIT(Sky, ArcadeIcons.Bolt),
-    TEAM(Grape, ArcadeIcons.Users),
+/** [mascot] is the Etha move shown instead of the icon sticker; errors and confirmations keep the plain icon. */
+enum class Tone(val fill: Color, val icon: ImageVector, val mascot: EthaMove?) {
+    EMPTY(SunSoft, ArcadeIcons.Star, EthaMove.SLEEP),
+    ERROR(Coral, ArcadeIcons.WifiOff, null),
+    DONE(Mint, ArcadeIcons.Check, null),
+    WAIT(Sky, ArcadeIcons.Bolt, EthaMove.SLEEP),
+    TEAM(Grape, ArcadeIcons.Users, EthaMove.IDLE),
 }
 
 /**
@@ -173,7 +174,10 @@ fun MessageBox(
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(Modifier.size(150.dp), contentAlignment = Alignment.Center) {
+        val mascot = tone.mascot
+        if (mascot != null) {
+            Etha(mascot, Modifier.graphicsLayer { scaleX = pop.value; scaleY = pop.value }, size = 160.dp)
+        } else Box(Modifier.size(150.dp), contentAlignment = Alignment.Center) {
             // Confetti dots around the sticker, fixed positions so the scene reads as a little illustration.
             listOf(Triple(-58, -44, Sun), Triple(60, -30, Mint), Triple(-52, 48, Sky), Triple(56, 52, Coral)).forEach { (x, y, c) ->
                 Box(
