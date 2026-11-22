@@ -83,4 +83,16 @@ class TeamsViewModelTest {
         assertEquals("A teammate has to confirm the result you reported.", loaded(vm).message)
         assertTrue(loaded(vm).teams.single().team.result!!.reportedByMe)
     }
+
+    @Test
+    fun `to-do counts unendorsed teammates and a result waiting on me, only after the event`() = runTest {
+        val team = loaded(teamsVm()).teams.single()
+        // Demo: two teammates not yet endorsed, and a Finalist report from Ana waiting for my confirmation.
+        assertEquals(3, team.toDo)
+        assertEquals(0, team.copy(eventEnded = false).toDo)
+
+        val endorsedAll = team.team.copy(teammates = team.team.teammates.map { it.copy(endorsedByMe = true) })
+        val confirmed = endorsedAll.copy(result = endorsedAll.result!!.copy(confirmed = true))
+        assertEquals(0, team.copy(team = confirmed).toDo)
+    }
 }

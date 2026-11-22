@@ -1,21 +1,29 @@
 package dev.ether.app.ui.teams
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import dev.ether.app.ui.components.LedgeIconButton
+import dev.ether.app.ui.dayMonth
+import dev.ether.app.ui.theme.CoralSoft
+import dev.ether.app.ui.theme.Paper
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
@@ -29,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -45,19 +52,14 @@ import dev.ether.app.ui.components.LedgeButton
 import dev.ether.app.ui.components.LedgeCard
 import dev.ether.app.ui.components.LoadingBox
 import dev.ether.app.ui.components.MessageBox
-import dev.ether.app.ui.components.ScreenHeader
-import dev.ether.app.ui.components.Seats
 import dev.ether.app.ui.components.Tone
-import dev.ether.app.ui.components.initials
 import dev.ether.app.ui.components.staggerIn
 import dev.ether.app.ui.contactLabel
 import dev.ether.app.ui.openContact
-import dev.ether.app.ui.shortDate
 import dev.ether.app.ui.theme.Arcade
 import dev.ether.app.ui.theme.GrapeSoft
 import dev.ether.app.ui.theme.Ink
 import dev.ether.app.ui.theme.MintSoft
-import dev.ether.app.ui.theme.NumberStyle
 import dev.ether.app.ui.theme.Peach
 import dev.ether.app.ui.theme.Sky
 import dev.ether.app.ui.theme.Sun
@@ -80,34 +82,58 @@ fun TeamsScreen(vm: TeamsViewModel = koinViewModel()) {
         }
     }
     Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            ScreenHeader("My teams")
-            when (val s = state) {
-                TeamsUiState.Loading -> LoadingBox()
-                is TeamsUiState.Failed -> MessageBox(s.message, action = "Retry", tone = Tone.ERROR, onAction = vm::load)
-                is TeamsUiState.Loaded ->
-                    if (s.teams.isEmpty()) {
-                        MessageBox("No teams yet. A mutual match in a competition puts you in one.", tone = Tone.TEAM)
-                    } else {
-                        LazyColumn(
-                            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 24.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                        ) {
-                            itemsIndexed(s.teams, key = { _, t -> t.team.id.value }) { i, team ->
-                                TeamCard(
-                                    team = team,
-                                    busy = s.busy,
-                                    onEndorse = { vm.endorse(team, it) },
-                                    onReport = { vm.reportResult(team, it) },
-                                    onConfirm = { vm.confirmResult(team) },
-                                    modifier = Modifier.staggerIn(i),
-                                )
-                            }
-                        }
+        when (val s = state) {
+            TeamsUiState.Loading -> Column(Modifier.fillMaxSize()) { Header(null); LoadingBox() }
+            is TeamsUiState.Failed -> Column(Modifier.fillMaxSize()) {
+                Header(null)
+                MessageBox(s.message, action = "Retry", tone = Tone.ERROR, onAction = vm::load)
+            }
+            is TeamsUiState.Loaded -> if (s.teams.isEmpty()) {
+                Column(Modifier.fillMaxSize()) {
+                    Header(null)
+                    MessageBox("No teams yet. A mutual match in a competition puts you in one.", tone = Tone.TEAM)
+                }
+            } else {
+                LazyColumn(
+                    Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 28.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    item(key = "header") { Header(s.teams, horizontal = 0.dp) }
+                    itemsIndexed(s.teams, key = { _, t -> t.team.id.value }) { i, team ->
+                        TeamCard(
+                            team = team,
+                            busy = s.busy,
+                            onEndorse = { vm.endorse(team, it) },
+                            onReport = { vm.reportResult(team, it) },
+                            onConfirm = { vm.confirmResult(team) },
+                            modifier = Modifier.staggerIn(i),
+                        )
                     }
+                }
             }
         }
         ArcadeSnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
+    }
+}
+
+/** Title plus a one-line summary of what's waiting. [teams] is null while there is nothing to summarize. */
+@Composable
+private fun Header(teams: List<TeamView>?, horizontal: Dp = 20.dp) {
+    val toDo = teams?.sumOf { it.toDo } ?: 0
+    Column(Modifier.fillMaxWidth().padding(start = horizontal, end = horizontal, top = 20.dp, bottom = 4.dp)) {
+        Text("Teams", Modifier.semantics { heading() }, style = MaterialTheme.typography.displaySmall, color = Arcade.colors.text)
+        if (teams != null) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                buildString {
+                    append(if (teams.size == 1) "1 team" else "${teams.size} teams")
+                    if (toDo > 0) append(" · ${if (toDo == 1) "1 thing" else "$toDo things"} to do")
+                },
+                style = MaterialTheme.typography.bodyLarge,
+                color = Arcade.colors.muted,
+            )
+        }
     }
 }
 
@@ -124,30 +150,30 @@ private fun TeamCard(
     LedgeCard(modifier.fillMaxWidth()) {
         Box(Modifier.fillMaxWidth().background(if (team.eventEnded) EndedFill else Sky)) {
             Column(Modifier.padding(16.dp)) {
-                CapsLabel(t.competition.name, color = Ink)
-                Text(t.name, style = MaterialTheme.typography.headlineSmall, color = Ink)
-                Text(
-                    if (team.eventEnded) "Event ended ${t.competition.eventEnd.shortDate()}" else "Event ends ${t.competition.eventEnd.shortDate()}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Ink,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CapsLabel(t.competition.name, Modifier.weight(1f), color = Ink)
+                    if (team.toDo > 0) Chip("${team.toDo} to do", color = CoralSoft)
+                }
+                Text(t.name, style = MaterialTheme.typography.headlineMedium, color = Ink)
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("${t.teammates.size + 1}/${t.competition.maxTeamSize} members", color = Paper, icon = ArcadeIcons.Users)
+                    Chip(
+                        "${if (team.eventEnded) "Ended" else "Ends"} ${t.competition.eventEnd.dayMonth()}",
+                        color = Paper, icon = ArcadeIcons.Calendar,
+                    )
+                }
             }
             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp).background(Arcade.colors.line))
         }
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Seats(listOf("ME") + t.teammates.map { initials(it.name) }, t.competition.maxTeamSize)
-                Text(
-                    "${t.teammates.size + 1} / ${t.competition.maxTeamSize}",
-                    Modifier.padding(start = 10.dp),
-                    style = NumberStyle,
-                    color = Arcade.colors.text,
-                )
-            }
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             if (t.teammates.isEmpty()) {
-                Text("No teammates yet. Keep swiping to fill your open roles.", style = MaterialTheme.typography.bodyMedium, color = Arcade.colors.text)
+                Text("No teammates yet. Keep swiping to fill your open roles.", style = MaterialTheme.typography.bodyMedium, color = Arcade.colors.muted)
             }
-            t.teammates.forEach { TeammateRow(it, team.eventEnded, busy, onEndorse) }
+            if (team.eventEnded && t.teammates.any { !it.endorsedByMe }) {
+                CapsLabel("Endorse your teammates · +30 XP each")
+            }
+            t.teammates.forEach { TeammateRow(it, isCaptain = it.id == t.ownerId, team.eventEnded, busy, onEndorse) }
             if (team.eventEnded) {
                 Box(Modifier.fillMaxWidth().height(2.dp).background(Arcade.colors.track))
                 ResultSection(t.result, busy, onReport, onConfirm)
@@ -159,30 +185,31 @@ private fun TeamCard(
 private val EndedFill = Color(0xFFD9D3C7)
 
 @Composable
-private fun TeammateRow(mate: Teammate, eventEnded: Boolean, busy: Boolean, onEndorse: (Teammate) -> Unit) {
+private fun TeammateRow(mate: Teammate, isCaptain: Boolean, eventEnded: Boolean, busy: Boolean, onEndorse: (Teammate) -> Unit) {
     val context = LocalContext.current
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Avatar(mate.name, null, 44.dp, color = Peach, ledge = 3.dp)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Avatar(mate.name, null, 48.dp, color = Peach, ledge = 3.dp)
+        Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(mate.name, style = MaterialTheme.typography.titleSmall, color = Arcade.colors.text)
-            mate.contactUrl?.let { url ->
-                Row(
-                    Modifier.heightIn(min = 48.dp).clickable(role = Role.Button) { openContact(context, url) },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Icon(ArcadeIcons.Chat, contentDescription = null, tint = Arcade.colors.muted, modifier = Modifier.size(16.dp))
-                    Text(contactLabel(url).removePrefix("Message on "), style = MaterialTheme.typography.bodySmall, color = Arcade.colors.muted)
-                }
-            }
+            Text(mate.name, style = MaterialTheme.typography.titleMedium, color = Arcade.colors.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            val detail = listOfNotNull(
+                "Captain".takeIf { isCaptain },
+                mate.contactUrl?.let { contactLabel(it).removePrefix("Message on ") },
+            ).joinToString(" · ")
+            if (detail.isNotEmpty()) Text(detail, style = MaterialTheme.typography.bodySmall, color = Arcade.colors.muted)
+        }
+        mate.contactUrl?.let { url ->
+            Spacer(Modifier.width(8.dp))
+            LedgeIconButton(ArcadeIcons.Chat, contactLabel(url), { openContact(context, url) }, size = 44.dp, color = MintSoft, tint = Ink)
         }
         if (eventEnded) {
+            Spacer(Modifier.width(8.dp))
             if (mate.endorsedByMe) {
                 Chip("Endorsed", color = MintSoft, icon = ArcadeIcons.Check)
             } else {
                 LedgeButton(
                     "Endorse", { onEndorse(mate) }, Modifier.testTag("endorse ${mate.name}"),
-                    color = Sun, enabled = !busy, icon = ArcadeIcons.ThumbUp, height = 44.dp, shape = RoundedCornerShape(14.dp),
+                    color = Sun, enabled = !busy, height = 44.dp, shape = RoundedCornerShape(14.dp),
                 )
             }
         }
@@ -200,7 +227,7 @@ private fun ResultSection(result: ReportedResult?, busy: Boolean, onReport: (Tea
     Text("Result", style = MaterialTheme.typography.titleMedium, color = text)
     when {
         result == null -> {
-            Text("Did your team place? Report it and a teammate confirms.", style = MaterialTheme.typography.bodyMedium, color = text)
+            Text("Did your team place? Report it and a teammate confirms. A confirmed result is worth 200 XP.", style = MaterialTheme.typography.bodyMedium, color = text)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 TeamResult.entries.forEach { r ->
                     LedgeButton(
@@ -221,7 +248,7 @@ private fun ResultSection(result: ReportedResult?, busy: Boolean, onReport: (Tea
             color = text,
         )
         else -> {
-            Text("${result.reporterName} reported ${result.result.label}.", style = MaterialTheme.typography.bodyMedium, color = text)
+            Text("${result.reporterName} reported ${result.result.label}. Confirm it to lock in 200 XP.", style = MaterialTheme.typography.bodyMedium, color = text)
             LedgeButton("Confirm ${result.result.label}", onConfirm, Modifier.fillMaxWidth(), color = Sun, enabled = !busy, icon = ArcadeIcons.Check)
         }
     }
