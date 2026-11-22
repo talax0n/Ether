@@ -32,6 +32,7 @@ import dev.ether.app.domain.Teammate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 /**
  * In-memory stand-in for the whole backend, for unit tests and for running the app before the
@@ -165,7 +166,9 @@ class FakeBackend(
 
 object DemoData {
     const val OTP = "123456"
-    val now: Instant = Instant.parse("2026-10-15T09:00:00Z")
+    // Dates are relative to launch so the demo always has one open, one closed and one finished competition.
+    val now: Instant = Instant.now().truncatedTo(ChronoUnit.HOURS)
+    private fun days(n: Long): Instant = now.plus(n, ChronoUnit.DAYS)
 
     val me = Profile(
         id = ProfileId("p-me"),
@@ -187,17 +190,16 @@ object DemoData {
     val competitions = listOf(
         Competition(
             gemastik, "GEMASTIK 2026", "National ICT competition. Software dev, UX, and data mining tracks.",
-            "https://gemastik.kemdikbud.go.id", Instant.parse("2026-11-01T16:59:00Z"),
-            Instant.parse("2026-12-10T10:00:00Z"), minTeamSize = 2, maxTeamSize = 3,
+            "https://gemastik.kemdikbud.go.id", days(-3), days(18), minTeamSize = 2, maxTeamSize = 3,
         ),
         Competition(
             campusHack, "Campus Hackathon", "48-hour build sprint on campus. Theme announced at kickoff.",
-            null, Instant.parse("2026-11-20T16:59:00Z"), Instant.parse("2026-11-29T18:00:00Z"),
+            null, days(4).plus(7, ChronoUnit.HOURS), days(12),
             minTeamSize = 3, maxTeamSize = 5,
         ),
         Competition(
             dataChallenge, "Data Challenge 2026", "Finished data science challenge.",
-            null, Instant.parse("2026-09-15T16:59:00Z"), Instant.parse("2026-10-08T18:00:00Z"),
+            null, days(-30), days(-7),
             minTeamSize = 2, maxTeamSize = 3,
         ),
     )

@@ -37,6 +37,19 @@ fun Competition.status(now: Instant = Instant.now()) = when {
     else -> EventStatus.OPEN
 }
 
+/**
+ * Competitions grouped for the list: open first (closing soonest on top), then closed (ending soonest),
+ * then finished (most recent first). Empty groups are left out.
+ */
+fun List<Competition>.bySection(now: Instant): List<Pair<EventStatus, List<Competition>>> =
+    groupBy { it.status(now) }.let { groups ->
+        listOfNotNull(
+            groups[EventStatus.OPEN]?.sortedBy { it.registrationDeadline }?.let { EventStatus.OPEN to it },
+            groups[EventStatus.CLOSED]?.sortedBy { it.eventEnd }?.let { EventStatus.CLOSED to it },
+            groups[EventStatus.ENDED]?.sortedByDescending { it.eventEnd }?.let { EventStatus.ENDED to it },
+        )
+    }
+
 /** Colored event header: status sticker, optional title, and the pitch. Text is Ink on every fill. */
 @Composable
 fun EventHeader(c: Competition, status: EventStatus, showTitle: Boolean, descriptionLines: Int = Int.MAX_VALUE) {

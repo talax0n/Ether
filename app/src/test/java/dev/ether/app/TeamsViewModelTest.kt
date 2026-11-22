@@ -11,6 +11,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.time.Duration
 import java.time.Instant
 
 class TeamsViewModelTest {
@@ -49,7 +50,7 @@ class TeamsViewModelTest {
 
     @Test
     fun `endorsing before the event ends shows the database's refusal`() = runTest {
-        val vm = teamsVm(now = Instant.parse("2026-10-01T00:00:00Z"))
+        val vm = teamsVm(now = DemoData.now.minus(Duration.ofDays(10)))
         val team = loaded(vm).teams.single()
         assertFalse(team.eventEnded)
 
