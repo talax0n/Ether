@@ -1,6 +1,6 @@
 # Ether
 
-Android app for finding hackathon teammates at one university by swiping. Product scope lives in [SPEC.md](SPEC.md). Build order lives in [PLAN.md](PLAN.md). Read SPEC §3 (domain model) before touching data code.
+Android app for finding hackathon teammates by swiping. Product scope lives in [SPEC.md](SPEC.md). Build order lives in [PLAN.md](PLAN.md). Read SPEC §3 (domain model) before touching data code.
 
 ## Stack
 

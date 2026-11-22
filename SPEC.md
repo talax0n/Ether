@@ -4,7 +4,7 @@
 
 ## 1. Problem & target user
 
-**User.** Students at one university who want to enter hackathons and competitions (e.g. GEMASTIK, campus hackathons, business case competitions) but lack a full team, or teams that need one more role.
+**User.** Students who want to enter hackathons and competitions (e.g. GEMASTIK, campus hackathons, business case competitions) but lack a full team, or teams that need one more role.
 
 **Problem.** Team finding today runs through WhatsApp group blasts and "anyone need a designer?" posts. Those are noisy, one-sided, and give no signal about whether a stranger will show up and contribute. Students outside a friend circle get left out.
 
@@ -87,7 +87,7 @@ The profile shows the level, its title, and progress to the next threshold. Leve
 ## 5. MVP features (YAGNI-tight)
 
 **In scope:**
-- Email OTP sign-in limited to the university domain.
+- Sign-in with any email (one-time code) or a Google account. The first sign-in creates the account.
 - Profile create and edit: skills, roles, major, year, bio, contact link, avatar.
 - Competition list (seeded by hand in the database).
 - Join a competition as SOLO, or create a team and list it as TEAM.
@@ -137,7 +137,6 @@ Business rules live in Postgres (constraints, triggers, RLS) because they must h
 
 - In-app chat. Contact handoff covers it.
 - iOS. Android first. Compose Multiplatform later if there is demand.
-- Multiple universities. One domain only.
 - Recommendation or AI ranking. Deck order is newest-first, filtered by open roles.
 - Admin dashboard. Competitions are seeded through the Supabase SQL editor.
 - Leaderboards. They need a user base big enough for ranking to mean anything.
@@ -146,8 +145,8 @@ Business rules live in Postgres (constraints, triggers, RLS) because they must h
 
 ## 8. Risks & unknowns
 
-- 🔴 **Domain-restricted sign-up.** Supabase does not restrict email domains out of the box. Plan: a "before user created" auth hook or a trigger on `auth.users` that rejects other domains. Verify this on day 1.
-- 🔴 **University email domain.** TBD. Needed before auth can work.
+- 🟡 **Open sign-up.** Anyone with an email or a Google account can join, so the deck is no longer limited to one campus. Trust comes from per-competition decks, mutual consent, and endorsements. Revisit if decks fill with people who never show up.
+- 🟡 **Google sign-in setup.** Needs a Google Cloud OAuth web client ID (shared with Supabase) and an Android client registered with the app's signing SHA-1. Without them the Google button stays hidden.
 - 🟡 **Cold start.** An empty deck kills the app. Mitigation: launch tied to one specific upcoming competition, seeded with friends and a campus org.
 - 🟡 **Contact link abuse.** Contact links are only visible to matched listings. Enforce that with RLS, not in the client.
 - 🟡 **Swipe gesture feel.** The hand-rolled card needs tuning (threshold, rotation, spring). Prototype it early on a real device.
@@ -156,7 +155,7 @@ Business rules live in Postgres (constraints, triggers, RLS) because they must h
 
 ## 9. Launch checklist
 
-- [ ] University domain confirmed and enforced at sign-up
+- [ ] Google sign-in configured for the release signing key
 - [ ] RLS on every table, with a test that a non-matched user cannot read another user's `contactUrl`
 - [ ] Matching, swipe cap, and XP triggers covered by SQL tests
 - [ ] One real upcoming competition seeded
