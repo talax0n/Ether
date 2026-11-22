@@ -177,9 +177,9 @@ private fun MainNavHost() {
                 )
             }
             composable<MatchesRoute> { entry ->
-                MatchesScreen(entry.toRoute<MatchesRoute>().competitionId, onBack = nav::popBackStack)
+                MatchesScreen(entry.toRoute<MatchesRoute>().competitionId, onBack = nav::popBackStack, onBrowse = { nav.navigateToTab(Tab.COMPETITIONS) })
             }
-            composable<AllMatchesRoute> { MatchesScreen(competitionId = null, onBack = null) }
+            composable<AllMatchesRoute> { MatchesScreen(competitionId = null, onBack = null, onBrowse = { nav.navigateToTab(Tab.COMPETITIONS) }) }
             composable<TeamsRoute> { TeamsScreen() }
             composable<ProfileRoute> { ProfileScreen(onEdit = { nav.navigate(EditProfileRoute) }) }
             composable<EditProfileRoute> {
