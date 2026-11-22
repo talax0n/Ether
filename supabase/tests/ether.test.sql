@@ -11,28 +11,24 @@ create function pg_temp.login(p uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true);
 $$;
 
-select throws_ok(
-  $$ insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000ff', 'mallory@gmail.com') $$,
-  '42501', 'email_domain_not_allowed', 'sign-up with another domain is rejected');
-
-select throws_ok(
-  $$ insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000fe', 'x@evil.student.example.ac.id.com') $$,
-  '42501', 'email_domain_not_allowed', 'domain must be a suffix match');
-select throws_ok(
-  $$ insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000fd', 'x@evil.student.example.ac.id') $$,
-  '42501', 'email_domain_not_allowed', 'subdomain of the allowed domain is rejected');
-select throws_ok(
-  $$ insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000fc', 'x@student.example.ac.id@evil.com') $$,
-  '42501', 'email_domain_not_allowed', 'email with two @ is rejected');
 select lives_ok(
-  $$ insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000fb', 'Upper@STUDENT.Example.AC.ID') $$,
-  'domain match is case-insensitive');
-select throws_ok(
-  $$ update auth.users set email = 'upper@external.example' where id = '00000000-0000-0000-0000-0000000000fb' $$,
-  '42501', 'email_domain_not_allowed', 'changing email to another domain is rejected');
-select throws_ok(
-  $$ update auth.users set email_change = 'upper@external.example' where id = '00000000-0000-0000-0000-0000000000fb' $$,
-  '42501', 'email_domain_not_allowed', 'pending email change to another domain is rejected');
+  $$ insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000ff', 'mallory@gmail.com') $$,
+  'sign-up is open to any email domain');
+select is(
+  (select name from profiles where id = '00000000-0000-0000-0000-0000000000ff'), 'mallory',
+  'an email sign-up is named after the local part');
+select lives_ok(
+  $$ insert into auth.users (id, email, raw_user_meta_data) values (
+       '00000000-0000-0000-0000-0000000000fe', 'g.user@gmail.com',
+       '{"full_name": "Gita Pratama", "avatar_url": "https://lh3.googleusercontent.com/a/x"}') $$,
+  'a Google sign-up is accepted');
+select results_eq(
+  $$ select name, avatar_url from profiles where id = '00000000-0000-0000-0000-0000000000fe' $$,
+  $$ values ('Gita Pratama'::text, 'https://lh3.googleusercontent.com/a/x'::text) $$,
+  'a Google sign-up takes its name and photo from the Google profile');
+select lives_ok(
+  $$ update auth.users set email = 'mallory@external.example' where id = '00000000-0000-0000-0000-0000000000ff' $$,
+  'changing email to any domain is allowed');
 
 insert into auth.users (id, email)
 select ('00000000-0000-0000-0000-0000000000' || x)::uuid, 'user' || x || '@student.example.ac.id'

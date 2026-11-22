@@ -26,7 +26,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,7 +46,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.ether.app.BuildConfig
 import dev.ether.app.ui.components.ArcadeIcons
 import dev.ether.app.ui.components.ArcadeTextField
 import dev.ether.app.ui.components.ErrorText
@@ -97,24 +95,14 @@ fun SignInContent(
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp)) {
                 when (step) {
                     SignInStep.EMAIL -> {
-                        Heading("What's your\ncampus email?", "We'll email you a 6-digit code. No password to remember.")
+                        Heading("Sign in or\ncreate an account", "Enter your email and we'll send a 6-digit code. New here? The code creates your account.")
                         ArcadeTextField(
                             value = state.email,
                             onValueChange = onEmailChange,
-                            label = "University email",
+                            label = "Email",
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Send),
                             keyboardActions = KeyboardActions(onSend = { onSubmit() }),
                         )
-                        Spacer(Modifier.height(12.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(ArcadeIcons.Lock, null, tint = colors.muted, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.size(6.dp))
-                            Text(
-                                "Only @${BuildConfig.ALLOWED_EMAIL_DOMAIN} addresses can join.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = colors.muted,
-                            )
-                        }
                     }
                     SignInStep.CODE -> {
                         Heading("Check your\ninbox", "Enter the code we sent to ${state.email.trim()}.")

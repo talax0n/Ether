@@ -82,7 +82,7 @@ import kotlin.math.absoluteValue
 import kotlin.math.sin
 
 enum class OnboardingPage(val title: String, val body: String) {
-    SWIPE("Swipe to find\nyour hackathon team", "Right on the builders you want. Left to pass. Only students from your campus are in the deck."),
+    SWIPE("Swipe to find\nyour hackathon team", "Right on the builders you want. Left to pass. Every card is someone entering the same competition."),
     MATCH("Match, then\nmessage", "Two right swipes make a team. WhatsApp and Telegram links unlock only for the people you matched."),
     LEVEL("Level up with\nevery event", "Earn XP for joining, shipping and winning. Teammates endorse you once the event ends."),
 }

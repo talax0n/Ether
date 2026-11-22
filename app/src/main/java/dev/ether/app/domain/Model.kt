@@ -107,7 +107,6 @@ sealed class EtherError(message: String) : Exception(message) {
     class ResultAlreadyConfirmed : EtherError("Your team's result is already confirmed.")
     class NoResultReported : EtherError("No result has been reported yet.")
     class CannotConfirmOwnResult : EtherError("A teammate has to confirm the result you reported.")
-    class EmailDomainNotAllowed(domain: String) : EtherError("Use your university email (@$domain)")
     class InvalidCode : EtherError("That code is wrong or has expired.")
     class Offline : EtherError("Can't reach Ether. Check your connection and try again.")
     class Unknown : EtherError("Something went wrong. Please try again.")
