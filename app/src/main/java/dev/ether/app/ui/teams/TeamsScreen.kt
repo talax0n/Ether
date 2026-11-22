@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -54,6 +53,7 @@ import dev.ether.app.ui.components.LoadingBox
 import dev.ether.app.ui.components.MessageBox
 import dev.ether.app.ui.components.Tone
 import dev.ether.app.ui.components.staggerIn
+import dev.ether.app.ui.contactApp
 import dev.ether.app.ui.contactLabel
 import dev.ether.app.ui.openContact
 import dev.ether.app.ui.theme.Arcade
@@ -194,7 +194,7 @@ private fun TeammateRow(mate: Teammate, isCaptain: Boolean, eventEnded: Boolean,
             Text(mate.name, style = MaterialTheme.typography.titleMedium, color = Arcade.colors.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             val detail = listOfNotNull(
                 "Captain".takeIf { isCaptain },
-                mate.contactUrl?.let { contactLabel(it).removePrefix("Message on ") },
+                mate.contactUrl?.let(::contactApp),
             ).joinToString(" · ")
             if (detail.isNotEmpty()) Text(detail, style = MaterialTheme.typography.bodySmall, color = Arcade.colors.muted)
         }

@@ -60,7 +60,6 @@ import dev.ether.app.ui.theme.Arcade
 import dev.ether.app.ui.theme.Coral
 import dev.ether.app.ui.theme.Grape
 import dev.ether.app.ui.theme.Ink
-import dev.ether.app.ui.theme.Mint
 import dev.ether.app.ui.theme.Motion
 import dev.ether.app.ui.theme.NumberStyle
 import dev.ether.app.ui.theme.Sun
@@ -188,25 +187,6 @@ fun LevelHex(level: Int, modifier: Modifier = Modifier, width: Dp = 54.dp, capti
             if (caption) Text("LV", style = NumberStyle.copy(fontSize = 11.sp, lineHeight = 11.sp), color = Ink)
             Text("$level", style = NumberStyle.copy(fontSize = (width.value * 0.4f).sp, lineHeight = (width.value * 0.42f).sp), color = Ink)
         }
-    }
-}
-
-/** Mint ring filling to [progress], with a white hole, like a chunky donut gauge. */
-@Composable
-fun ProgressRing(progress: Float, modifier: Modifier = Modifier, size: Dp = 50.dp, color: Color = Mint) {
-    val reducedMotion = Arcade.reducedMotion
-    val anim = remember { Animatable(if (reducedMotion) progress else 0f) }
-    LaunchedEffect(progress) { anim.animateTo(progress, tween(900, 200, FastOutSlowInEasing)) }
-    val line = Arcade.colors.line
-    val track = Arcade.colors.track
-    val hole = Arcade.colors.surface
-    Canvas(modifier.size(size)) {
-        val stroke = 3.dp.toPx()
-        drawCircle(track)
-        drawArc(color, -90f, 360f * anim.value, useCenter = true)
-        drawCircle(line, radius = this.size.minDimension / 2 - stroke / 2, style = Stroke(stroke))
-        drawCircle(hole, radius = this.size.minDimension * 0.28f)
-        drawCircle(line, radius = this.size.minDimension * 0.28f, style = Stroke(2.dp.toPx()))
     }
 }
 
