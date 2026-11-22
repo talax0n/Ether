@@ -22,6 +22,19 @@ data class TeamForm(val name: String = "", val pitch: String = "", val openRoles
     val isValid get() = name.isNotBlank() && pitch.isNotBlank() && roles.isNotEmpty()
 }
 
+/** What the user can do in this competition. Derived, so the screen branches on one value. */
+sealed interface Entry {
+    /** No listing yet and registration is open: pick solo or team. */
+    data object Choose : Entry
+    data object RegistrationClosed : Entry
+    /** [canSwipe] mirrors the database: swipes need an active listing and open registration. */
+    data class Listed(val listing: Listing, val team: MyTeam?, val registrationOpen: Boolean) : Entry {
+        val canSwipe get() = listing.active && registrationOpen
+    }
+    /** Joined a team through a match; only the owner swipes for it. */
+    data class OnTeam(val team: MyTeam) : Entry
+}
+
 data class CompetitionDetailUiState(
     val competition: Competition? = null,
     val listing: Listing? = null,
@@ -33,7 +46,15 @@ data class CompetitionDetailUiState(
     /** Non-null while the create-team form is open. */
     val teamForm: TeamForm? = null,
     val error: String? = null,
-)
+) {
+    val entry: Entry
+        get() = when {
+            team != null && listing?.active != true -> Entry.OnTeam(team)
+            listing == null && !registrationOpen -> Entry.RegistrationClosed
+            listing == null -> Entry.Choose
+            else -> Entry.Listed(listing, team, registrationOpen)
+        }
+}
 
 class CompetitionDetailViewModel(
     private val id: CompetitionId,
