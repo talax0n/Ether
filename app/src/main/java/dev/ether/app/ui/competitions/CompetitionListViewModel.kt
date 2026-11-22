@@ -9,10 +9,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.Instant
 
 sealed interface CompetitionListUiState {
     data object Loading : CompetitionListUiState
-    data class Loaded(val competitions: List<Competition>) : CompetitionListUiState
+    data class Loaded(val competitions: List<Competition>, val now: Instant = Instant.now()) : CompetitionListUiState {
+        val sections = competitions.bySection(now)
+    }
     data class Failed(val message: String) : CompetitionListUiState
 }
 

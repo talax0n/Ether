@@ -1,5 +1,6 @@
 package dev.ether.app.ui
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
@@ -32,7 +33,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,7 +57,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import dev.ether.app.ui.components.ArcadeIcons
 import dev.ether.app.ui.components.MessageBox
-import dev.ether.app.ui.components.SplashLoading
+import dev.ether.app.ui.components.Splash
 import dev.ether.app.ui.components.Tone
 import dev.ether.app.ui.theme.Arcade
 import dev.ether.app.ui.theme.Ink
@@ -65,7 +69,11 @@ import dev.ether.app.ui.deck.DeckScreen
 import dev.ether.app.ui.matches.MatchesScreen
 import dev.ether.app.ui.profile.ProfileEditScreen
 import dev.ether.app.ui.profile.ProfileScreen
+import dev.ether.app.ui.onboarding.OnboardingScreen
 import dev.ether.app.ui.signin.SignInScreen
+import dev.ether.app.data.OnboardingStore
+import kotlinx.coroutines.delay
+import org.koin.compose.koinInject
 import dev.ether.app.ui.teams.TeamsScreen
 import kotlinx.serialization.Serializable
 import org.koin.compose.viewmodel.koinViewModel
@@ -90,9 +98,23 @@ private enum class Tab(val route: Any, val routeClass: KClass<*>, val label: Str
 @Composable
 fun EtherRoot(vm: AppViewModel = koinViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
-    when (val s = state) {
-        AppUiState.Loading -> SplashLoading()
-        AppUiState.SignedOut -> SignInScreen()
+    val onboarding = koinInject<OnboardingStore>()
+    val seenOnboarding by onboarding.seen.collectAsStateWithLifecycle()
+    // The splash holds long enough to finish its intro even when auth resolves instantly.
+    var introDone by rememberSaveable { mutableStateOf(false) }
+    val introMs = if (Arcade.reducedMotion) 300L else 1_100L
+    LaunchedEffect(Unit) { delay(introMs); introDone = true }
+    val screen = if (!introDone) AppUiState.Loading else state
+    Crossfade(screen to seenOnboarding, animationSpec = tween(Motion.SCREEN_MS), label = "root") { (s, seen) ->
+        RootScreen(s, seen, vm, onboarding::markSeen)
+    }
+}
+
+@Composable
+private fun RootScreen(s: AppUiState, seenOnboarding: Boolean, vm: AppViewModel, onOnboarded: () -> Unit) {
+    when (s) {
+        AppUiState.Loading -> Splash()
+        AppUiState.SignedOut -> if (seenOnboarding) SignInScreen() else OnboardingScreen(onDone = onOnboarded)
         // Keyed by user: this screen lives outside the NavHost, so its ViewModel would otherwise outlive a sign-out.
         is AppUiState.NeedsProfile -> ProfileEditScreen(
             isSetup = true, onDone = vm::recheck, onBack = {},
@@ -150,13 +172,14 @@ private fun MainNavHost() {
                     competitionId = route.competitionId,
                     listingId = route.listingId,
                     onOpenMatches = { nav.navigate(MatchesRoute(route.competitionId)) },
+                    onOpenTeams = { nav.navigateToTab(Tab.TEAMS) },
                     onBack = nav::popBackStack,
                 )
             }
             composable<MatchesRoute> { entry ->
-                MatchesScreen(entry.toRoute<MatchesRoute>().competitionId, onBack = nav::popBackStack)
+                MatchesScreen(entry.toRoute<MatchesRoute>().competitionId, onBack = nav::popBackStack, onBrowse = { nav.navigateToTab(Tab.COMPETITIONS) })
             }
-            composable<AllMatchesRoute> { MatchesScreen(competitionId = null, onBack = null) }
+            composable<AllMatchesRoute> { MatchesScreen(competitionId = null, onBack = null, onBrowse = { nav.navigateToTab(Tab.COMPETITIONS) }) }
             composable<TeamsRoute> { TeamsScreen() }
             composable<ProfileRoute> { ProfileScreen(onEdit = { nav.navigate(EditProfileRoute) }) }
             composable<EditProfileRoute> {

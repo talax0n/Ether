@@ -92,7 +92,8 @@ private const val COMMIT_FRACTION = 0.35f
 private const val MAX_ROTATION_DEG = 14f
 private val FlingVelocity = 1100.dp
 private const val NEXT_CARD_SCALE = 0.94f
-private val NEXT_CARD_DROP = 16.dp
+// Larger than the 3% the next card loses at each edge from scaling, so its bottom edge peeks out as a stack.
+private val NEXT_CARD_DROP = 34.dp
 
 private class SwipeCardState {
     val offset = Animatable(Offset.Zero, Offset.VectorConverter)
@@ -139,7 +140,7 @@ fun SwipeDeck(
     }
 
     Column(modifier, verticalArrangement = Arrangement.spacedBy(18.dp)) {
-        Box(Modifier.weight(1f).fillMaxWidth()) {
+        Box(Modifier.weight(1f).fillMaxWidth().padding(bottom = 14.dp)) {
             if (next != null) key(next.listingId) {
                 CardFace(
                     next,

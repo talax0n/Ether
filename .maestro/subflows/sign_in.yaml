@@ -1,6 +1,9 @@
 appId: dev.ether.app
 ---
 - runScript: ../scripts/clear_mail.js
+- tapOn:
+    text: "Skip"
+    optional: true
 - tapOn: "University email"
 - inputText: ${EMAIL}
 - tapOn: "Send code"
@@ -13,4 +16,3 @@ appId: dev.ether.app
       EMAIL: ${EMAIL}
 - tapOn: "6-digit code"
 - inputText: ${output.otp}
-- tapOn: "Verify"

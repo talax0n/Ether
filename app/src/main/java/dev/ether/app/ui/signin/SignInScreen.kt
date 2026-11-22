@@ -1,18 +1,13 @@
 package dev.ether.app.ui.signin
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,7 +21,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -34,41 +30,41 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.ether.app.BuildConfig
 import dev.ether.app.ui.components.ArcadeIcons
 import dev.ether.app.ui.components.ArcadeTextField
 import dev.ether.app.ui.components.ErrorText
+import dev.ether.app.ui.components.EtherMark
 import dev.ether.app.ui.components.LedgeButton
-import dev.ether.app.ui.components.LedgeCard
-import dev.ether.app.ui.components.Wordmark
+import dev.ether.app.ui.components.LedgeIconButton
 import dev.ether.app.ui.components.ledge
-import dev.ether.app.ui.components.staggerIn
 import dev.ether.app.ui.theme.Arcade
-import dev.ether.app.ui.theme.Grape
-import dev.ether.app.ui.theme.Ink
-import dev.ether.app.ui.theme.Mint
-import dev.ether.app.ui.theme.Sky
-import dev.ether.app.ui.theme.Sun
+import dev.ether.app.ui.theme.Coral
 import dev.ether.app.ui.theme.EtherTheme
+import dev.ether.app.ui.theme.NumberStyle
 import org.koin.compose.viewmodel.koinViewModel
-import kotlin.math.sin
 
 @Composable
 fun SignInScreen(vm: SignInViewModel = koinViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
-    SignInContent(state, vm::onEmailChange, vm::onCodeChange, vm::submit, vm::changeEmail)
+    SignInContent(state, vm::onEmailChange, vm::onCodeChange, vm::submit, vm::changeEmail, vm::resend)
 }
 
 @Composable
@@ -78,108 +74,131 @@ fun SignInContent(
     onCodeChange: (String) -> Unit,
     onSubmit: () -> Unit,
     onChangeEmail: () -> Unit,
+    onResend: () -> Unit,
 ) {
-    Box(Modifier.fillMaxSize().background(Arcade.colors.background)) {
-        Column(
-            Modifier.safeDrawingPadding().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Stickers(Modifier.staggerIn(0))
-            Spacer(Modifier.height(18.dp))
-            Wordmark(Modifier.staggerIn(1))
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "Swipe to find your hackathon team.",
-                Modifier.staggerIn(2),
-                style = MaterialTheme.typography.titleLarge,
-                color = Arcade.colors.text,
-            )
-            Spacer(Modifier.height(28.dp))
-            LedgeCard(Modifier.fillMaxWidth().staggerIn(3)) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    AnimatedContent(
-                        state.step,
-                        transitionSpec = {
-                            val dir = if (targetState == SignInStep.CODE) 1 else -1
-                            (slideInHorizontally { dir * it / 3 } + fadeIn()) togetherWith (slideOutHorizontally { -dir * it / 3 } + fadeOut())
-                        },
-                        label = "step",
-                    ) { step ->
-                        when (step) {
-                            SignInStep.EMAIL -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text("Use your campus address. We'll email you a code.", style = MaterialTheme.typography.bodyMedium, color = Arcade.colors.muted)
-                                ArcadeTextField(
-                                    value = state.email,
-                                    onValueChange = onEmailChange,
-                                    label = "University email",
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Send),
-                                    keyboardActions = KeyboardActions(onSend = { onSubmit() }),
-                                )
-                            }
-                            SignInStep.CODE -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text("We sent a 6-digit code to ${state.email.trim()}.", style = MaterialTheme.typography.bodyMedium, color = Arcade.colors.muted)
-                                ArcadeTextField(
-                                    value = state.code,
-                                    onValueChange = onCodeChange,
-                                    label = "6-digit code",
-                                    numeric = true,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
-                                    keyboardActions = KeyboardActions(onDone = { onSubmit() }),
-                                )
-                            }
-                        }
-                    }
-                    state.error?.let { ErrorText(it) }
-                    LedgeButton(
-                        if (state.step == SignInStep.EMAIL) "Send code" else "Verify",
-                        onSubmit,
-                        Modifier.fillMaxWidth(),
-                        enabled = state.canSubmit || state.busy,
-                        busy = state.busy,
-                        icon = if (state.step == SignInStep.EMAIL) ArcadeIcons.Bolt else ArcadeIcons.Check,
-                    )
-                }
-            }
+    val colors = Arcade.colors
+    Column(Modifier.fillMaxSize().background(colors.background).safeDrawingPadding().imePadding()) {
+        Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
             if (state.step == SignInStep.CODE) {
-                Spacer(Modifier.height(12.dp))
-                LedgeButton(
-                    "Use a different email", onChangeEmail, Modifier.fillMaxWidth(),
-                    color = Color.Transparent, contentColor = Arcade.colors.text, height = 48.dp,
-                )
+                LedgeIconButton(ArcadeIcons.Back, "Use a different email", onChangeEmail, size = 42.dp)
+            } else {
+                EtherMark(size = 40.dp)
             }
         }
+        AnimatedContent(
+            state.step,
+            Modifier.weight(1f),
+            transitionSpec = {
+                val dir = if (targetState == SignInStep.CODE) 1 else -1
+                (slideInHorizontally { dir * it / 4 } + fadeIn()) togetherWith (slideOutHorizontally { -dir * it / 4 } + fadeOut())
+            },
+            label = "step",
+        ) { step ->
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp)) {
+                when (step) {
+                    SignInStep.EMAIL -> {
+                        Heading("What's your\ncampus email?", "We'll email you a 6-digit code. No password to remember.")
+                        ArcadeTextField(
+                            value = state.email,
+                            onValueChange = onEmailChange,
+                            label = "University email",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Send),
+                            keyboardActions = KeyboardActions(onSend = { onSubmit() }),
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(ArcadeIcons.Lock, null, tint = colors.muted, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.size(6.dp))
+                            Text(
+                                "Only @${BuildConfig.ALLOWED_EMAIL_DOMAIN} addresses can join.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.muted,
+                            )
+                        }
+                    }
+                    SignInStep.CODE -> {
+                        Heading("Check your\ninbox", "Enter the code we sent to ${state.email.trim()}.")
+                        CodeCells(state.code, onCodeChange, enabled = !state.busy)
+                        Spacer(Modifier.height(16.dp))
+                        ResendRow(state.resendIn, enabled = !state.busy, onResend)
+                    }
+                }
+                state.error?.let {
+                    Spacer(Modifier.height(14.dp))
+                    ErrorText(it)
+                }
+            }
+        }
+        LedgeButton(
+            if (state.step == SignInStep.EMAIL) "Send code" else "Verify",
+            onSubmit,
+            Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
+            enabled = state.canSubmit || state.busy,
+            busy = state.busy,
+            icon = if (state.step == SignInStep.EMAIL) ArcadeIcons.Bolt else ArcadeIcons.Check,
+        )
     }
 }
 
-/** Four reward stickers that bob gently above the logo: the arcade promise before the first tap. */
 @Composable
-private fun Stickers(modifier: Modifier = Modifier) {
-    val t = if (Arcade.reducedMotion) remember { mutableFloatStateOf(0f) } else rememberInfiniteTransition(label = "bob")
-        .animateFloat(0f, (2 * Math.PI).toFloat(), infiniteRepeatable(tween(3200, easing = LinearEasing), RepeatMode.Restart), label = "t")
-    val items = listOf<Triple<ImageVector, Color, Float>>(
-        Triple(ArcadeIcons.HeartFilled, Mint, -10f),
-        Triple(ArcadeIcons.Bolt, Sun, 6f),
-        Triple(ArcadeIcons.Trophy, Sky, -4f),
-        Triple(ArcadeIcons.Users, Grape, 10f),
-    )
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        items.forEachIndexed { i, (icon, color, tilt) ->
-            Box(
-                Modifier
-                    .graphicsLayer {
-                        translationY = sin(t.value + i * 1.3f) * 4.dp.toPx()
-                        rotationZ = tilt
+private fun Heading(title: String, body: String) {
+    Text(title, style = MaterialTheme.typography.displaySmall, color = Arcade.colors.text)
+    Spacer(Modifier.height(10.dp))
+    Text(body, style = MaterialTheme.typography.bodyLarge, color = Arcade.colors.muted)
+    Spacer(Modifier.height(28.dp))
+}
+
+/** Six code boxes over one hidden text field, so paste, autofill and the keyboard all behave like a normal input. */
+@Composable
+private fun CodeCells(code: String, onChange: (String) -> Unit, enabled: Boolean) {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    val colors = Arcade.colors
+    BasicTextField(
+        value = code,
+        onValueChange = onChange,
+        enabled = enabled,
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
+        modifier = Modifier.fillMaxWidth().focusRequester(focus).semantics { contentDescription = "6-digit code" },
+        decorationBox = {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                repeat(SignInUiState.CODE_LENGTH) { i ->
+                    val active = enabled && i == code.length
+                    Box(
+                        Modifier.weight(1f).height(64.dp)
+                            .ledge(RoundedCornerShape(14.dp), colors.surface, if (active) Coral else colors.line, colors.ledge, if (active) 5.dp else 3.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(code.getOrNull(i)?.toString() ?: "", style = NumberStyle.copy(fontSize = 26.sp), color = colors.text)
                     }
-                    .size(52.dp)
-                    .ledge(CircleShape, color, Arcade.colors.line, Arcade.colors.ledge, 4.dp),
-                contentAlignment = Alignment.Center,
-            ) { Icon(icon, contentDescription = null, tint = Ink, modifier = Modifier.size(24.dp)) }
-        }
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun ResendRow(resendIn: Int, enabled: Boolean, onResend: () -> Unit) {
+    val colors = Arcade.colors
+    if (resendIn > 0) {
+        Text(
+            "Resend code in 0:${resendIn.toString().padStart(2, '0')}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.muted,
+        )
+    } else {
+        Text(
+            "Resend code",
+            Modifier.clip(RoundedCornerShape(8.dp)).clickable(enabled = enabled, role = Role.Button, onClick = onResend).padding(vertical = 4.dp),
+            style = MaterialTheme.typography.titleSmall,
+            color = colors.text,
+        )
     }
 }
 
 @Preview
 @Composable
 private fun SignInPreview() {
-    EtherTheme { SignInContent(SignInUiState(email = "ana@student.ac.id"), {}, {}, {}, {}) }
+    EtherTheme { SignInContent(SignInUiState(email = "ana@student.ac.id"), {}, {}, {}, {}, {}) }
 }

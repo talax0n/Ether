@@ -8,15 +8,15 @@ name: Create a team and see it in another user's deck
     env:
       EMAIL: demo5@student.example.ac.id
 - tapOn: "Campus Hackathon 2026"
-- tapOn: "Create a team, find members"
+- tapOn: "Start a team"
 - tapOn: "Team name"
 - inputText: "Rocket Owls"
 # BACK with the keyboard up closes the keyboard, the next BACK closes the dialog; the app stays put.
 - back
-- assertVisible: "Create a team"
+- assertVisible: "Start a team"
 - back
-- assertVisible: "How are you entering?"
-- tapOn: "Create a team, find members"
+- assertVisible: "Your entry"
+- tapOn: "Start a team"
 - tapOn: "Team name"
 - inputText: "Rocket Owls"
 - tapOn: "Pitch"

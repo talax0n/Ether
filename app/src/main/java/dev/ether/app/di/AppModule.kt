@@ -5,6 +5,7 @@ import dev.ether.app.data.AuthRepository
 import dev.ether.app.data.CompetitionRepository
 import dev.ether.app.data.DeckRepository
 import dev.ether.app.data.MatchRepository
+import dev.ether.app.data.OnboardingStore
 import dev.ether.app.data.ProfileRepository
 import dev.ether.app.data.TeamRepository
 import dev.ether.app.data.fake.FakeBackend
@@ -28,6 +29,7 @@ import dev.ether.app.ui.teams.TeamsViewModel
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
+import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.binds
@@ -56,6 +58,7 @@ private val supabaseData = module {
 }
 
 private val viewModels = module {
+    single { OnboardingStore(androidContext()) }
     viewModelOf(::AppViewModel)
     viewModelOf(::SignInViewModel)
     viewModelOf(::ProfileEditViewModel)

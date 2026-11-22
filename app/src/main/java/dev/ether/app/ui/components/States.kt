@@ -20,12 +20,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,9 +38,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import dev.ether.app.ui.theme.Arcade
 import dev.ether.app.ui.theme.Coral
+import dev.ether.app.ui.theme.Cream
 import dev.ether.app.ui.theme.Grape
 import dev.ether.app.ui.theme.Ink
 import dev.ether.app.ui.theme.Mint
@@ -75,17 +83,46 @@ fun LoadingBox(modifier: Modifier = Modifier) {
 }
 
 /** App-start splash: the wordmark over bouncing dots. */
+/**
+ * Launch screen. The mark sits at the exact screen centre, where the system splash icon was, so the handoff
+ * reads as one motion: the mark settles, then the wordmark rises under it. Dots appear only if loading
+ * outlasts the intro, so a fast start never flashes a spinner.
+ */
 @Composable
-fun SplashLoading(modifier: Modifier = Modifier) {
-    Column(
-        modifier.fillMaxSize().background(Arcade.colors.background).semantics { contentDescription = "Loading" },
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Wordmark()
-        Spacer(Modifier.height(20.dp))
-        BouncingDots(Coral)
+fun Splash(modifier: Modifier = Modifier) {
+    val reduced = Arcade.reducedMotion
+    val pop = remember { Animatable(if (reduced) 1f else 0.86f) }
+    val rise = remember { Animatable(if (reduced) 1f else 0f) }
+    var slow by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        launch { pop.animateTo(1f, Motion.pop()) }
+        delay(160)
+        rise.animateTo(1f, Motion.settle())
+        delay(1200)
+        slow = true
     }
+    val markSize = 104.dp
+    Box(modifier.fillMaxSize().background(Arcade.colors.background).semantics { contentDescription = "Loading" }) {
+        EtherMark(Modifier.align(Alignment.Center).graphicsLayer { scaleX = pop.value; scaleY = pop.value }, size = markSize)
+        Column(
+            Modifier.align(Alignment.Center).offset(y = markSize / 2 + 64.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Wordmark(Modifier.graphicsLayer { alpha = rise.value.coerceIn(0f, 1f); translationY = (1f - rise.value) * 24.dp.toPx() })
+            Box(Modifier.height(48.dp), contentAlignment = Alignment.BottomCenter) {
+                if (slow) BouncingDots(Coral)
+            }
+        }
+    }
+}
+
+/** The app mark: the launcher heart in a Coral ledge tile. */
+@Composable
+fun EtherMark(modifier: Modifier = Modifier, size: Dp = 56.dp) {
+    Box(
+        modifier.size(size + size / 14).ledge(RoundedCornerShape(size * 0.3f), Coral, Arcade.colors.line, Arcade.colors.ledge, size / 14, lineWidth = size / 24),
+        contentAlignment = Alignment.Center,
+    ) { Icon(ArcadeIcons.HeartFilled, contentDescription = null, tint = Cream, modifier = Modifier.size(size * 0.52f)) }
 }
 
 /** The "ether" logotype: Coral letters with an Ink ledge. */

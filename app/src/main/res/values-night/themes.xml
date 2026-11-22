@@ -2,5 +2,5 @@
     <style name="Theme.Ether" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/window_background</item>
     </style>
-    <color name="window_background">#FF16131A</color>
+    <color name="window_background">#FF17142A</color>
 </resources>

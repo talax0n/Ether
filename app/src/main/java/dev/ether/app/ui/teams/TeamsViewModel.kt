@@ -15,7 +15,17 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 
 /** [eventEnded] unlocks endorsements and result reporting, which the database only allows after `event_end`. */
-data class TeamView(val team: MyTeam, val eventEnded: Boolean)
+data class TeamView(val team: MyTeam, val eventEnded: Boolean) {
+    /** Post-event jobs still waiting on this user: teammates to endorse, plus reporting or confirming the result. */
+    val toDo: Int
+        get() {
+            if (!eventEnded) return 0
+            val endorsements = team.teammates.count { !it.endorsedByMe }
+            val result = team.result
+            val resultJob = result == null || (!result.confirmed && !result.reportedByMe)
+            return endorsements + if (resultJob) 1 else 0
+        }
+}
 
 sealed interface TeamsUiState {
     data object Loading : TeamsUiState

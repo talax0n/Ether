@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -92,7 +93,8 @@ private fun rewardsFor(match: Match) = listOfNotNull(
  * confetti falls over sun rays. Under reduced motion every piece starts in its final state.
  */
 @Composable
-fun MatchCelebration(match: Match, onDismiss: () -> Unit) {
+/** [canKeepSwiping] is false when the match closed the user's own listing (a solo who joined a team). */
+fun MatchCelebration(match: Match, canKeepSwiping: Boolean, onDismiss: () -> Unit, onOpenTeams: () -> Unit) {
     val reduced = Arcade.reducedMotion
     val haptics = LocalHapticFeedback.current
     val context = LocalContext.current
@@ -159,7 +161,9 @@ fun MatchCelebration(match: Match, onDismiss: () -> Unit) {
                         Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyMedium, color = Paper, textAlign = TextAlign.Center,
                     )
                     LedgeButton(
-                        "Keep swiping", onDismiss, Modifier.fillMaxWidth(),
+                        if (canKeepSwiping) "Keep swiping" else "See your team",
+                        if (canKeepSwiping) onDismiss else { { onDismiss(); onOpenTeams() } },
+                        Modifier.fillMaxWidth(),
                         color = Color.Transparent, contentColor = Paper, line = Paper, ledgeColor = Ink.copy(alpha = 0.6f),
                     )
                 }
@@ -184,9 +188,10 @@ private fun Headline(modifier: Modifier) {
 @Composable
 private fun Duo(match: Match, duo: () -> Float, heart: () -> Float) {
     Box(Modifier.fillMaxWidth().height(176.dp), contentAlignment = Alignment.Center) {
-        Row(horizontalArrangement = Arrangement.spacedBy((-22).dp), verticalAlignment = Alignment.CenterVertically) {
+        // A small gap, not an overlap, and the heart sits low on the seam so neither set of initials is covered.
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             Avatar(
-                "You", null, 128.dp,
+                "You", null, 116.dp,
                 Modifier.graphicsLayer {
                     val p = duo()
                     translationX = (1f - p) * -200.dp.toPx()
@@ -196,7 +201,7 @@ private fun Duo(match: Match, duo: () -> Float, heart: () -> Float) {
                 label = "ME",
             )
             Avatar(
-                match.name, match.avatarUrl, 128.dp,
+                match.name, match.avatarUrl, 116.dp,
                 Modifier.graphicsLayer {
                     val p = duo()
                     translationX = (1f - p) * 200.dp.toPx()
@@ -207,6 +212,7 @@ private fun Duo(match: Match, duo: () -> Float, heart: () -> Float) {
         }
         Box(
             Modifier
+                .offset(y = 46.dp)
                 .graphicsLayer {
                     val s = heart()
                     scaleX = s
