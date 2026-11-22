@@ -172,6 +172,7 @@ private fun MainNavHost() {
                     competitionId = route.competitionId,
                     listingId = route.listingId,
                     onOpenMatches = { nav.navigate(MatchesRoute(route.competitionId)) },
+                    onOpenTeams = { nav.navigateToTab(Tab.TEAMS) },
                     onBack = nav::popBackStack,
                 )
             }

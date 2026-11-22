@@ -35,10 +35,10 @@ name: Drag left, then match with a team that already liked you
     timeout: 15000
 - assertVisible: "You and Byte Club both swiped right."
 - assertVisible: "Message on WhatsApp"
-- tapOn: "Keep swiping"
-- assertVisible: "Your listing is closed.*"
-- back
-- back
+- tapOn: "See your team"
+- extendedWaitUntil:
+    visible: "Byte Club"
+    timeout: 10000
 - tapOn: "Matches"
 - extendedWaitUntil:
     visible: "Byte Club"
