@@ -4,7 +4,7 @@ appId: dev.ether.app
 - tapOn:
     text: "Skip"
     optional: true
-- tapOn: "University email"
+- tapOn: "Email"
 - inputText: ${EMAIL}
 - tapOn: "Send code"
 - extendedWaitUntil:

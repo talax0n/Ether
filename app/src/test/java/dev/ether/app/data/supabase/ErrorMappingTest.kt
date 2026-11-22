@@ -16,7 +16,6 @@ class ErrorMappingTest {
         assertTrue(etherErrorFor("swipe_cap_reached") is EtherError.SwipeCapReached)
         assertTrue(etherErrorFor("team_formed_after_deadline") is EtherError.TeamFormedAfterDeadline)
         assertTrue(etherErrorFor("result_already_confirmed") is EtherError.ResultAlreadyConfirmed)
-        assertTrue(etherErrorFor("email_domain_not_allowed", "uni.ac.id") is EtherError.EmailDomainNotAllowed)
     }
 
     @Test
@@ -25,9 +24,8 @@ class ErrorMappingTest {
     }
 
     @Test
-    fun `GoTrue's generic sign-up 500 asks for the university email`() {
-        val gotrue = "unexpected_failure\nDatabase error saving new user"
-        assertEquals("Use your university email (@uni.ac.id)", etherErrorFor(gotrue, "uni.ac.id")?.message)
+    fun `a generic sign-up failure is no longer blamed on the email domain`() {
+        assertNull(etherErrorFor("unexpected_failure\nDatabase error saving new user"))
     }
 
     @Test

@@ -15,9 +15,9 @@ fun config(name: String, default: String): String =
 
 val supabaseUrl = config("SUPABASE_URL", "http://10.0.2.2:54321")
 val supabaseAnonKey = config("SUPABASE_ANON_KEY", "")
-// Must match app_config.allowed_email_domain; only used to word the sign-up error.
-val allowedEmailDomain = config("ALLOWED_EMAIL_DOMAIN", "student.example.ac.id")
 // Without a key there is no backend to talk to, so fall back to the in-memory demo data.
+// Google Cloud OAuth *web* client ID, the same one configured on the Supabase Google provider. Blank hides the button.
+val googleWebClientId = config("GOOGLE_WEB_CLIENT_ID", "")
 val useFakeBackend = config("USE_FAKE_BACKEND", (supabaseAnonKey.isBlank()).toString()).toBoolean()
 
 android {
@@ -35,8 +35,8 @@ android {
 
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
-        buildConfigField("String", "ALLOWED_EMAIL_DOMAIN", "\"$allowedEmailDomain\"")
         buildConfigField("boolean", "USE_FAKE_BACKEND", useFakeBackend.toString())
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
     // Release signing comes from the environment (CI secrets); without it, release builds stay unsigned.
@@ -90,6 +90,9 @@ dependencies {
     implementation(platform(libs.supabase.bom))
     implementation(libs.supabase.auth)
     implementation(libs.supabase.postgrest)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services)
+    implementation(libs.googleid)
     implementation(libs.ktor.client.okhttp)
     implementation(libs.kotlinx.serialization.json)
 

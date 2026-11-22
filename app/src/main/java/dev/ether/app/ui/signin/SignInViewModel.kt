@@ -81,6 +81,19 @@ class SignInViewModel(private val auth: AuthRepository) : ViewModel() {
         }
     }
 
+    fun signInWithGoogle(idToken: String, rawNonce: String) {
+        if (_state.value.busy) return
+        _state.update { it.copy(busy = true, error = null) }
+        viewModelScope.launch {
+            runCatching { auth.signInWithGoogle(idToken, rawNonce) }
+                .onSuccess { _state.update { it.copy(busy = false) } }
+                .onFailure { e -> _state.update { it.copy(busy = false, error = e.userMessage()) } }
+        }
+    }
+
+    /** Google's own sheet failed before a token existed (no account, network, misconfiguration). */
+    fun googleFailed(message: String) = _state.update { it.copy(busy = false, error = message) }
+
     fun resend() {
         val current = _state.value
         if (current.step != SignInStep.CODE || current.busy || current.resendIn > 0) return

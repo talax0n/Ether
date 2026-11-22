@@ -67,6 +67,10 @@ class FakeBackend(
         auth.value = AuthState.SignedIn(DemoData.me.id)
     }
 
+    override suspend fun signInWithGoogle(idToken: String, rawNonce: String) {
+        auth.value = AuthState.SignedIn(DemoData.me.id)
+    }
+
     override suspend fun signOut() {
         auth.value = AuthState.SignedOut
     }

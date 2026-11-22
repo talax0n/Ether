@@ -93,4 +93,19 @@ class SignInViewModelTest {
         assertEquals("", vm.state.value.code)
         assertEquals(30, vm.state.value.resendIn)
     }
+
+    @Test
+    fun `a Google token signs in without the email steps`() = runTest {
+        vm.signInWithGoogle("id-token", "nonce")
+
+        assertEquals(AuthState.SignedIn(ProfileId("p-me")), backend.authState.value)
+    }
+
+    @Test
+    fun `a failed Google sheet shows its message and stays on email`() = runTest {
+        vm.googleFailed("No Google account on this phone. Add one in Settings, or use your email.")
+
+        assertEquals(SignInStep.EMAIL, vm.state.value.step)
+        assertEquals("No Google account on this phone. Add one in Settings, or use your email.", vm.state.value.error)
+    }
 }

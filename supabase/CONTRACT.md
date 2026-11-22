@@ -124,19 +124,13 @@ Each award happens once per (profile, reason, reference), so retries never doubl
 
 ## Sign-up
 
-An `auth.users` trigger rejects any email whose domain is not exactly `app_config.allowed_email_domain` (case-insensitive, one `@`, no subdomains). It runs on sign-up and on any change to `email` or the pending `email_change`, so an email change to another domain also fails. The insert then creates the `profiles` row. The name comes from `user_metadata.name`, or the email's local part if that is missing. Change the domain with:
-
-```sql
-update app_config set value = 'your.domain' where key = 'allowed_email_domain';
-```
-
-A rejected sign-up reaches the client as a GoTrue 500, `"Database error saving new user"`. Show it as "use your university email". A rejected email change also surfaces as a GoTrue database error.
+Sign-up is open to any email (one-time code) and to Google accounts. An `auth.users` insert trigger creates the `profiles` row. The name comes from `user_metadata.name`, then `user_metadata.full_name` (Google), then the email's local part. The avatar comes from `user_metadata.avatar_url` or `user_metadata.picture` (Google).
 
 ## Error messages
 
 Errors raised from Postgres arrive as the PostgREST `message`. They are stable strings:
 
-`not_authenticated`, `competition_not_found`, `team_name_required`, `listing_not_found`, `not_listing_owner`, `self_swipe`, `different_competition`, `listing_inactive`, `team_to_team`, `swipe_cap_reached`, `already_in_team`, `team_full`, `not_teammates`, `event_not_ended`, `not_team_member`, `result_already_confirmed`, `no_result_reported`, `cannot_confirm_own_result`, `email_domain_not_allowed`, `registration_closed`, `team_formed_after_deadline`.
+`not_authenticated`, `competition_not_found`, `team_name_required`, `listing_not_found`, `not_listing_owner`, `self_swipe`, `different_competition`, `listing_inactive`, `team_to_team`, `swipe_cap_reached`, `already_in_team`, `team_full`, `not_teammates`, `event_not_ended`, `not_team_member`, `result_already_confirmed`, `no_result_reported`, `cannot_confirm_own_result`, `registration_closed`, `team_formed_after_deadline`.
 
 ## Local dev
 

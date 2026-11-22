@@ -4,7 +4,7 @@
 
 ## Setup (Week 0)
 
-- Supabase project created. Env names live in `.env.example`: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `ALLOWED_EMAIL_DOMAIN`. Gradle reads them into `BuildConfig`. Real values stay in gitignored `local.properties` or `.env`.
+- Supabase project created. Env names live in `.env.example`: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `GOOGLE_WEB_CLIENT_ID`. Gradle reads them into `BuildConfig`. Real values stay in gitignored `local.properties` or `.env`.
 - Android Studio (latest stable), JDK 17, an emulator plus one physical Android phone for gesture testing.
 - Supabase CLI for local DB, migrations under `supabase/migrations/`.
 - Repo already has the README, LICENSE, and `.gitignore`.

@@ -4,7 +4,7 @@
 
 **Swipe to find your hackathon team.**
 
-A campus-only Android app where students swipe right on teammates or teams for a specific competition. A mutual right swipe is a match, and a match forms the team.
+An Android app where students swipe right on teammates or teams for a specific competition. A mutual right swipe is a match, and a match forms the team.
 
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.4-7F52FF?logo=kotlin&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack_Compose-Material_3-4285F4?logo=jetpackcompose&logoColor=white)
@@ -35,13 +35,13 @@ A campus-only Android app where students swipe right on teammates or teams for a
 
 ## Why
 
-Team finding for campus competitions runs on WhatsApp group posts like "anyone need a designer?". Those posts are noisy and one-sided, and they say nothing about whether a stranger will show up. Students outside a friend circle get left out.
+Team finding for student competitions runs on WhatsApp group posts like "anyone need a designer?". Those posts are noisy and one-sided, and they say nothing about whether a stranger will show up. Students outside a friend circle get left out.
 
 Ether gives each competition its own deck, so everyone you see shares your deadline and goal. Both sides have to say yes, so nobody gets cold-pitched. After the event, teammates endorse each other, which builds a reputation that shows on your card next time.
 
 ## Features
 
-- **University-only sign-in.** Email one-time code, limited to the campus email domain.
+- **Open sign-in.** Any email with a one-time code, or a Google account.
 - **A deck for each competition.** You can enter one as a solo student, or create a team with open roles.
 - **Tinder-style swiping.** Drag with tilt and LIKE/NOPE stamps, plus buttons for accessibility.
 - **Mutual matches form teams automatically.** The match reveals the WhatsApp or Telegram link.
@@ -53,7 +53,7 @@ Ether gives each competition its own deck, so everyone you see shares your deadl
 
 ```mermaid
 flowchart LR
-    A[Sign in with<br/>university email] --> B[Pick a<br/>competition]
+    A[Sign in with<br/>email or Google] --> B[Pick a<br/>competition]
     B --> C{Enter as}
     C -->|Solo| D[Solo listing]
     C -->|Team owner| E[Team listing<br/>+ open roles]
@@ -203,7 +203,7 @@ docs/              decisions log, design research and mockups, demo screenshots
 
 Get the latest APK from **[Releases](https://github.com/talax0n/Ether/releases/latest)** and open it on an Android 8.0+ phone. Allow installs from your browser or file manager when asked.
 
-Release builds run in **demo mode** on built-in sample data: sign in with any email and the code `123456`. To point releases at a hosted Supabase instead, add the `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `ALLOWED_EMAIL_DOMAIN` repo secrets.
+Release builds run in **demo mode** on built-in sample data: sign in with any email and the code `123456`. To point releases at a hosted Supabase instead, add the `SUPABASE_URL` and `SUPABASE_ANON_KEY` repo secrets.
 
 **Publishing a release:** push a tag (`git tag v0.2.0 && git push origin v0.2.0`), or run the *Release APK* workflow from the Actions tab. [`release.yml`](.github/workflows/release.yml) runs the unit tests, builds an APK signed with the release key (stored in repo secrets), and attaches it to a GitHub Release.
 
@@ -219,7 +219,7 @@ scripts/demo.sh
 
 This starts local Supabase and resets it to the seed data, then writes `local.properties` if it is missing. Next it boots the `ether` emulator, creating it if needed, and installs and opens the app. It is safe to re-run. Use `HEADLESS=1` to run without a window.
 
-Sign in with `demo1@student.example.ac.id` … `demo8@student.example.ac.id`, or any new `@student.example.ac.id` address. The 6-digit code arrives in Mailpit at **http://127.0.0.1:54324**.
+Sign in with `demo1@student.example.ac.id` … `demo8@student.example.ac.id`, or any other email. The 6-digit code arrives in Mailpit at **http://127.0.0.1:54324**.
 
 | Try this | Account |
 |---|---|
@@ -245,10 +245,17 @@ Set these in the gitignored `local.properties` or as environment variables:
 SUPABASE_URL=http://10.0.2.2:54321   # local Supabase as seen from the emulator
 SUPABASE_ANON_KEY=...                 # from `supabase status`; blank → in-memory demo backend
 USE_FAKE_BACKEND=false                # true → offline demo (any email, code 123456)
-ALLOWED_EMAIL_DOMAIN=student.example.ac.id
+GOOGLE_WEB_CLIENT_ID=                 # optional; blank hides "Continue with Google"
 ```
 
-The allowed domain is enforced in the database (`app_config.allowed_email_domain`). The app only uses `ALLOWED_EMAIL_DOMAIN` to word the error message.
+### Google sign-in
+
+The app uses Credential Manager to get a Google ID token, then exchanges it with Supabase. To turn it on:
+
+1. In Google Cloud, create an OAuth client of type **Web application**. Its client ID is `GOOGLE_WEB_CLIENT_ID`.
+2. Create an OAuth client of type **Android** for package `dev.ether.app` with the SHA-1 of each signing key you use (`./gradlew signingReport` for debug, the release keystore for CI).
+3. In Supabase, enable the Google provider with the web client ID and secret. Locally, export `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` and `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET` and set `enabled = true` under `[auth.external.google]` in `supabase/config.toml`.
+4. Set `GOOGLE_WEB_CLIENT_ID` in `local.properties`, and as a repo secret for release builds.
 
 ## Testing
 
@@ -260,7 +267,6 @@ scripts/e2e.sh                     # Maestro on the emulator against real local 
 
 The end-to-end suite covers these flows:
 - sign-up and onboarding
-- rejecting an email from outside the university
 - swiping into a match
 - creating a team and seeing it in another user's deck
 - endorsing a teammate and confirming a result, with the XP and badge updates
@@ -288,7 +294,7 @@ It resets the database first, and it refuses to run against a non-local backend 
 These are not in the MVP. See SPEC §7 for the reasons.
 
 - Push notifications for new matches (first post-MVP item)
-- Deploy to hosted Supabase with the real university domain
+- Deploy to hosted Supabase
 - Signed release build and a Play Store internal track
 - Leaderboards, once there are enough users for rankings to mean something
 

@@ -9,9 +9,9 @@ import kotlinx.coroutines.CancellationException
 
 /**
  * Maps the text of a backend error to a domain error. Postgres raises stable snake_case strings
- * (supabase/CONTRACT.md); GoTrue hides the sign-up trigger's error behind a generic 500.
+ * (supabase/CONTRACT.md).
  */
-internal fun etherErrorFor(text: String, emailDomain: String = BuildConfig.ALLOWED_EMAIL_DOMAIN): EtherError? = when {
+internal fun etherErrorFor(text: String): EtherError? = when {
     "registration_closed" in text -> EtherError.RegistrationClosed()
     "already_in_team" in text -> EtherError.AlreadyInTeam()
     "listing_inactive" in text -> EtherError.ListingInactive()
@@ -26,8 +26,6 @@ internal fun etherErrorFor(text: String, emailDomain: String = BuildConfig.ALLOW
     "result_already_confirmed" in text -> EtherError.ResultAlreadyConfirmed()
     "no_result_reported" in text -> EtherError.NoResultReported()
     "cannot_confirm_own_result" in text -> EtherError.CannotConfirmOwnResult()
-    "email_domain_not_allowed" in text || "Database error saving new user" in text ->
-        EtherError.EmailDomainNotAllowed(emailDomain)
     "otp_expired" in text || "Token has expired or is invalid" in text -> EtherError.InvalidCode()
     else -> null
 }

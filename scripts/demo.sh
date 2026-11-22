@@ -68,7 +68,7 @@ Ether is running on the emulator.
 
 Demo accounts (email OTP):
   demo1@student.example.ac.id ... demo8@student.example.ac.id
-  Any new @student.example.ac.id address also works and starts at profile setup.
+  Any other email also works and starts at profile setup.
 Sign-in codes arrive in Mailpit: ${mailpit:-http://127.0.0.1:54324}
 
 Seed: Campus Hackathon 2026 has solos demo1-6 and team Byte Club (demo7 + demo8).

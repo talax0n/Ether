@@ -28,6 +28,8 @@ import dev.ether.app.domain.Teammate
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.Google
+import io.github.jan.supabase.auth.providers.builtin.IDToken
 import io.github.jan.supabase.auth.providers.builtin.OTP
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.postgrest.from
@@ -65,6 +67,14 @@ class SupabaseAuthRepository(private val client: SupabaseClient) : AuthRepositor
 
     override suspend fun verifyOtp(email: String, code: String): Unit = backend {
         client.auth.verifyEmailOtp(type = OtpType.Email.EMAIL, email = email, token = code)
+    }
+
+    override suspend fun signInWithGoogle(idToken: String, rawNonce: String): Unit = backend {
+        client.auth.signInWith(IDToken) {
+            this.idToken = idToken
+            provider = Google
+            nonce = rawNonce
+        }
     }
 
     override suspend fun signOut(): Unit = backend {

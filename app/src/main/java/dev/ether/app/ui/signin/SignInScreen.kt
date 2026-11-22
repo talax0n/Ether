@@ -26,7 +26,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +33,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.res.painterResource
+import dev.ether.app.R
+import dev.ether.app.ui.components.pressableLedge
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import dev.ether.app.BuildConfig
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
@@ -47,7 +56,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.ether.app.BuildConfig
 import dev.ether.app.ui.components.ArcadeIcons
 import dev.ether.app.ui.components.ArcadeTextField
 import dev.ether.app.ui.components.ErrorText
@@ -64,7 +72,25 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun SignInScreen(vm: SignInViewModel = koinViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
-    SignInContent(state, vm::onEmailChange, vm::onCodeChange, vm::submit, vm::changeEmail, vm::resend)
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val clientId = BuildConfig.GOOGLE_WEB_CLIENT_ID
+    // The demo backend has no Google project behind it, so its button signs straight in.
+    val onGoogle: (() -> Unit)? = when {
+        clientId.isNotBlank() -> { ->
+            scope.launch {
+                when (val r = pickGoogleAccount(context, clientId)) {
+                    is GoogleResult.Token -> vm.signInWithGoogle(r.idToken, r.rawNonce)
+                    GoogleResult.Cancelled -> Unit
+                    is GoogleResult.Failed -> vm.googleFailed(r.message)
+                }
+            }
+            Unit
+        }
+        BuildConfig.USE_FAKE_BACKEND -> { -> vm.signInWithGoogle("demo-id-token", "demo-nonce") }
+        else -> null
+    }
+    SignInContent(state, vm::onEmailChange, vm::onCodeChange, vm::submit, vm::changeEmail, vm::resend, onGoogle)
 }
 
 @Composable
@@ -75,6 +101,8 @@ fun SignInContent(
     onSubmit: () -> Unit,
     onChangeEmail: () -> Unit,
     onResend: () -> Unit,
+    /** Null hides the Google button: no client ID is configured for this build. */
+    onGoogle: (() -> Unit)?,
 ) {
     val colors = Arcade.colors
     Column(Modifier.fillMaxSize().background(colors.background).safeDrawingPadding().imePadding()) {
@@ -97,23 +125,21 @@ fun SignInContent(
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp)) {
                 when (step) {
                     SignInStep.EMAIL -> {
-                        Heading("What's your\ncampus email?", "We'll email you a 6-digit code. No password to remember.")
+                        Heading("Sign in or\ncreate an account", "Enter your email and we'll send a 6-digit code. New here? The code creates your account.")
                         ArcadeTextField(
                             value = state.email,
                             onValueChange = onEmailChange,
-                            label = "University email",
+                            label = "Email",
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Send),
                             keyboardActions = KeyboardActions(onSend = { onSubmit() }),
                         )
-                        Spacer(Modifier.height(12.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(ArcadeIcons.Lock, null, tint = colors.muted, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.size(6.dp))
-                            Text(
-                                "Only @${BuildConfig.ALLOWED_EMAIL_DOMAIN} addresses can join.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = colors.muted,
-                            )
+                        onGoogle?.let { google ->
+                            Row(Modifier.padding(vertical = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.weight(1f).height(2.dp).background(colors.track))
+                                Text("or", Modifier.padding(horizontal = 12.dp), style = MaterialTheme.typography.bodyMedium, color = colors.muted)
+                                Box(Modifier.weight(1f).height(2.dp).background(colors.track))
+                            }
+                            GoogleButton(google, enabled = !state.busy)
                         }
                     }
                     SignInStep.CODE -> {
@@ -137,6 +163,22 @@ fun SignInContent(
             busy = state.busy,
             icon = if (state.step == SignInStep.EMAIL) ArcadeIcons.Bolt else ArcadeIcons.Check,
         )
+    }
+}
+
+/** Google's sign-in guidelines ask for the multicolor G, so this can't use LedgeButton's single-tint icon. */
+@Composable
+private fun GoogleButton(onClick: () -> Unit, enabled: Boolean) {
+    Box(
+        Modifier.fillMaxWidth().heightIn(min = 61.dp)
+            .pressableLedge(MaterialTheme.shapes.medium, Arcade.colors.surface, 5.dp, onClick, enabled),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Image(painterResource(R.drawable.ic_google), contentDescription = null, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(10.dp))
+            Text("Continue with Google", style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp), color = Arcade.colors.text)
+        }
     }
 }
 
@@ -200,5 +242,5 @@ private fun ResendRow(resendIn: Int, enabled: Boolean, onResend: () -> Unit) {
 @Preview
 @Composable
 private fun SignInPreview() {
-    EtherTheme { SignInContent(SignInUiState(email = "ana@student.ac.id"), {}, {}, {}, {}, {}) }
+    EtherTheme { SignInContent(SignInUiState(email = "ana@example.com"), {}, {}, {}, {}, {}, {}) }
 }
