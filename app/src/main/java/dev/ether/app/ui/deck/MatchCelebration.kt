@@ -23,10 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.first
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import dev.ether.app.ui.components.Etha
+import dev.ether.app.ui.components.EthaRepeating
 import dev.ether.app.ui.components.EthaMove
 import androidx.compose.ui.Alignment
 import dev.ether.app.ui.theme.Cream
@@ -192,23 +189,9 @@ private fun Headline(modifier: Modifier) {
     }
 }
 
-private const val CHEER_REST_MS = 1200L
-
 @Composable
 private fun Duo(match: Match, duo: () -> Float, heart: () -> Float) {
     // Etha takes the heart's place on the seam and keeps cheering while the user reads the rewards.
-    // Idle alone is a soft breathe that reads as a still at this size, so the jump repeats with a short rest.
-    var move by remember { mutableStateOf(EthaMove.IDLE) }
-    val reduced = Arcade.reducedMotion
-    // The disc pops in after the avatars collide; cheer only once it is on screen, or the jump plays unseen.
-    LaunchedEffect(reduced) {
-        snapshotFlow { heart() }.first { it > 0.6f }
-        do {
-            move = EthaMove.CELEBRATE
-            snapshotFlow { move }.first { it == EthaMove.IDLE }
-            delay(CHEER_REST_MS)
-        } while (!reduced)
-    }
     Row(
         Modifier.fillMaxWidth().height(176.dp),
         horizontalArrangement = Arrangement.Center,
@@ -229,7 +212,10 @@ private fun Duo(match: Match, duo: () -> Float, heart: () -> Float) {
             Modifier.graphicsLayer { val s = heart(); scaleX = s; scaleY = s }
                 .size(132.dp).ledge(CircleShape, Cream, Ink, Ink, 5.dp),
             contentAlignment = Alignment.Center,
-        ) { Etha(move, size = 118.dp, onFinished = { if (move == EthaMove.CELEBRATE) move = EthaMove.IDLE }) }
+        ) {
+            // The disc pops in after the avatars collide; cheer only once it is on screen, or the jump plays unseen.
+            EthaRepeating(EthaMove.CELEBRATE, restMs = 1200, size = 118.dp, ready = { snapshotFlow { heart() }.first { it > 0.6f } })
+        }
         Avatar(
             match.name, match.avatarUrl, 92.dp,
             Modifier.graphicsLayer {

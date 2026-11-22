@@ -6,6 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -22,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import dev.ether.app.R
 import dev.ether.app.ui.theme.Arcade
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 
 /**
  * One row of res/drawable-nodpi/etha_sheet.png per move, frames left to right in square cells.
@@ -66,4 +69,24 @@ fun Etha(move: EthaMove, modifier: Modifier = Modifier, size: Dp = 120.dp, descr
             filterQuality = FilterQuality.High,
         )
     }
+}
+
+/**
+ * Etha plays the one-shot [move], idles for [restMs], and plays it again. Idle alone is a soft breathe
+ * that reads as a still, so a screen that should feel alive repeats its move. [ready] holds the first
+ * play back, e.g. until a container has animated in. Under reduced motion the move plays once.
+ */
+@Composable
+fun EthaRepeating(move: EthaMove, restMs: Long, modifier: Modifier = Modifier, size: Dp = 120.dp, ready: suspend () -> Unit = {}) {
+    var current by remember { mutableStateOf(EthaMove.IDLE) }
+    val reduced = Arcade.reducedMotion
+    LaunchedEffect(move, reduced) {
+        ready()
+        do {
+            current = move
+            snapshotFlow { current }.first { it == EthaMove.IDLE }
+            delay(restMs)
+        } while (!reduced)
+    }
+    Etha(current, modifier, size, onFinished = { if (current == move) current = EthaMove.IDLE })
 }
