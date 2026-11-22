@@ -133,6 +133,12 @@ fun SignInContent(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Send),
                             keyboardActions = KeyboardActions(onSend = { onSubmit() }),
                         )
+                        Spacer(Modifier.height(14.dp))
+                        // Right under the field it fills, so it reads as the email route, not a final step after Google.
+                        LedgeButton(
+                            "Continue with email", onSubmit, Modifier.fillMaxWidth(),
+                            enabled = state.canSubmit || state.busy, busy = state.busy, icon = ArcadeIcons.Bolt,
+                        )
                         onGoogle?.let { google ->
                             Row(Modifier.padding(vertical = 20.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Box(Modifier.weight(1f).height(2.dp).background(colors.track))
@@ -155,14 +161,12 @@ fun SignInContent(
                 }
             }
         }
-        LedgeButton(
-            if (state.step == SignInStep.EMAIL) "Send code" else "Verify",
-            onSubmit,
-            Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
-            enabled = state.canSubmit || state.busy,
-            busy = state.busy,
-            icon = if (state.step == SignInStep.EMAIL) ArcadeIcons.Bolt else ArcadeIcons.Check,
-        )
+        if (state.step == SignInStep.CODE) {
+            LedgeButton(
+                "Verify", onSubmit, Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
+                enabled = state.canSubmit || state.busy, busy = state.busy, icon = ArcadeIcons.Check,
+            )
+        }
     }
 }
 

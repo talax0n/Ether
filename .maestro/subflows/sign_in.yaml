@@ -6,7 +6,7 @@ appId: dev.ether.app
     optional: true
 - tapOn: "Email"
 - inputText: ${EMAIL}
-- tapOn: "Send code"
+- tapOn: "Continue with email"
 - extendedWaitUntil:
     visible: "6-digit code"
     timeout: 15000
