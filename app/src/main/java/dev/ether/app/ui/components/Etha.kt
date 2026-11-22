@@ -28,9 +28,9 @@ import kotlinx.coroutines.delay
  * Copied from docs/brand/etha/manifest.json; EthaManifestTest fails if the two disagree.
  */
 enum class EthaMove(val manifestKey: String, val row: Int, val frames: Int, val frameMs: Long, val loop: Boolean) {
-    IDLE("idle", 0, 6, 167, true),
-    WAVE("wave", 1, 6, 125, false),
-    CELEBRATE("celebrate", 2, 6, 125, false),
+    IDLE("idle", 0, 12, 83, true),
+    WAVE("wave", 1, 11, 68, false),
+    CELEBRATE("celebrate", 2, 11, 68, false),
     LEVEL_UP("levelup", 3, 6, 125, false),
     SLEEP("sleep", 4, 6, 250, true),
 }
