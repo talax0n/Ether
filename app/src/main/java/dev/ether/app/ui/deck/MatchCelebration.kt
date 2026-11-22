@@ -23,7 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.first
-import dev.ether.app.ui.components.EthaRepeating
+import dev.ether.app.ui.components.EthaLive
 import dev.ether.app.ui.components.EthaMove
 import androidx.compose.ui.Alignment
 import dev.ether.app.ui.theme.Cream
@@ -214,7 +214,10 @@ private fun Duo(match: Match, duo: () -> Float, heart: () -> Float) {
             contentAlignment = Alignment.Center,
         ) {
             // The disc pops in after the avatars collide; cheer only once it is on screen, or the jump plays unseen.
-            EthaRepeating(EthaMove.CELEBRATE, restMs = 1200, size = 118.dp, ready = { snapshotFlow { heart() }.first { it > 0.6f } })
+            EthaLive(
+                size = 118.dp, first = EthaMove.CELEBRATE, pool = listOf(EthaMove.CELEBRATE), restMs = 1_200L..1_200L,
+                ready = { snapshotFlow { heart() }.first { it > 0.6f } },
+            )
         }
         Avatar(
             match.name, match.avatarUrl, 92.dp,

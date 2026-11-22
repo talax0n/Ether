@@ -5,7 +5,7 @@ import dev.ether.app.data.AuthRepository
 import dev.ether.app.data.CompetitionRepository
 import dev.ether.app.data.DeckRepository
 import dev.ether.app.data.MatchRepository
-import dev.ether.app.data.OnboardingStore
+import dev.ether.app.data.DeviceStore
 import dev.ether.app.data.ProfileRepository
 import dev.ether.app.data.TeamRepository
 import dev.ether.app.data.fake.FakeBackend
@@ -58,7 +58,7 @@ private val supabaseData = module {
 }
 
 private val viewModels = module {
-    single { OnboardingStore(androidContext()) }
+    single { DeviceStore(androidContext()) }
     viewModelOf(::AppViewModel)
     viewModelOf(::SignInViewModel)
     viewModelOf(::ProfileEditViewModel)

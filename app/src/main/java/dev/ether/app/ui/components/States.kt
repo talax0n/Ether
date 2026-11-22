@@ -54,30 +54,36 @@ import dev.ether.app.ui.theme.Sky
 import dev.ether.app.ui.theme.Sun
 import dev.ether.app.ui.theme.SunSoft
 
-/** Skeleton cards that pulse while a list loads. Shaped like the content they stand in for. */
+/** Etha runs in place over skeleton cards that pulse while a list loads. The cards are shaped like the content they stand in for. */
 @Composable
 fun LoadingBox(modifier: Modifier = Modifier) {
     val pulse = if (Arcade.reducedMotion) null else rememberInfiniteTransition(label = "skeleton")
         .animateFloat(0.55f, 1f, infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "pulse")
     val bone = Arcade.colors.track
-    Column(
-        modifier.fillMaxSize().padding(20.dp).semantics { contentDescription = "Loading" }.graphicsLayer { alpha = pulse?.value ?: 1f },
-        verticalArrangement = Arrangement.spacedBy(18.dp),
-    ) {
-        repeat(3) { i ->
-            Column(
-                Modifier.fillMaxWidth().ledge(MaterialTheme.shapes.large, Arcade.colors.surface, Arcade.colors.lockedLine, Arcade.colors.lockedLine, 5.dp).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(Modifier.size(44.dp).background(bone, CircleShape))
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Box(Modifier.width(if (i == 1) 120.dp else 170.dp).height(16.dp).background(bone, CircleShape))
-                        Box(Modifier.width(96.dp).height(12.dp).background(bone, CircleShape))
+    Column(modifier.fillMaxSize().semantics(mergeDescendants = true) { contentDescription = "Loading" }) {
+        EthaLive(
+            Modifier.align(Alignment.CenterHorizontally).padding(top = 12.dp),
+            size = 88.dp, controller = rememberEthaController(EthaMove.RUN), pool = emptyList(),
+        )
+        Column(
+            Modifier.fillMaxSize().padding(20.dp).graphicsLayer { alpha = pulse?.value ?: 1f },
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+        ) {
+            repeat(3) { i ->
+                Column(
+                    Modifier.fillMaxWidth().ledge(MaterialTheme.shapes.large, Arcade.colors.surface, Arcade.colors.lockedLine, Arcade.colors.lockedLine, 5.dp).padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Box(Modifier.size(44.dp).background(bone, CircleShape))
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(Modifier.width(if (i == 1) 120.dp else 170.dp).height(16.dp).background(bone, CircleShape))
+                            Box(Modifier.width(96.dp).height(12.dp).background(bone, CircleShape))
+                        }
                     }
+                    Box(Modifier.fillMaxWidth().height(12.dp).background(bone, CircleShape))
+                    Box(Modifier.fillMaxWidth(0.7f).height(12.dp).background(bone, CircleShape))
                 }
-                Box(Modifier.fillMaxWidth().height(12.dp).background(bone, CircleShape))
-                Box(Modifier.fillMaxWidth(0.7f).height(12.dp).background(bone, CircleShape))
             }
         }
     }
@@ -176,7 +182,11 @@ fun MessageBox(
     ) {
         val mascot = tone.mascot
         if (mascot != null) {
-            Etha(mascot, Modifier.graphicsLayer { scaleX = pop.value; scaleY = pop.value }, size = 160.dp)
+            // A sleeping Etha stays asleep between pokes; an awake one fidgets.
+            EthaLive(
+                Modifier.graphicsLayer { scaleX = pop.value; scaleY = pop.value }, size = 160.dp,
+                controller = rememberEthaController(mascot), pool = if (mascot == EthaMove.IDLE) EthaMove.FIDGETS else emptyList(),
+            )
         } else Box(Modifier.size(150.dp), contentAlignment = Alignment.Center) {
             // Confetti dots around the sticker, fixed positions so the scene reads as a little illustration.
             listOf(Triple(-58, -44, Sun), Triple(60, -30, Mint), Triple(-52, 48, Sky), Triple(56, 52, Coral)).forEach { (x, y, c) ->

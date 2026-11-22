@@ -56,6 +56,18 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import dev.ether.app.ui.components.ArcadeIcons
+import dev.ether.app.ui.components.EthaLive
+import dev.ether.app.ui.components.EthaMove
+import dev.ether.app.ui.components.performOrYield
+import dev.ether.app.ui.components.rememberEthaController
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+import kotlin.math.sign
 import dev.ether.app.ui.components.MessageBox
 import dev.ether.app.ui.components.Splash
 import dev.ether.app.ui.components.Tone
@@ -71,7 +83,7 @@ import dev.ether.app.ui.profile.ProfileEditScreen
 import dev.ether.app.ui.profile.ProfileScreen
 import dev.ether.app.ui.onboarding.OnboardingScreen
 import dev.ether.app.ui.signin.SignInScreen
-import dev.ether.app.data.OnboardingStore
+import dev.ether.app.data.DeviceStore
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
 import dev.ether.app.ui.teams.TeamsScreen
@@ -88,25 +100,26 @@ import kotlin.reflect.KClass
 @Serializable data object ProfileRoute
 @Serializable data object EditProfileRoute
 
-private enum class Tab(val route: Any, val routeClass: KClass<*>, val label: String, val icon: ImageVector) {
-    COMPETITIONS(CompetitionsRoute, CompetitionsRoute::class, "Compete", ArcadeIcons.Trophy),
-    MATCHES(AllMatchesRoute, AllMatchesRoute::class, "Matches", ArcadeIcons.Heart),
-    TEAMS(TeamsRoute, TeamsRoute::class, "Teams", ArcadeIcons.Users),
-    PROFILE(ProfileRoute, ProfileRoute::class, "Profile", ArcadeIcons.User),
+/** [etha] is what the tab-bar Etha does when it lands on the tab. */
+private enum class Tab(val route: Any, val routeClass: KClass<*>, val label: String, val icon: ImageVector, val etha: EthaMove) {
+    COMPETITIONS(CompetitionsRoute, CompetitionsRoute::class, "Compete", ArcadeIcons.Trophy, EthaMove.LOOK),
+    MATCHES(AllMatchesRoute, AllMatchesRoute::class, "Matches", ArcadeIcons.Heart, EthaMove.CELEBRATE),
+    TEAMS(TeamsRoute, TeamsRoute::class, "Teams", ArcadeIcons.Users, EthaMove.WAVE),
+    PROFILE(ProfileRoute, ProfileRoute::class, "Profile", ArcadeIcons.User, EthaMove.TAP),
 }
 
 @Composable
 fun EtherRoot(vm: AppViewModel = koinViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
-    val onboarding = koinInject<OnboardingStore>()
-    val seenOnboarding by onboarding.seen.collectAsStateWithLifecycle()
+    val onboarding = koinInject<DeviceStore>()
+    val seenOnboarding by onboarding.onboardingSeen.collectAsStateWithLifecycle()
     // The splash holds long enough to finish its intro even when auth resolves instantly.
     var introDone by rememberSaveable { mutableStateOf(false) }
     val introMs = if (Arcade.reducedMotion) 300L else 1_100L
     LaunchedEffect(Unit) { delay(introMs); introDone = true }
     val screen = if (!introDone) AppUiState.Loading else state
     Crossfade(screen to seenOnboarding, animationSpec = tween(Motion.SCREEN_MS), label = "root") { (s, seen) ->
-        RootScreen(s, seen, vm, onboarding::markSeen)
+        RootScreen(s, seen, vm, onboarding::markOnboardingSeen)
     }
 }
 
@@ -194,39 +207,84 @@ private fun MainNavHost() {
 private fun ArcadeNavBar(current: Tab, onSelect: (Tab) -> Unit) {
     val colors = Arcade.colors
     val reduced = Arcade.reducedMotion
-    Column(Modifier.fillMaxWidth().background(colors.surface)) {
-        Box(Modifier.fillMaxWidth().height(3.dp).background(colors.line))
-        Row(
-            Modifier.navigationBarsPadding().padding(horizontal = 6.dp, vertical = 8.dp).height(56.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Tab.entries.forEach { tab ->
-                val selected = tab == current
-                val fill by animateColorAsState(if (selected) SunSoft else Color.Transparent, tween(Motion.SCREEN_MS / 2), label = "tab-fill")
-                val hop = remember { Animatable(1f) }
-                LaunchedEffect(selected) {
-                    if (selected && !reduced) {
-                        hop.snapTo(0.7f)
-                        hop.animateTo(1f, Motion.pop())
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        // Tabs share the row equally after its 6dp side padding and 4dp gaps; Etha needs their centres.
+        val tabWidth = (maxWidth - BAR_PADDING * 2 - TAB_GAP * (Tab.entries.size - 1)) / Tab.entries.size
+        Column(Modifier.fillMaxWidth().background(colors.surface)) {
+            Box(Modifier.fillMaxWidth().height(3.dp).background(colors.line))
+            Row(
+                Modifier.navigationBarsPadding().padding(horizontal = BAR_PADDING, vertical = 8.dp).height(56.dp),
+                horizontalArrangement = Arrangement.spacedBy(TAB_GAP),
+            ) {
+                Tab.entries.forEach { tab ->
+                    val selected = tab == current
+                    val fill by animateColorAsState(if (selected) SunSoft else Color.Transparent, tween(Motion.SCREEN_MS / 2), label = "tab-fill")
+                    val hop = remember { Animatable(1f) }
+                    LaunchedEffect(selected) {
+                        if (selected && !reduced) {
+                            hop.snapTo(0.7f)
+                            hop.animateTo(1f, Motion.pop())
+                        }
                     }
-                }
-                val shape = RoundedCornerShape(16.dp)
-                Column(
-                    Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clip(shape)
-                        .background(fill, shape)
-                        .border(2.dp, if (selected) colors.line else Color.Transparent, shape)
-                        .selectable(selected, remember { MutableInteractionSource() }, indication = null, role = Role.Tab) { onSelect(tab) },
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    val ink = if (selected) Ink else colors.muted
-                    Icon(tab.icon, contentDescription = null, tint = ink, modifier = Modifier.size(24.dp).graphicsLayer { scaleX = hop.value; scaleY = hop.value })
-                    Text(tab.label, color = ink, style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp))
+                    val shape = RoundedCornerShape(16.dp)
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clip(shape)
+                            .background(fill, shape)
+                            .border(2.dp, if (selected) colors.line else Color.Transparent, shape)
+                            .selectable(selected, remember { MutableInteractionSource() }, indication = null, role = Role.Tab) { onSelect(tab) },
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        val ink = if (selected) Ink else colors.muted
+                        Icon(tab.icon, contentDescription = null, tint = ink, modifier = Modifier.size(24.dp).graphicsLayer { scaleX = hop.value; scaleY = hop.value })
+                        Text(tab.label, color = ink, style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp))
+                    }
                 }
             }
         }
+        TabBarEtha(current) { position -> BAR_PADDING + (tabWidth + TAB_GAP) * position + tabWidth / 2 }
     }
+}
+
+private val BAR_PADDING = 6.dp
+private val TAB_GAP = 4.dp
+private val TAB_ETHA = 48.dp
+
+/**
+ * One Etha standing on the tab bar's top edge. Choosing a tab sends it hopping there one tab at a time,
+ * and on landing it does that tab's move. [centerOf] maps a fractional tab position to the x of its centre.
+ * Drawn above the bar's bounds, so it overlaps the screen content and never shrinks it.
+ */
+@Composable
+private fun TabBarEtha(current: Tab, centerOf: (Float) -> Dp) {
+    val etha = rememberEthaController()
+    val reduced = Arcade.reducedMotion
+    val position = remember { Animatable(current.ordinal.toFloat()) }
+    LaunchedEffect(current, reduced) {
+        val target = current.ordinal
+        if (reduced) return@LaunchedEffect position.snapTo(target.toFloat())
+        var at = position.value.roundToInt()
+        val hop = EthaMove.HOP
+        while (at != target) {
+            at += (target - at).sign
+            coroutineScope {
+                launch { etha.performOrYield(hop) }
+                // Travel only while airborne: skip the crouch frame, land on the last one.
+                position.animateTo(at.toFloat(), tween(((hop.frames - 2) * hop.frameMs).toInt(), delayMillis = hop.frameMs.toInt()))
+            }
+        }
+        position.animateTo(target.toFloat())
+        etha.performOrYield(current.etha)
+    }
+    EthaLive(
+        Modifier.offset {
+            // The sprite's feet sit near the bottom of its cell, so most of it rises above the bar.
+            IntOffset((centerOf(position.value) - TAB_ETHA / 2).roundToPx(), -(TAB_ETHA * 0.9f).roundToPx())
+        },
+        size = TAB_ETHA,
+        controller = etha,
+    )
 }

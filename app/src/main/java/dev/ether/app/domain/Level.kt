@@ -17,3 +17,6 @@ fun levelFor(xp: Int): Level {
     val (floor, title) = thresholds[index]
     return Level(index + 1, title, floor, thresholds.getOrNull(index + 1)?.first)
 }
+
+/** A level-up to celebrate: [now] beats the last level shown. 0 means none shown yet, which is a first look, not a level-up. */
+fun leveledUp(lastSeen: Int, now: Int): Boolean = lastSeen in 1 until now

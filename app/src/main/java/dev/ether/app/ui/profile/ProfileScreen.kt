@@ -35,6 +35,8 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ether.app.domain.ProfileSummary
 import dev.ether.app.domain.levelFor
+import dev.ether.app.ui.components.EthaLive
+import dev.ether.app.ui.components.EthaMove
 import dev.ether.app.ui.components.ArcadeIcons
 import dev.ether.app.ui.components.Avatar
 import dev.ether.app.ui.components.BadgeState
@@ -80,13 +82,13 @@ fun ProfileScreen(onEdit: () -> Unit, vm: ProfileViewModel = koinViewModel()) {
         when (val s = state) {
             ProfileUiState.Loading -> LoadingBox()
             is ProfileUiState.Failed -> MessageBox(s.message, action = "Retry", tone = Tone.ERROR, onAction = vm::load)
-            is ProfileUiState.Loaded -> ProfileContent(s.summary, onEdit, vm::signOut)
+            is ProfileUiState.Loaded -> ProfileContent(s.summary, s.leveledUp, onEdit, vm::signOut)
         }
     }
 }
 
 @Composable
-private fun ProfileContent(summary: ProfileSummary, onEdit: () -> Unit, onSignOut: () -> Unit) {
+private fun ProfileContent(summary: ProfileSummary, leveledUp: Boolean, onEdit: () -> Unit, onSignOut: () -> Unit) {
     val p = summary.profile
     val colors = Arcade.colors
     Column(
@@ -107,7 +109,7 @@ private fun ProfileContent(summary: ProfileSummary, onEdit: () -> Unit, onSignOu
             }
             LedgeIconButton(ArcadeIcons.Edit, "Edit profile", onEdit, size = 42.dp)
         }
-        XpCard(p.xp, Modifier.staggerIn(1))
+        XpCard(p.xp, leveledUp, Modifier.staggerIn(1))
         CardPreview(p, Modifier.staggerIn(2))
         BadgeGrid(summary, Modifier.staggerIn(3))
         LedgeButton(
@@ -149,11 +151,21 @@ private fun CardPreview(p: Profile, modifier: Modifier) {
 }
 
 @Composable
-private fun XpCard(xp: Int, modifier: Modifier) {
+private fun XpCard(xp: Int, leveledUp: Boolean, modifier: Modifier) {
     val level = levelFor(xp)
     val muted = Arcade.colors.muted
     LedgeCard(modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, ledge = 5.dp) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (leveledUp) {
+                // Shown once per new level on this device; Etha powers up, then fidgets.
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    EthaLive(size = 72.dp, first = EthaMove.LEVEL_UP)
+                    Column(Modifier.weight(1f)) {
+                        Text("Level up!", style = MaterialTheme.typography.titleLarge, color = Arcade.colors.text)
+                        Text("You reached ${level.title}.", style = MaterialTheme.typography.bodyMedium, color = muted)
+                    }
+                }
+            }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 LevelHex(level.number)
                 Column(Modifier.weight(1f)) {

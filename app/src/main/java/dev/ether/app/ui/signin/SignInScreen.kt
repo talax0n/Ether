@@ -33,7 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import dev.ether.app.ui.components.EthaRepeating
+import dev.ether.app.ui.components.EthaLive
 import dev.ether.app.ui.components.EthaMove
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.Image
@@ -128,8 +128,8 @@ fun SignInContent(
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp)) {
                 when (step) {
                     SignInStep.EMAIL -> {
-                        // Etha waves hello now and then while the user types.
-                        EthaRepeating(EthaMove.WAVE, restMs = 3000, Modifier.padding(bottom = 8.dp), size = 112.dp)
+                        // Etha waves hello, then fidgets and waves again now and then while the user types.
+                        EthaLive(Modifier.padding(bottom = 8.dp), size = 112.dp, first = EthaMove.WAVE, pool = EthaMove.FIDGETS + EthaMove.WAVE)
                         Heading("Sign in or\ncreate an account", "Enter your email and we'll send a 6-digit code. New here? The code creates your account.")
                         ArcadeTextField(
                             value = state.email,

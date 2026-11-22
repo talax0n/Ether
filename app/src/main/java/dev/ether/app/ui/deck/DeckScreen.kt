@@ -21,6 +21,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ether.app.ui.components.ArcadeIcons
 import dev.ether.app.ui.components.ArcadeSnackbarHost
 import dev.ether.app.ui.components.EnergyMeter
+import dev.ether.app.ui.components.EthaLive
+import dev.ether.app.ui.components.EthaMove
+import dev.ether.app.ui.components.rememberEthaController
+import dev.ether.app.domain.SwipeDirection
+import androidx.compose.runtime.rememberCoroutineScope
 import dev.ether.app.ui.components.LedgeIconButton
 import dev.ether.app.ui.components.LoadingBox
 import dev.ether.app.ui.components.MessageBox
@@ -40,6 +45,8 @@ fun DeckScreen(
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
+    val etha = rememberEthaController()
+    val scope = rememberCoroutineScope()
     LaunchedEffect(state.error, state.phase) {
         if (state.phase != DeckPhase.FAILED) state.error?.let { snackbar.showSnackbar(it) }
     }
@@ -57,6 +64,8 @@ fun DeckScreen(
                         )
                     }
                 }
+                // Etha watches the deck: cheers on a like, shrugs on a pass.
+                EthaLive(Modifier.padding(end = 8.dp), size = 56.dp, controller = etha)
                 LedgeIconButton(ArcadeIcons.Heart, "Matches", onOpenMatches, size = 42.dp)
             }
             state.remaining?.let { EnergyMeter(it, Modifier.padding(horizontal = 20.dp).fillMaxWidth()) }
@@ -77,7 +86,10 @@ fun DeckScreen(
                 )
                 DeckPhase.SWIPING -> SwipeDeck(
                     cards = state.cards,
-                    onSwipe = vm::swipe,
+                    onSwipe = { card, direction ->
+                        vm.swipe(card, direction)
+                        etha.play(scope, if (direction == SwipeDirection.RIGHT) EthaMove.CELEBRATE else EthaMove.SHRUG)
+                    },
                     enabled = !state.swiping,
                     modifier = inner.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 16.dp),
                 )
