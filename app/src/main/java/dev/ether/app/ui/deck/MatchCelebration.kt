@@ -192,14 +192,22 @@ private fun Headline(modifier: Modifier) {
     }
 }
 
+private const val CHEER_REST_MS = 1200L
+
 @Composable
 private fun Duo(match: Match, duo: () -> Float, heart: () -> Float) {
-    // Etha takes the heart's place on the seam: it cheers once, then idles while the user reads the rewards.
+    // Etha takes the heart's place on the seam and keeps cheering while the user reads the rewards.
+    // Idle alone is a soft breathe that reads as a still at this size, so the jump repeats with a short rest.
     var move by remember { mutableStateOf(EthaMove.IDLE) }
+    val reduced = Arcade.reducedMotion
     // The disc pops in after the avatars collide; cheer only once it is on screen, or the jump plays unseen.
-    LaunchedEffect(Unit) {
+    LaunchedEffect(reduced) {
         snapshotFlow { heart() }.first { it > 0.6f }
-        move = EthaMove.CELEBRATE
+        do {
+            move = EthaMove.CELEBRATE
+            snapshotFlow { move }.first { it == EthaMove.IDLE }
+            delay(CHEER_REST_MS)
+        } while (!reduced)
     }
     Row(
         Modifier.fillMaxWidth().height(176.dp),
