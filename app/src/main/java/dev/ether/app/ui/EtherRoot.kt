@@ -66,8 +66,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
-import kotlin.math.sign
+import androidx.compose.animation.core.LinearEasing
 import dev.ether.app.ui.components.MessageBox
 import dev.ether.app.ui.components.Splash
 import dev.ether.app.ui.components.Tone
@@ -210,6 +209,8 @@ private fun ArcadeNavBar(current: Tab, onSelect: (Tab) -> Unit) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         // Tabs share the row equally after its 6dp side padding and 4dp gaps; Etha needs their centres.
         val tabWidth = (maxWidth - BAR_PADDING * 2 - TAB_GAP * (Tab.entries.size - 1)) / Tab.entries.size
+        // Drawn first so the bar covers Etha's lower half: it peeps out over the top edge.
+        TabBarEtha(current) { position -> BAR_PADDING + (tabWidth + TAB_GAP) * position + tabWidth / 2 }
         Column(Modifier.fillMaxWidth().background(colors.surface)) {
             Box(Modifier.fillMaxWidth().height(3.dp).background(colors.line))
             Row(
@@ -245,44 +246,48 @@ private fun ArcadeNavBar(current: Tab, onSelect: (Tab) -> Unit) {
                 }
             }
         }
-        TabBarEtha(current) { position -> BAR_PADDING + (tabWidth + TAB_GAP) * position + tabWidth / 2 }
     }
 }
 
 private val BAR_PADDING = 6.dp
 private val TAB_GAP = 4.dp
-private val TAB_ETHA = 48.dp
+private val TAB_ETHA = 64.dp
+
+/** How much of Etha shows above the bar: just the head while peeping, nearly all of it while out. */
+private const val PEEP = 0.5f
+private const val OUT = 0.9f
+private const val RUN_MS_PER_TAB = 260
 
 /**
- * One Etha standing on the tab bar's top edge. Choosing a tab sends it hopping there one tab at a time,
- * and on landing it does that tab's move. [centerOf] maps a fractional tab position to the x of its centre.
- * Drawn above the bar's bounds, so it overlaps the screen content and never shrinks it.
+ * One Etha living behind the tab bar, peeping over its top edge. Choosing a tab makes it climb out and run
+ * there, do that tab's move, then sink back to peeping. [centerOf] maps a fractional tab position to its centre x.
+ * It overlaps the screen content instead of shrinking it.
  */
 @Composable
 private fun TabBarEtha(current: Tab, centerOf: (Float) -> Dp) {
     val etha = rememberEthaController()
     val reduced = Arcade.reducedMotion
     val position = remember { Animatable(current.ordinal.toFloat()) }
+    val rise = remember { Animatable(PEEP) }
     LaunchedEffect(current, reduced) {
-        val target = current.ordinal
-        if (reduced) return@LaunchedEffect position.snapTo(target.toFloat())
-        var at = position.value.roundToInt()
-        val hop = EthaMove.HOP
-        while (at != target) {
-            at += (target - at).sign
+        val target = current.ordinal.toFloat()
+        if (reduced) return@LaunchedEffect position.snapTo(target)
+        val distance = kotlin.math.abs(target - position.value)
+        if (distance > 0.01f) {
+            etha.performOrYield(EthaMove.RUN)
             coroutineScope {
-                launch { etha.performOrYield(hop) }
-                // Travel only while airborne: skip the crouch frame, land on the last one.
-                position.animateTo(at.toFloat(), tween(((hop.frames - 2) * hop.frameMs).toInt(), delayMillis = hop.frameMs.toInt()))
+                launch { rise.animateTo(OUT, tween(160)) }
+                position.animateTo(target, tween((distance * RUN_MS_PER_TAB).toInt().coerceAtLeast(180), easing = LinearEasing))
             }
+        } else {
+            rise.animateTo(OUT, tween(160))
         }
-        position.animateTo(target.toFloat())
         etha.performOrYield(current.etha)
+        rise.animateTo(PEEP, tween(300))
     }
     EthaLive(
         Modifier.offset {
-            // The sprite's feet sit near the bottom of its cell, so most of it rises above the bar.
-            IntOffset((centerOf(position.value) - TAB_ETHA / 2).roundToPx(), -(TAB_ETHA * 0.9f).roundToPx())
+            IntOffset((centerOf(position.value) - TAB_ETHA / 2).roundToPx(), -(TAB_ETHA * rise.value).roundToPx())
         },
         size = TAB_ETHA,
         controller = etha,
