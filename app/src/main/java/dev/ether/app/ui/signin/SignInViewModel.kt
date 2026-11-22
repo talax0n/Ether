@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import dev.ether.app.data.AuthRepository
 import dev.ether.app.domain.AuthState
 import dev.ether.app.ui.userMessage
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,6 +21,8 @@ data class SignInUiState(
     val code: String = "",
     val busy: Boolean = false,
     val error: String? = null,
+    /** Seconds until "Resend code" is allowed again; 0 means it can be tapped. */
+    val resendIn: Int = 0,
 ) {
     val canSubmit: Boolean
         get() = !busy && when (step) {
@@ -28,6 +32,7 @@ data class SignInUiState(
 
     companion object {
         const val CODE_LENGTH = 6
+        const val RESEND_COOLDOWN = 30
     }
 }
 
@@ -47,8 +52,10 @@ class SignInViewModel(private val auth: AuthRepository) : ViewModel() {
 
     fun onEmailChange(value: String) = _state.update { it.copy(email = value, error = null) }
 
-    fun onCodeChange(value: String) = _state.update {
-        it.copy(code = value.filter(Char::isDigit).take(SignInUiState.CODE_LENGTH), error = null)
+    fun onCodeChange(value: String) {
+        _state.update { it.copy(code = value.filter(Char::isDigit).take(SignInUiState.CODE_LENGTH), error = null) }
+        // The last digit verifies on its own; nobody should have to hunt for a button after typing a code.
+        if (_state.value.code.length == SignInUiState.CODE_LENGTH) submit()
     }
 
     fun submit() {
@@ -62,12 +69,43 @@ class SignInViewModel(private val auth: AuthRepository) : ViewModel() {
                     SignInStep.CODE -> auth.verifyOtp(current.email.trim(), current.code)
                 }
             }.onSuccess {
-                _state.update { if (current.step == SignInStep.EMAIL) it.copy(step = SignInStep.CODE, busy = false) else it.copy(busy = false) }
+                if (current.step == SignInStep.EMAIL) {
+                    _state.update { it.copy(step = SignInStep.CODE, busy = false) }
+                    startCooldown()
+                } else {
+                    _state.update { it.copy(busy = false) }
+                }
             }.onFailure { e ->
                 _state.update { it.copy(busy = false, error = e.userMessage()) }
             }
         }
     }
 
-    fun changeEmail() = _state.update { it.copy(step = SignInStep.EMAIL, code = "", error = null) }
+    fun resend() {
+        val current = _state.value
+        if (current.step != SignInStep.CODE || current.busy || current.resendIn > 0) return
+        _state.update { it.copy(busy = true, code = "", error = null) }
+        viewModelScope.launch {
+            runCatching { auth.sendOtp(current.email.trim()) }
+                .onSuccess { _state.update { it.copy(busy = false) }; startCooldown() }
+                .onFailure { e -> _state.update { it.copy(busy = false, error = e.userMessage()) } }
+        }
+    }
+
+    fun changeEmail() {
+        cooldown?.cancel()
+        _state.update { it.copy(step = SignInStep.EMAIL, code = "", error = null, resendIn = 0) }
+    }
+
+    private var cooldown: Job? = null
+
+    private fun startCooldown() {
+        cooldown?.cancel()
+        cooldown = viewModelScope.launch {
+            for (left in SignInUiState.RESEND_COOLDOWN downTo 0) {
+                _state.update { it.copy(resendIn = left) }
+                if (left > 0) delay(1_000)
+            }
+        }
+    }
 }

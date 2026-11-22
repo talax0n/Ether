@@ -5,6 +5,7 @@ import dev.ether.app.domain.AuthState
 import dev.ether.app.domain.ProfileId
 import dev.ether.app.ui.signin.SignInStep
 import dev.ether.app.ui.signin.SignInViewModel
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -65,5 +66,31 @@ class SignInViewModelTest {
         // Reset for the next sign-in after a sign-out.
         assertEquals(SignInStep.EMAIL, vm.state.value.step)
         assertEquals("", vm.state.value.email)
+    }
+
+    @Test
+    fun `typing the last digit verifies without tapping Verify`() = runTest {
+        vm.onEmailChange("ana@student.ac.id")
+        vm.submit()
+        vm.onCodeChange("123456")
+
+        assertEquals(AuthState.SignedIn(ProfileId("p-me")), backend.authState.value)
+    }
+
+    @Test
+    fun `resend waits out the cooldown, then clears the code and restarts it`() = runTest(main.dispatcher) {
+        vm.onEmailChange("ana@student.ac.id")
+        vm.submit()
+        assertEquals(30, vm.state.value.resendIn)
+
+        vm.onCodeChange("12")
+        vm.resend()
+        assertEquals("12", vm.state.value.code)
+
+        advanceTimeBy(30_001)
+        assertEquals(0, vm.state.value.resendIn)
+        vm.resend()
+        assertEquals("", vm.state.value.code)
+        assertEquals(30, vm.state.value.resendIn)
     }
 }

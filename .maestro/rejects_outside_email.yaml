@@ -3,6 +3,9 @@ name: Outside email is rejected
 ---
 - launchApp:
     clearState: true
+- tapOn:
+    text: "Skip"
+    optional: true
 - tapOn: "University email"
 - inputText: "someone@gmail.com"
 - tapOn: "Send code"
