@@ -1,0 +1,280 @@
+{
+  "characterId": "pip",
+  "engine": "component-row",
+  "game_input": "sprite-sheet-alpha.png",
+  "degraded_static_fallback": false,
+  "curation_applied": true,
+  "frame_variant": "pixel",
+  "sprite_sheet_alpha": "sprite-sheet-alpha.png",
+  "sprite_sheet_alpha_report": "sprite-sheet-alpha.report.json",
+  "base_image": "base-source.png",
+  "cell": {
+    "shape": "square",
+    "width": 256,
+    "height": 256,
+    "safe_margin_x": 24,
+    "safe_margin_y": 24,
+    "size": 256,
+    "safe_margin": 24
+  },
+  "chroma_key": {
+    "name": "green",
+    "hex": "#00FF00",
+    "rgb": [
+      0,
+      255,
+      0
+    ],
+    "selection": "manual"
+  },
+  "animation": {
+    "cellWidth": 256,
+    "cellHeight": 256,
+    "columns": 8,
+    "rows": {
+      "idle": {
+        "row": 0,
+        "frames": 8,
+        "fps": 4,
+        "durations_ms": [
+          250,
+          250,
+          250,
+          250,
+          250,
+          250,
+          250,
+          250
+        ],
+        "loop": true,
+        "frame_variant": "pixel",
+        "breathe": {
+          "anatomy": {
+            "width": 203,
+            "height": 205,
+            "axis_x": 96,
+            "neck_row": 96,
+            "neck_source": "bottleneck",
+            "rigid_row": 115,
+            "rigid_source": "face",
+            "basis_row": 96,
+            "torso_half": 41,
+            "max_half": 106,
+            "torso_source": "auto",
+            "face": [
+              78,
+              114
+            ],
+            "warnings": []
+          },
+          "matches_sidecar": true,
+          "sidecar_drift": null,
+          "warnings": []
+        }
+      },
+      "celebrate": {
+        "row": 1,
+        "frames": 6,
+        "fps": 9,
+        "durations_ms": [
+          111,
+          111,
+          111,
+          111,
+          111,
+          111
+        ],
+        "loop": false,
+        "frame_variant": "pixel"
+      },
+      "wave": {
+        "row": 2,
+        "frames": 6,
+        "fps": 7,
+        "durations_ms": [
+          143,
+          143,
+          143,
+          143,
+          143,
+          143
+        ],
+        "loop": false,
+        "frame_variant": "pixel"
+      },
+      "sleep": {
+        "row": 3,
+        "frames": 4,
+        "fps": 4,
+        "durations_ms": [
+          250,
+          250,
+          250,
+          250
+        ],
+        "loop": true,
+        "frame_variant": "pixel"
+      }
+    }
+  },
+  "frame_layout": {
+    "sheetWidth": 2048,
+    "sheetHeight": 1024,
+    "cellWidth": 256,
+    "cellHeight": 256,
+    "rows": {
+      "idle": [
+        {
+          "x": 0,
+          "y": 0,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 256,
+          "y": 0,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 512,
+          "y": 0,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 768,
+          "y": 0,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 1024,
+          "y": 0,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 1280,
+          "y": 0,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 1536,
+          "y": 0,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 1792,
+          "y": 0,
+          "w": 256,
+          "h": 256
+        }
+      ],
+      "celebrate": [
+        {
+          "x": 0,
+          "y": 256,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 256,
+          "y": 256,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 512,
+          "y": 256,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 768,
+          "y": 256,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 1024,
+          "y": 256,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 1280,
+          "y": 256,
+          "w": 256,
+          "h": 256
+        }
+      ],
+      "wave": [
+        {
+          "x": 0,
+          "y": 512,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 256,
+          "y": 512,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 512,
+          "y": 512,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 768,
+          "y": 512,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 1024,
+          "y": 512,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 1280,
+          "y": 512,
+          "w": 256,
+          "h": 256
+        }
+      ],
+      "sleep": [
+        {
+          "x": 0,
+          "y": 768,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 256,
+          "y": 768,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 512,
+          "y": 768,
+          "w": 256,
+          "h": 256
+        },
+        {
+          "x": 768,
+          "y": 768,
+          "w": 256,
+          "h": 256
+        }
+      ]
+    }
+  }
+}

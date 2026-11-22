@@ -26,3 +26,7 @@ supabase/.temp/
 .idea/
 *.iml
 .vscode/
+
+# sprite-gen working files; the deliverables sit next to them
+docs/brand/mascot/run/
+docs/brand/mascot/.run.sg-rwlock
