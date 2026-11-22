@@ -245,7 +245,17 @@ Set these in the gitignored `local.properties` or as environment variables:
 SUPABASE_URL=http://10.0.2.2:54321   # local Supabase as seen from the emulator
 SUPABASE_ANON_KEY=...                 # from `supabase status`; blank → in-memory demo backend
 USE_FAKE_BACKEND=false                # true → offline demo (any email, code 123456)
+GOOGLE_WEB_CLIENT_ID=                 # optional; blank hides "Continue with Google"
 ```
+
+### Google sign-in
+
+The app uses Credential Manager to get a Google ID token, then exchanges it with Supabase. To turn it on:
+
+1. In Google Cloud, create an OAuth client of type **Web application**. Its client ID is `GOOGLE_WEB_CLIENT_ID`.
+2. Create an OAuth client of type **Android** for package `dev.ether.app` with the SHA-1 of each signing key you use (`./gradlew signingReport` for debug, the release keystore for CI).
+3. In Supabase, enable the Google provider with the web client ID and secret. Locally, export `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` and `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET` and set `enabled = true` under `[auth.external.google]` in `supabase/config.toml`.
+4. Set `GOOGLE_WEB_CLIENT_ID` in `local.properties`, and as a repo secret for release builds.
 
 ## Testing
 

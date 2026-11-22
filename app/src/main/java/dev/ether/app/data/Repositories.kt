@@ -24,6 +24,8 @@ interface AuthRepository {
     val authState: Flow<AuthState>
     suspend fun sendOtp(email: String)
     suspend fun verifyOtp(email: String, code: String)
+    /** Exchanges a Google ID token (from Credential Manager) for a session. [rawNonce] is the unhashed nonce sent to Google. */
+    suspend fun signInWithGoogle(idToken: String, rawNonce: String)
     suspend fun signOut()
 }
 
