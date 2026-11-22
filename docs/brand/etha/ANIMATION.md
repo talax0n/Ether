@@ -16,6 +16,8 @@ The atlas uses 256 × 256 RGBA cells. Use the pixel rectangles in `manifest.json
 | Shrug | 0 → 7 | 100 | No | Both mittens up, flat mouth at the peak |
 | Hop | 0 → 7 | 70 | No | Crouch, lift, apex, descent, landing |
 | Run | 0 → 8 | 80 | Yes | Run in place for loading |
+| Run right (`run_right`, row 12) | 0 → 8 | 80 | Yes | Right-facing profile run in place |
+| Run left (`run_left`, row 13) | 0 → 8 | 80 | Yes | Left-facing profile run in place |
 
 Idle samples the same Breathe cycle at twice the frame count. Wave and Celebrate interleave the approved poses with deterministically extracted Codex takes aligned to the neighboring visors. Level-up kept its approved poses after rerolls introduced visible changes in the mitten path and hoodie. Sleep kept the original slow bob.
 
@@ -34,6 +36,12 @@ Idle samples the same Breathe cycle at twice the frame count. Wave and Celebrate
 - Hop uses a reroll to keep the right antenna tip Grape. Its three airborne poses rise 11, 21 and 10 px above the 232 px foot baseline. Run uses a Codex transition into its first stride so the last-to-first step carries the gait forward.
 - The six one-shots use idle frame 0 verbatim at both ends. Rows 0–4 retain their original pixels and timing in the expanded atlases. The Android sheet reuses the original 256-entry palette.
 
+## Side run review
+
+- Each direction uses a separately drawn Codex profile. The near antenna tip is Grape in `run_right` and Sky blue in `run_left`. The other tip is visible behind it. The cream chest mark is visible when the forward mitten leaves it exposed.
+- Both rows use rerolled poses with alternating arm swings. The right loop ends on a Codex in-between into its first touchdown. The left loop uses the rerolled flight pose into touchdown.
+- The hood stays centered in each cell. The contact poses match row 11's 232 px foot baseline, measured at 50% opacity. The feet lift clear during push-off and flight. Rows 0–11 retain their pixels and timing in both atlases.
+
 ## Files
 
 - `sprite-sheet-alpha.png` is the transparent atlas.
@@ -41,4 +49,4 @@ Idle samples the same Breathe cycle at twice the frame count. Wave and Celebrate
 - `base.png` is the approved still with its green background removed.
 - Each animation has a GIF named for its manifest key.
 - `ANIMATION.md` records timing and QA.
-- `run/` contains the original sprite-gen run. `run/extra-rows/` contains the Codex takes, and its `qa/` folder has contact sheets for the new rows.
+- `run/` contains the original sprite-gen run. `run/extra-rows/qa/` has contact sheets for rows 5–11. `run/side-rows/qa/` has contact sheets for rows 12–13.

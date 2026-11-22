@@ -54,6 +54,8 @@ enum class EthaMove(val manifestKey: String, val row: Int, val frames: Int, val 
     SHRUG("shrug", 9, 7, 100, false),
     HOP("hop", 10, 7, 70, false),
     RUN("run", 11, 8, 80, true),
+    RUN_RIGHT("run_right", 12, 8, 80, true),
+    RUN_LEFT("run_left", 13, 8, 80, true),
     ;
 
     companion object {

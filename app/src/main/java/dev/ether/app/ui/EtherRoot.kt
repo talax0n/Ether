@@ -260,7 +260,7 @@ private const val RUN_MS_PER_TAB = 260
 
 /**
  * One Etha living behind the tab bar, peeping over its top edge. Choosing a tab makes it climb out and run
- * there, do that tab's move, then sink back to peeping. [centerOf] maps a fractional tab position to its centre x.
+ * there side-on, do that tab's move, then sink back to peeping. [centerOf] maps a fractional tab position to its centre x.
  * It overlaps the screen content instead of shrinking it.
  */
 @Composable
@@ -274,7 +274,7 @@ private fun TabBarEtha(current: Tab, centerOf: (Float) -> Dp) {
         if (reduced) return@LaunchedEffect position.snapTo(target)
         val distance = kotlin.math.abs(target - position.value)
         if (distance > 0.01f) {
-            etha.performOrYield(EthaMove.RUN)
+            etha.performOrYield(if (target > position.value) EthaMove.RUN_RIGHT else EthaMove.RUN_LEFT)
             coroutineScope {
                 launch { rise.animateTo(OUT, tween(160)) }
                 position.animateTo(target, tween((distance * RUN_MS_PER_TAB).toInt().coerceAtLeast(180), easing = LinearEasing))
