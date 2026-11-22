@@ -1,5 +1,13 @@
 package dev.ether.app.ui.profile
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import dev.ether.app.domain.Profile
+import dev.ether.app.ui.components.CapsLabel
+import dev.ether.app.ui.contactApp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -39,8 +46,6 @@ import dev.ether.app.ui.components.LedgeIconButton
 import dev.ether.app.ui.components.LevelHex
 import dev.ether.app.ui.components.LoadingBox
 import dev.ether.app.ui.components.MessageBox
-import dev.ether.app.ui.components.ProgressRing
-import dev.ether.app.ui.components.ScreenHeader
 import dev.ether.app.ui.components.SectionHeader
 import dev.ether.app.ui.components.TagRow
 import dev.ether.app.ui.components.Tone
@@ -72,60 +77,74 @@ fun ProfileScreen(onEdit: () -> Unit, vm: ProfileViewModel = koinViewModel()) {
         onPauseOrDispose {}
     }
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader("Profile") { LedgeIconButton(ArcadeIcons.Edit, "Edit profile", onEdit) }
         when (val s = state) {
             ProfileUiState.Loading -> LoadingBox()
             is ProfileUiState.Failed -> MessageBox(s.message, action = "Retry", tone = Tone.ERROR, onAction = vm::load)
-            is ProfileUiState.Loaded -> ProfileContent(s.summary, vm::signOut)
+            is ProfileUiState.Loaded -> ProfileContent(s.summary, onEdit, vm::signOut)
         }
     }
 }
 
 @Composable
-private fun ProfileContent(summary: ProfileSummary, onSignOut: () -> Unit) {
+private fun ProfileContent(summary: ProfileSummary, onEdit: () -> Unit, onSignOut: () -> Unit) {
     val p = summary.profile
-    val text = Arcade.colors.text
+    val colors = Arcade.colors
     Column(
-        Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 4.dp),
+        Modifier.verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Row(Modifier.staggerIn(0), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Avatar(p.name, p.avatarUrl, 92.dp)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(p.name, style = MaterialTheme.typography.headlineMedium, color = text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Row(Modifier.staggerIn(0), verticalAlignment = Alignment.CenterVertically) {
+            Avatar(p.name, p.avatarUrl, 88.dp)
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    p.name, Modifier.semantics { heading() },
+                    style = MaterialTheme.typography.headlineLarge, color = colors.text, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                )
                 listOfNotNull(p.major, p.year?.let { "Year $it" }).takeIf { it.isNotEmpty() }?.let {
-                    Text(it.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = Arcade.colors.muted)
+                    Text(it.joinToString(" · "), style = MaterialTheme.typography.bodyLarge, color = colors.muted)
                 }
-                TagRow(p.skills, SkySoft, Modifier.padding(top = 6.dp), maxLines = 1)
             }
+            LedgeIconButton(ArcadeIcons.Edit, "Edit profile", onEdit, size = 42.dp)
         }
         XpCard(p.xp, Modifier.staggerIn(1))
-        Row(Modifier.staggerIn(2), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            val endorsements = summary.reliability.endorsements
-            StatCard("$endorsements", if (endorsements == 1) "Endorsement" else "Endorsements", Modifier.weight(1f)) {
-                ProgressRing(endorsements / RELIABLE_AT.toFloat())
-            }
-            StatCard("${summary.badges.size}", if (summary.badges.size == 1) "Badge" else "Badges", Modifier.weight(1f)) {
-                Box(Modifier.size(50.dp).ledge(CircleShape, Grape, Arcade.colors.line, Arcade.colors.ledge, 0.dp), contentAlignment = Alignment.Center) {
-                    Icon(ArcadeIcons.Star, contentDescription = null, tint = Paper, modifier = Modifier.size(26.dp))
-                }
-            }
-        }
+        CardPreview(p, Modifier.staggerIn(2))
         BadgeGrid(summary, Modifier.staggerIn(3))
-        if (p.bio.isNotBlank()) {
-            Column(Modifier.staggerIn(4), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionHeader("About")
-                Text(p.bio, style = MaterialTheme.typography.bodyLarge, color = text)
+        LedgeButton(
+            "Sign out", onSignOut, Modifier.fillMaxWidth().padding(top = 4.dp),
+            color = Color.Transparent, contentColor = colors.text, icon = ArcadeIcons.Logout,
+        )
+    }
+}
+
+/** Everything a match or a deck viewer learns about you, in one place, so you can check it before they do. */
+@Composable
+private fun CardPreview(p: Profile, modifier: Modifier) {
+    val colors = Arcade.colors
+    LedgeCard(modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("How others see you", style = MaterialTheme.typography.titleMedium, color = colors.text)
+            if (p.bio.isNotBlank()) Text(p.bio, style = MaterialTheme.typography.bodyLarge, color = colors.text)
+            if (p.skills.isNotEmpty()) {
+                CapsLabel("Skills")
+                TagRow(p.skills, SkySoft)
+            }
+            if (p.roles.isNotEmpty()) {
+                CapsLabel("Roles")
+                TagRow(p.roles, CoralSoft)
+            }
+            Box(Modifier.fillMaxWidth().height(2.dp).background(colors.track))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(ArcadeIcons.Lock, contentDescription = null, tint = colors.muted, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    p.contactUrl?.let { url -> "Matches and teammates reach you " + (contactApp(url)?.let { "on $it" } ?: "through your contact link") }
+                        ?: "No contact link yet. Matches can't reach you until you add one.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.muted,
+                )
             }
         }
-        Column(Modifier.staggerIn(5), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SectionHeader("Roles")
-            TagRow(p.roles, CoralSoft)
-        }
-        LedgeButton(
-            "Sign out", onSignOut, Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 20.dp),
-            color = Color.Transparent, contentColor = text, icon = ArcadeIcons.Logout,
-        )
     }
 }
 
@@ -150,19 +169,6 @@ private fun XpCard(xp: Int, modifier: Modifier) {
                 }
             }
             XpBar(level.progress(xp))
-        }
-    }
-}
-
-@Composable
-private fun StatCard(value: String, label: String, modifier: Modifier, sticker: @Composable () -> Unit) {
-    LedgeCard(modifier, shape = MaterialTheme.shapes.medium, ledge = 4.dp) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            sticker()
-            Column {
-                Text(value, style = NumberStyle.copy(fontSize = 22.sp), color = Arcade.colors.text)
-                Text(label, style = MaterialTheme.typography.labelMedium, color = Arcade.colors.muted, maxLines = 1)
-            }
         }
     }
 }

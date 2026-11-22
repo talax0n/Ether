@@ -50,6 +50,7 @@ import dev.ether.app.ui.components.Confetti
 import dev.ether.app.ui.components.LedgeButton
 import dev.ether.app.ui.components.Rays
 import dev.ether.app.ui.components.ledge
+import dev.ether.app.ui.contactApp
 import dev.ether.app.ui.contactLabel
 import dev.ether.app.ui.openContact
 import dev.ether.app.ui.theme.Arcade
@@ -82,7 +83,7 @@ private fun rewardsFor(match: Match) = listOfNotNull(
     },
     Reward(
         ArcadeIcons.Chat, Mint, "Contact unlocked",
-        match.contactUrl?.let { contactLabel(it).removePrefix("Message on ") + " link shared" } ?: "Their link lands in Matches shortly",
+        match.contactUrl?.let { url -> contactApp(url)?.let { "$it link shared" } ?: "Contact link shared" } ?: "Their link lands in Matches shortly",
         null,
     ),
     Reward(ArcadeIcons.Trophy, Sky, "XP on its way", "Check your profile for the new total", null),

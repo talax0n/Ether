@@ -2,6 +2,19 @@ package dev.ether.app.ui.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Icon
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import dev.ether.app.ui.components.LedgeIconButton
+import dev.ether.app.ui.components.TagRow
+import dev.ether.app.ui.contactApp
+import dev.ether.app.ui.theme.CoralSoft
+import dev.ether.app.ui.theme.SkySoft
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ether.app.ui.components.ArcadeIcons
 import dev.ether.app.ui.components.ArcadeTextField
-import dev.ether.app.ui.components.ArcadeTopBar
 import dev.ether.app.ui.components.Chip
 import dev.ether.app.ui.components.XpBar
 import dev.ether.app.ui.components.ErrorText
@@ -41,45 +53,65 @@ import org.koin.compose.viewmodel.koinViewModel
 fun ProfileEditScreen(isSetup: Boolean, onDone: () -> Unit, onBack: () -> Unit, vm: ProfileEditViewModel = koinViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(state.saved) { if (state.saved) onDone() }
-    Column(Modifier.fillMaxSize().background(Arcade.colors.background)) {
-        ArcadeTopBar(
-            title = if (isSetup) "Set up your profile" else "Edit profile",
-            subtitle = if (isSetup) "One minute, then you're swiping" else null,
-            onBack = if (isSetup) null else onBack,
-        )
+    val colors = Arcade.colors
+    Column(Modifier.fillMaxSize().background(colors.background).safeDrawingPadding().imePadding()) {
+        if (!isSetup) {
+            Row(Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+                LedgeIconButton(ArcadeIcons.Back, "Back", onBack, size = 42.dp)
+            }
+        }
         if (state.loading) return@Column LoadingBox()
         state.loadError?.let { return@Column MessageBox(it, action = "Retry", tone = Tone.ERROR, onAction = vm::load) }
         val form = state.form
         val filled = listOf(form.name, form.major, form.year, form.bio, form.skills, form.roles, form.contactUrl).count { it.isNotBlank() }
         Column(
-            Modifier.imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+            Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = if (isSetup) 24.dp else 4.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Row(Modifier.staggerIn(0), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("$filled/7", style = NumberStyle, color = Arcade.colors.text)
+            Column(Modifier.staggerIn(0)) {
+                Text(
+                    if (isSetup) "Set up your\nprofile" else "Edit profile",
+                    Modifier.semantics { heading() }, style = MaterialTheme.typography.displaySmall, color = colors.text,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    if (isSetup) "One minute, then you're swiping. This is what teams see on your card." else "This is what teams see on your card.",
+                    style = MaterialTheme.typography.bodyLarge, color = colors.muted,
+                )
+            }
+            Row(Modifier.staggerIn(1), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("$filled/7", style = NumberStyle, color = colors.text)
                 XpBar(filled / 7f, Modifier.weight(1f))
                 if (isSetup) Chip("+50 XP", color = SunSoft, icon = ArcadeIcons.Bolt)
             }
-            Field("Name", form.name, 1) { vm.edit { copy(name = it) } }
-            Field("Major", form.major, 2) { vm.edit { copy(major = it) } }
-            Field("Year (1-10)", form.year, 3, KeyboardType.Number) { vm.edit { copy(year = it) } }
-            Field("Bio", form.bio, 4, singleLine = false) { vm.edit { copy(bio = it) } }
-            Field("Skills, comma separated", form.skills, 5) { vm.edit { copy(skills = it) } }
-            Field("Roles, comma separated", form.roles, 6) { vm.edit { copy(roles = it) } }
-            Field("Contact link (https://wa.me/… or https://t.me/…)", form.contactUrl, 7, KeyboardType.Uri) {
+            Field("Name", form.name, 2) { vm.edit { copy(name = it) } }
+            Field("Major", form.major, 3) { vm.edit { copy(major = it) } }
+            Field("Year (1-10)", form.year, 4, KeyboardType.Number) { vm.edit { copy(year = it) } }
+            Field("Bio", form.bio, 5, singleLine = false) { vm.edit { copy(bio = it) } }
+            Field("Skills, comma separated", form.skills, 6) { vm.edit { copy(skills = it) } }
+            if (form.skillTags.isNotEmpty()) TagRow(form.skillTags, SkySoft)
+            Field("Roles, comma separated", form.roles, 7) { vm.edit { copy(roles = it) } }
+            if (form.roleTags.isNotEmpty()) TagRow(form.roleTags, CoralSoft)
+            Field("Contact link (https://wa.me/… or https://t.me/…)", form.contactUrl, 8, KeyboardType.Uri) {
                 vm.edit { copy(contactUrl = it) }
             }
-            Text(
-                "All fields are required. Only your teammates and people you match with can see your contact link.",
-                style = MaterialTheme.typography.bodySmall,
-                color = Arcade.colors.muted,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(ArcadeIcons.Lock, contentDescription = null, tint = colors.muted, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    form.contactUrl.trim().takeIf { it.startsWith("https://") }
+                        ?.let { url -> "Only matches and teammates see it." + (contactApp(url)?.let { " They'll reach you on $it." } ?: "") }
+                        ?: "Only matches and teammates see your contact link. It must start with https://.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.muted,
+                )
+            }
             state.error?.let { ErrorText(it) }
-            LedgeButton(
-                if (state.saving) "Saving…" else "Save", vm::save, Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                enabled = state.canSave, icon = ArcadeIcons.Check,
-            )
         }
+        LedgeButton(
+            if (state.saving) "Saving…" else "Save", vm::save, Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
+            enabled = state.canSave, icon = ArcadeIcons.Check,
+        )
     }
 }
 

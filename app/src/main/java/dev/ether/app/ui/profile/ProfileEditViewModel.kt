@@ -21,6 +21,9 @@ data class ProfileForm(
     val roles: String = "",
     val contactUrl: String = "",
 ) {
+    val skillTags get() = skills.splitTags()
+    val roleTags get() = roles.splitTags()
+
     fun toDraftOrNull(): ProfileDraft? {
         val yearValue = year.trim().toIntOrNull()?.takeIf { it in 1..10 } ?: return null
         // Everything is required: the database only counts a profile as complete with all of it.

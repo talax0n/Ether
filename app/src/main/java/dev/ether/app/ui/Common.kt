@@ -25,8 +25,11 @@ fun Instant.shortDate(): String = atZone(ZoneId.systemDefault()).format(dateForm
 private val dayMonthFormat = DateTimeFormatter.ofPattern("d MMM")
 fun Instant.dayMonth(): String = atZone(ZoneId.systemDefault()).format(dayMonthFormat)
 
-fun contactLabel(url: String): String = when {
-    "wa.me" in url || "whatsapp" in url -> "Message on WhatsApp"
-    "t.me" in url || "telegram" in url -> "Message on Telegram"
-    else -> "Open contact"
+/** The chat app a contact link opens, or null for any other link. */
+fun contactApp(url: String): String? = when {
+    "wa.me" in url || "whatsapp" in url -> "WhatsApp"
+    "t.me" in url || "telegram" in url -> "Telegram"
+    else -> null
 }
+
+fun contactLabel(url: String): String = contactApp(url)?.let { "Message on $it" } ?: "Open contact"

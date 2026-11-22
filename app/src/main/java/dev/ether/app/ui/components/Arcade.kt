@@ -15,13 +15,11 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -262,41 +260,6 @@ fun Avatar(
         } else {
             Text(label, color = Ink, style = MaterialTheme.typography.titleLarge.copy(fontSize = (size.value * (if (label.length > 2) 0.24f else 0.36f)).sp))
         }
-    }
-}
-
-/** Title row for pushed screens: back, title + subtitle, trailing actions. */
-@Composable
-fun ArcadeTopBar(
-    title: String,
-    modifier: Modifier = Modifier,
-    subtitle: String? = null,
-    onBack: (() -> Unit)? = null,
-    actions: @Composable RowScope.() -> Unit = {},
-) {
-    Row(
-        modifier.fillMaxWidth().statusBarsPadding().height(64.dp).padding(start = if (onBack == null) 20.dp else 6.dp, end = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        onBack?.let { BarIconButton(ArcadeIcons.Back, "Back", it) }
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleLarge, color = Arcade.colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.semantics { heading() })
-            subtitle?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = Arcade.colors.muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-        }
-        actions()
-    }
-}
-
-/** Big title for the four top-level tabs. */
-@Composable
-fun ScreenHeader(title: String, modifier: Modifier = Modifier, action: @Composable () -> Unit = {}) {
-    Row(
-        modifier.fillMaxWidth().statusBarsPadding().padding(start = 20.dp, end = 18.dp, top = 10.dp, bottom = 6.dp).heightIn(min = 56.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(title, style = MaterialTheme.typography.headlineMedium, color = Arcade.colors.text, modifier = Modifier.weight(1f).semantics { heading() })
-        action()
     }
 }
 
