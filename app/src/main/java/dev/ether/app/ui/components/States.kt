@@ -7,11 +7,14 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.res.painterResource
+import dev.ether.app.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,7 +23,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -44,7 +46,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import dev.ether.app.ui.theme.Arcade
 import dev.ether.app.ui.theme.Coral
-import dev.ether.app.ui.theme.Cream
 import dev.ether.app.ui.theme.Grape
 import dev.ether.app.ui.theme.Ink
 import dev.ether.app.ui.theme.Mint
@@ -101,9 +102,13 @@ fun Splash(modifier: Modifier = Modifier) {
         delay(1200)
         slow = true
     }
-    val markSize = 104.dp
+    // Same size and spot as the system splash icon (a 160dp Coral circle), so the handoff doesn't jump.
+    val markSize = SplashIconSize
     Box(modifier.fillMaxSize().background(Arcade.colors.background).semantics { contentDescription = "Loading" }) {
-        EtherMark(Modifier.align(Alignment.Center).graphicsLayer { scaleX = pop.value; scaleY = pop.value }, size = markSize)
+        Box(
+            Modifier.align(Alignment.Center).graphicsLayer { scaleX = pop.value; scaleY = pop.value }.size(markSize).background(Coral, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) { EtherMark(size = markSize * 0.76f) }
         Column(
             Modifier.align(Alignment.Center).offset(y = markSize / 2 + 64.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -119,11 +124,15 @@ fun Splash(modifier: Modifier = Modifier) {
 /** The app mark: the launcher heart in a Coral ledge tile. */
 @Composable
 fun EtherMark(modifier: Modifier = Modifier, size: Dp = 56.dp) {
-    Box(
-        modifier.size(size + size / 14).ledge(RoundedCornerShape(size * 0.3f), Coral, Arcade.colors.line, Arcade.colors.ledge, size / 14, lineWidth = size / 24),
-        contentAlignment = Alignment.Center,
-    ) { Icon(ArcadeIcons.HeartFilled, contentDescription = null, tint = Cream, modifier = Modifier.size(size * 0.52f)) }
+    Image(
+        painterResource(R.drawable.ether_mark), contentDescription = null,
+        modifier = modifier.height(size).aspectRatio(MarkAspect),
+    )
 }
+
+/** Width over height of drawable/ether_mark.png (the launcher foreground cropped to the mark). */
+private const val MarkAspect = 361f / 384f
+private val SplashIconSize = 160.dp
 
 /** The "ether" logotype: Coral letters with an Ink ledge. */
 @Composable
