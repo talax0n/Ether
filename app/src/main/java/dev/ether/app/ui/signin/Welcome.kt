@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -163,9 +164,9 @@ private fun Burst(modifier: Modifier) {
         Canvas(Modifier.fillMaxSize()) {
             val c = center
             val reach = size.maxDimension
-            val turn = orbit.value / 2f
+            // Static rays: redrawing them every frame cost more than the slow turn was worth.
             repeat(RAYS) { i ->
-                val a = (TAU * i / RAYS) + turn
+                val a = TAU * i / RAYS
                 drawLine(
                     ray, c + Offset(cos(a), sin(a)) * 70.dp.toPx(), c + Offset(cos(a), sin(a)) * reach,
                     strokeWidth = (if (i % 2 == 0) 3f else 1.5f).dp.toPx(), cap = StrokeCap.Round,
@@ -179,6 +180,7 @@ private fun Burst(modifier: Modifier) {
                 val p = centre.value
                 scaleX = scale * (0.6f + 0.4f * p); scaleY = scaleX
                 alpha = p.coerceIn(0f, 1f)
+                compositingStrategy = CompositingStrategy.ModulateAlpha
             },
         ) {
             FloatingEtha({ phase.value })
@@ -269,6 +271,8 @@ private fun BubbleView(b: Bubble, index: Int, bob: () -> Float, orbit: () -> Flo
                 val s = pop.value * scale * (1f + 0.12f * pulse.value)
                 scaleX = s; scaleY = s
                 alpha = if (b.far) 0.3f else 1f
+                // Fade by multiplying each draw instead of compositing an offscreen buffer every frame.
+                compositingStrategy = CompositingStrategy.ModulateAlpha
             },
             color = b.color,
         )
