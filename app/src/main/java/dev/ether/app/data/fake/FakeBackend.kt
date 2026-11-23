@@ -106,7 +106,8 @@ class FakeBackend(
     override suspend fun competition(id: CompetitionId): Competition =
         DemoData.competitions.first { it.id == id }
 
-    override suspend fun myListing(id: CompetitionId): Listing? = listings.firstOrNull { it.competitionId == id }
+    override suspend fun myListing(id: CompetitionId): Listing? =
+        if (auth.value !is AuthState.SignedIn) null else listings.firstOrNull { it.competitionId == id }
 
     override suspend fun joinSolo(id: CompetitionId): Listing =
         if (registrationClosed) throw EtherError.RegistrationClosed()
@@ -153,7 +154,7 @@ class FakeBackend(
     override suspend fun matches(competitionId: CompetitionId): List<Match> =
         matches.filter { it.competitionId == competitionId }.sortedByDescending { it.createdAt }
 
-    override suspend fun myTeams(): List<MyTeam> = teams.toList()
+    override suspend fun myTeams(): List<MyTeam> = if (auth.value !is AuthState.SignedIn) emptyList() else teams.toList()
 
     override suspend fun endorse(competitionId: CompetitionId, teammate: ProfileId) {
         val team = teams.first { it.competition.id == competitionId }

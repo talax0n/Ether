@@ -2,11 +2,13 @@ appId: dev.ether.app
 ---
 # Creates an account and confirms the email with the 6-digit code read from Mailpit.
 - runScript: ../scripts/clear_mail.js
-- tapOn: "Continue with email"
-# First launch only: the intro pages play after the welcome screen.
+# First launch only: the intro pages, then the app opens for browsing without an account.
 - tapOn:
     text: "Skip"
     optional: true
+- tapOn: "Profile"
+- tapOn: "Sign in"
+- tapOn: "Continue with email"
 - tapOn: "Create account"
 - tapOn: "Email"
 - inputText: ${EMAIL}

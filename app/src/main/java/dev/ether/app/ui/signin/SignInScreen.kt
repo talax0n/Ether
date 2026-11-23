@@ -39,8 +39,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.saveable.rememberSaveable
-import dev.ether.app.ui.onboarding.OnboardingScreen
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -98,7 +96,7 @@ import dev.ether.app.ui.theme.NumberStyle
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun SignInScreen(seenOnboarding: Boolean, onOnboarded: () -> Unit, vm: SignInViewModel = koinViewModel()) {
+fun SignInScreen(onClose: () -> Unit, vm: SignInViewModel = koinViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -118,34 +116,11 @@ fun SignInScreen(seenOnboarding: Boolean, onOnboarded: () -> Unit, vm: SignInVie
         BuildConfig.USE_FAKE_BACKEND -> { -> vm.signInWithGoogle("demo-id-token", "demo-nonce") }
         else -> null
     }
-    // A way in picked on the welcome screen, held while the intro pages play the first time.
-    var pending by rememberSaveable { mutableStateOf<WayIn?>(null) }
-    val go = { way: WayIn ->
-        when (way) {
-            WayIn.EMAIL -> vm.continueWithEmail()
-            WayIn.GOOGLE -> onGoogle?.invoke()
-        }
-    }
-    val choose = { way: WayIn -> if (seenOnboarding) go(way) else pending = way }
-    AnimatedContent(pending != null && !seenOnboarding, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "intro") { intro ->
-        if (intro) {
-            BackHandler { pending = null }
-            OnboardingScreen(onDone = {
-                val way = pending
-                pending = null
-                onOnboarded()
-                way?.let(go)
-            })
-        } else {
-            SignInContent(
-                state, vm::onEmailChange, vm::onPasswordChange, vm::onModeChange, vm::onCodeChange, vm::submit, vm::back,
-                vm::resend, vm::forgotPassword, { choose(WayIn.EMAIL) }, onGoogle?.let { { choose(WayIn.GOOGLE) } },
-            )
-        }
-    }
+    SignInContent(
+        state, vm::onEmailChange, vm::onPasswordChange, vm::onModeChange, vm::onCodeChange, vm::submit, vm::back,
+        vm::resend, vm::forgotPassword, vm::continueWithEmail, onGoogle, onClose,
+    )
 }
-
-private enum class WayIn { EMAIL, GOOGLE }
 
 @Composable
 fun SignInContent(
@@ -161,9 +136,11 @@ fun SignInContent(
     onContinueWithEmail: () -> Unit,
     /** Null hides the Google button: no client ID is configured for this build. */
     onGoogle: (() -> Unit)?,
+    /** Leaves sign-in and goes back to browsing as a guest. */
+    onClose: () -> Unit,
 ) {
     val colors = Arcade.colors
-    BackHandler(enabled = state.step != SignInStep.WELCOME && !state.busy, onBack = onBack)
+    BackHandler(enabled = !state.busy) { if (state.step == SignInStep.WELCOME) onClose() else onBack() }
     Column(Modifier.fillMaxSize().background(colors.background).safeDrawingPadding().imePadding()) {
       // Etha is one shared element across steps: leaving the welcome screen it flies from the burst's centre
       // into its spot above the form, while the bubbles scatter outward and the form rises in.
@@ -195,7 +172,7 @@ fun SignInContent(
             if (step == SignInStep.WELCOME) {
                 // 0 while shown, 1 once gone: drives the bubbles' scatter out and back in.
                 val scatter by transition.animateFloat({ tween(420) }, label = "scatter") { if (it == EnterExitState.Visible) 0f else 1f }
-                Welcome(onGoogle, onContinueWithEmail, busy = state.busy, error = state.error, ethaModifier = ethaShared, scatter = { scatter })
+                Welcome(onGoogle, onContinueWithEmail, onClose, busy = state.busy, error = state.error, ethaModifier = ethaShared, scatter = { scatter })
                 return@AnimatedContent
             }
             Column(Modifier.fillMaxSize()) {
@@ -407,5 +384,5 @@ private fun ResendRow(resendIn: Int, enabled: Boolean, onResend: () -> Unit) {
 @Preview
 @Composable
 private fun SignInPreview() {
-    EtherTheme { SignInContent(SignInUiState(email = "ana@example.com"), {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) }
+    EtherTheme { SignInContent(SignInUiState(email = "ana@example.com"), {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) }
 }

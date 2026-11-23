@@ -47,6 +47,7 @@ import dev.ether.app.domain.Competition
 import dev.ether.app.domain.Listing
 import dev.ether.app.domain.ListingId
 import dev.ether.app.ui.components.ArcadeIcons
+import dev.ether.app.ui.gated
 import dev.ether.app.ui.components.ArcadeTextField
 import dev.ether.app.ui.components.Countdown
 import dev.ether.app.ui.components.ErrorText
@@ -114,7 +115,7 @@ fun CompetitionDetailScreen(
                     )
                     if (state.teamForm == null) state.error?.let { ErrorText(it) }
                     Column(Modifier.staggerIn(3), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        EntryContent(entry, state.busy, vm::joinSolo, vm::openTeamForm, onOpenMatches)
+                        EntryContent(entry, state.busy, gated(vm::joinSolo), gated(vm::openTeamForm), onOpenMatches)
                     }
                 }
                 BottomAction(entry, onOpenDeck, onOpenTeams)

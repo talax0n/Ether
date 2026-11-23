@@ -157,7 +157,8 @@ class SupabaseCompetitionRepository(private val client: SupabaseClient) : Compet
     // After a SOLO↔SOLO match the user keeps an inactive solo listing and owns the new team's listing,
     // so the active one wins.
     override suspend fun myListing(id: CompetitionId): Listing? = backend {
-        val uid = client.uid()
+        // A guest browsing has no listing anywhere.
+        val uid = client.auth.currentUserOrNull()?.id ?: return@backend null
         val solo = client.from("listings").select { filter { eq("competition_id", id.value); eq("profile_id", uid) } }
             .decodeSingleOrNull<ListingDto>()?.toDomain()
         val team = client.from("teams").select(Columns.list("id")) {
@@ -214,7 +215,7 @@ class SupabaseMatchRepository(private val client: SupabaseClient) : MatchReposit
 
 class SupabaseTeamRepository(private val client: SupabaseClient) : TeamRepository {
     override suspend fun myTeams(): List<MyTeam> = backend {
-        val uid = client.uid()
+        val uid = client.auth.currentUserOrNull()?.id ?: return@backend emptyList()
         val teamIds = client.from("team_members").select(Columns.list("team_id")) { filter { eq("profile_id", uid) } }
             .decodeList<TeamIdDto>().map { it.teamId }
         if (teamIds.isEmpty()) return@backend emptyList()

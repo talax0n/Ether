@@ -53,6 +53,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import dev.ether.app.ui.components.EthaMove
 import dev.ether.app.ui.components.LedgeButton
+import dev.ether.app.ui.components.LedgeIconButton
 import dev.ether.app.ui.components.Wordmark
 import dev.ether.app.ui.theme.Arcade
 import dev.ether.app.ui.theme.GrapeSoft
@@ -106,6 +107,7 @@ private val bubbles = listOf(
 internal fun Welcome(
     onGoogle: (() -> Unit)?,
     onEmail: () -> Unit,
+    onClose: () -> Unit,
     busy: Boolean,
     error: String?,
     /** Applied to Etha, so a shared-element transition can fly it to the next screen. */
@@ -115,7 +117,11 @@ internal fun Welcome(
 ) {
     val colors = Arcade.colors
     Column(Modifier.fillMaxSize()) {
-        Burst(Modifier.weight(1f).fillMaxWidth(), ethaModifier, scatter)
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            Burst(Modifier.fillMaxSize(), ethaModifier, scatter)
+            // Signing in is never forced: close goes back to browsing.
+            LedgeIconButton(ArcadeIcons.Close, "Keep browsing", onClose, Modifier.padding(start = 20.dp, top = 9.dp), size = 42.dp)
+        }
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

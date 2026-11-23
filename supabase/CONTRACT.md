@@ -124,6 +124,8 @@ Each award happens once per (profile, reason, reference), so retries never doubl
 
 ## Sign-up
 
+Guests (the `anon` role) can read `competitions` and nothing else, so the app can be browsed before signing up.
+
 Sign-up is open to any email (password, confirmed with a 6-digit code) and to Google accounts. An `auth.users` insert trigger creates the `profiles` row. The name comes from `user_metadata.name`, then `user_metadata.full_name` (Google), then the email's local part. The avatar comes from `user_metadata.avatar_url` or `user_metadata.picture` (Google).
 
 ## Error messages

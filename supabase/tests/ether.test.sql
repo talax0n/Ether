@@ -393,5 +393,14 @@ select is((select contact_url from profile_contacts where profile_id = '00000000
   'https://wa.me/c', 'teammates can read each other''s contact without a match');
 reset role;
 
+-- ---------------------------------------------------------------- guests (anon) browse competitions only
+set local role anon;
+select set_config('request.jwt.claims', json_build_object('role', 'anon')::text, true);
+select ok((select count(*) from competitions) > 0, 'guests can read competitions');
+select throws_ok($$ select count(*) from profiles $$, '42501', null, 'guests cannot read profiles');
+select throws_ok($$ select count(*) from listings $$, '42501', null, 'guests cannot read listings');
+select throws_ok($$ select count(*) from profile_contacts $$, '42501', null, 'guests cannot read contacts');
+reset role;
+
 select * from finish();
 rollback;

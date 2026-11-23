@@ -51,6 +51,7 @@ interface CompetitionRepository {
     suspend fun competitions(): List<Competition>
     suspend fun competition(id: CompetitionId): Competition
     /** The listing the user swipes from in this competition: their solo listing or their owned team's. */
+    /** Null when the user has no listing here, or is a guest browsing without an account. */
     suspend fun myListing(id: CompetitionId): Listing?
     suspend fun joinSolo(id: CompetitionId): Listing
     suspend fun createTeam(id: CompetitionId, name: String, pitch: String, openRoles: List<String>): Listing
@@ -67,6 +68,7 @@ interface MatchRepository {
 }
 
 interface TeamRepository {
+    /** Empty for a guest browsing without an account. */
     suspend fun myTeams(): List<MyTeam>
     suspend fun endorse(competitionId: CompetitionId, teammate: ProfileId)
     suspend fun reportResult(teamId: TeamId, result: TeamResult)

@@ -1,6 +1,11 @@
 package dev.ether.app.ui
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
@@ -81,6 +86,7 @@ import dev.ether.app.ui.matches.MatchesScreen
 import dev.ether.app.ui.profile.ProfileEditScreen
 import dev.ether.app.ui.profile.ProfileScreen
 import dev.ether.app.ui.signin.SignInScreen
+import dev.ether.app.ui.onboarding.OnboardingScreen
 import dev.ether.app.data.DeviceStore
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
@@ -125,8 +131,8 @@ fun EtherRoot(vm: AppViewModel = koinViewModel()) {
 private fun RootScreen(s: AppUiState, seenOnboarding: Boolean, vm: AppViewModel, onOnboarded: () -> Unit) {
     when (s) {
         AppUiState.Loading -> Splash()
-        // Welcome comes first; the intro pages play once, between choosing a way in and using it.
-        AppUiState.SignedOut -> SignInScreen(seenOnboarding, onOnboarded)
+        // No account needed to look around: the intro plays once, then guests browse and sign in when they act.
+        AppUiState.SignedOut -> if (seenOnboarding) GuestApp() else OnboardingScreen(onDone = onOnboarded)
         // Keyed by user: this screen lives outside the NavHost, so its ViewModel would otherwise outlive a sign-out.
         is AppUiState.NeedsProfile -> ProfileEditScreen(
             isSetup = true, onDone = vm::recheck, onBack = {},
@@ -135,7 +141,7 @@ private fun RootScreen(s: AppUiState, seenOnboarding: Boolean, vm: AppViewModel,
         is AppUiState.Failed -> Box(Modifier.background(Arcade.colors.background)) {
             MessageBox(s.message, action = "Retry", tone = Tone.ERROR, title = "Can't load your profile", onAction = vm::recheck)
         }
-        AppUiState.Ready -> MainNavHost()
+        AppUiState.Ready -> MainNavHost(guest = false)
     }
 }
 
@@ -145,8 +151,25 @@ private fun NavHostController.navigateToTab(tab: Tab) = navigate(tab.route) {
     restoreState = true
 }
 
+/** The app as a guest sees it, with sign-in sliding up over it whenever an action needs an account. */
 @Composable
-private fun MainNavHost() {
+private fun GuestApp() {
+    var signingIn by rememberSaveable { mutableStateOf(false) }
+    val gate = remember { { signingIn = true } }
+    Box(Modifier.fillMaxSize()) {
+        CompositionLocalProvider(LocalSignInGate provides gate) { MainNavHost(guest = true) }
+        AnimatedVisibility(
+            signingIn,
+            enter = slideInVertically(tween(Motion.SCREEN_MS)) { it } + fadeIn(),
+            exit = slideOutVertically(tween(Motion.SCREEN_MS)) { it } + fadeOut(),
+        ) {
+            SignInScreen(onClose = { signingIn = false })
+        }
+    }
+}
+
+@Composable
+private fun MainNavHost(guest: Boolean) {
     val nav = rememberNavController()
     val destination = nav.currentBackStackEntryAsState().value?.destination
     val currentTab = Tab.entries.firstOrNull { tab -> destination?.hasRoute(tab.routeClass) == true }
@@ -191,9 +214,18 @@ private fun MainNavHost() {
             composable<MatchesRoute> { entry ->
                 MatchesScreen(entry.toRoute<MatchesRoute>().competitionId, onBack = nav::popBackStack, onBrowse = { nav.navigateToTab(Tab.COMPETITIONS) })
             }
-            composable<AllMatchesRoute> { MatchesScreen(competitionId = null, onBack = null, onBrowse = { nav.navigateToTab(Tab.COMPETITIONS) }) }
-            composable<TeamsRoute> { TeamsScreen() }
-            composable<ProfileRoute> { ProfileScreen(onEdit = { nav.navigate(EditProfileRoute) }) }
+            composable<AllMatchesRoute> {
+                if (guest) GuestGate("Your matches live here", "Sign in and swipe. Everyone who likes you back shows up here, with a way to reach them.")
+                else MatchesScreen(competitionId = null, onBack = null, onBrowse = { nav.navigateToTab(Tab.COMPETITIONS) })
+            }
+            composable<TeamsRoute> {
+                if (guest) GuestGate("Your teams live here", "Sign in and join a competition. The teams you form show up here.")
+                else TeamsScreen()
+            }
+            composable<ProfileRoute> {
+                if (guest) GuestGate("Make your card", "Sign in to set up the card teammates swipe on: your skills, roles, and how matches reach you.")
+                else ProfileScreen(onEdit = { nav.navigate(EditProfileRoute) })
+            }
             composable<EditProfileRoute> {
                 ProfileEditScreen(isSetup = false, onDone = nav::popBackStack, onBack = nav::popBackStack)
             }
