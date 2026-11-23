@@ -42,6 +42,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.ether.app.ui.components.ArcadeIcons
 import dev.ether.app.ui.components.Avatar
+import dev.ether.app.R
+import androidx.annotation.DrawableRes
 import dev.ether.app.ui.components.Chip
 import dev.ether.app.ui.theme.Paper
 import dev.ether.app.ui.components.ErrorText
@@ -76,7 +78,10 @@ import kotlin.math.sin
  * One thing floating in the welcome burst, placed relative to the centre. Near ones are students with the
  * role they bring; far ones are the skills a team is built from, faded back for depth.
  */
-private class Bubble(val name: String, val label: String, val color: Color, val x: Int, val y: Int, val size: Int = 0, val far: Boolean = false)
+private class Bubble(
+    val name: String, val label: String, val color: Color, val x: Int, val y: Int,
+    val size: Int = 0, @DrawableRes val face: Int? = null, val far: Boolean = false,
+)
 
 // ponytail: hand-placed, not laid out; tuned for phone widths, the burst is decoration and may clip at the edges.
 private val bubbles = listOf(
@@ -85,12 +90,12 @@ private val bubbles = listOf(
     Bubble("", "Python", MintSoft, -185, 170, far = true),
     Bubble("", "Pitching", SunSoft, 165, 225, far = true),
     Bubble("", "React", GrapeSoft, 205, 20, far = true),
-    Bubble("Nadia Rahma", "Android", MintSoft, 10, -205, 64),
-    Bubble("Budi Santoso", "Designer", SunSoft, -150, -95, 58),
-    Bubble("Citra Dewi", "Frontend", SkySoft, 155, -85, 62),
-    Bubble("Dimas Pratama", "Hardware", Peach, -160, 70, 56),
-    Bubble("Eka Putri", "Data / ML", GrapeSoft, 135, 110, 56),
-    Bubble("Fajar Nugroho", "Backend", SunSoft, -5, 200, 66),
+    Bubble("Nadia Rahma", "Android", MintSoft, 10, -205, 78, R.drawable.face_nadia),
+    Bubble("Budi Santoso", "Designer", SunSoft, -150, -95, 72, R.drawable.face_budi),
+    Bubble("Citra Dewi", "Frontend", SkySoft, 155, -85, 76, R.drawable.face_citra),
+    Bubble("Dimas Pratama", "Hardware", Peach, -160, 70, 70, R.drawable.face_dimas),
+    Bubble("Eka Putri", "Data / ML", GrapeSoft, 135, 110, 70, R.drawable.face_eka),
+    Bubble("Fajar Nugroho", "Backend", SunSoft, -5, 200, 80, R.drawable.face_fajar),
 )
 
 /**
@@ -283,7 +288,7 @@ private fun BubbleView(b: Bubble, index: Int, bob: () -> Float, orbit: () -> Flo
         } else {
             // A student and the role they bring; the tag tucks under the avatar like a name badge.
             Column(look, horizontalAlignment = Alignment.CenterHorizontally) {
-                Avatar(b.name, null, sizeDp, color = b.color)
+                Avatar(b.name, null, sizeDp, color = b.color, face = b.face)
                 Chip(b.label, Modifier.offset(y = (-10).dp), color = Paper)
             }
         }

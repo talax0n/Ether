@@ -38,6 +38,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
+import androidx.annotation.DrawableRes
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -251,12 +254,17 @@ fun Avatar(
     ledge: Dp = 4.dp,
     lineWidth: Dp = LineWidth,
     label: String = initials(name),
+    /** A bundled face illustration; shown instead of [url] or the initials. */
+    @DrawableRes face: Int? = null,
 ) {
     Box(
         modifier.ledge(CircleShape, color, Arcade.colors.line, Arcade.colors.ledge, ledge, lineWidth = lineWidth).size(size),
         contentAlignment = Alignment.Center,
     ) {
-        if (url != null) {
+        if (face != null) {
+            // Inset by the outline so the drawing sits inside the ring instead of covering it.
+            Image(painterResource(face), contentDescription = null, modifier = Modifier.size(size).padding(lineWidth).clip(CircleShape))
+        } else if (url != null) {
             AsyncImage(url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.size(size))
         } else {
             Text(label, color = Ink, style = MaterialTheme.typography.titleLarge.copy(fontSize = (size.value * (if (label.length > 2) 0.24f else 0.36f)).sp))
