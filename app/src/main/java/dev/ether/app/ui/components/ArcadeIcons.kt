@@ -39,6 +39,8 @@ object ArcadeIcons {
     val Globe = icon("M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z")
     /** A phone sending signal waves: Match nearby. */
     val Nearby = icon("M5 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM8 17.5h.01M16.5 9a4 4 0 0 1 0 6M19.5 6.5a8 8 0 0 1 0 11")
+    /** Two slider knobs: filters. */
+    val Sliders = icon("M4 7h9M17 7h3M4 17h3M11 17h9M15 5v4M9 15v4")
     val Logout = icon("M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11")
 
     private fun icon(path: String, filled: Boolean = false, autoMirror: Boolean = false): ImageVector =

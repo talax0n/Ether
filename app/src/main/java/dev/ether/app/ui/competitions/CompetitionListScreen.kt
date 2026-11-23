@@ -1,6 +1,20 @@
 package dev.ether.app.ui.competitions
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextAlign
+import dev.ether.app.ui.components.pressableLedge
+import dev.ether.app.ui.theme.Sun
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -159,47 +173,78 @@ private fun CompetitionList(s: CompetitionListUiState.Loaded, onOpen: (Competiti
 @Composable
 private fun SearchAndFilters(filters: CompetitionFilters, tags: List<String>, actions: FilterActions) {
     val focus = LocalFocusManager.current
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        ArcadeTextField(
-            filters.query, actions.onQuery, "Search name, organizer, tag or city",
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
-            trailingIcon = {
-                if (filters.query.isEmpty()) {
-                    Icon(ArcadeIcons.Search, contentDescription = null, tint = Arcade.colors.muted, modifier = Modifier.size(22.dp))
-                } else {
-                    BarIconButton(ArcadeIcons.Close, "Clear search", { actions.onQuery("") })
-                }
-            },
-        )
-        Spacer(Modifier.height(4.dp))
-        ChipStrip {
-            EventStatus.entries.forEach { status ->
-                ToggleChip(status.filterLabel, status in filters.statuses, { actions.onStatus(status) })
-            }
-            Box(Modifier.padding(horizontal = 2.dp).width(2.dp).height(22.dp).background(Arcade.colors.line))
-            CompetitionMode.entries.forEach { mode ->
-                ToggleChip(mode.label, mode in filters.modes, { actions.onMode(mode) }, selectedColor = Sky)
-            }
+    // ponytail: open state is screen-local UI, not worth a ViewModel field.
+    var open by rememberSaveable { mutableStateOf(false) }
+    val chosen = filters.statuses.size + filters.modes.size + filters.tags.size
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ArcadeTextField(
+                filters.query, actions.onQuery, "Search hackathons",
+                Modifier.weight(1f),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
+                trailingIcon = {
+                    if (filters.query.isEmpty()) {
+                        Icon(ArcadeIcons.Search, contentDescription = null, tint = Arcade.colors.muted, modifier = Modifier.size(22.dp))
+                    } else {
+                        BarIconButton(ArcadeIcons.Close, "Clear search", { actions.onQuery("") })
+                    }
+                },
+            )
+            FilterButton(open, chosen) { open = !open }
         }
-        if (tags.isNotEmpty()) {
-            ChipStrip {
-                tags.forEach { tag ->
-                    ToggleChip(tag, tag.lowercase() in filters.tags, { actions.onTag(tag) }, selectedColor = Mint)
+        AnimatedVisibility(open, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+            Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                FilterGroup("Status") {
+                    EventStatus.entries.forEach { status ->
+                        ToggleChip(status.filterLabel, status in filters.statuses, { actions.onStatus(status) })
+                    }
+                }
+                FilterGroup("Format") {
+                    CompetitionMode.entries.forEach { mode ->
+                        ToggleChip(mode.label, mode in filters.modes, { actions.onMode(mode) }, selectedColor = Sky)
+                    }
+                }
+                if (tags.isNotEmpty()) {
+                    FilterGroup("Topic") {
+                        tags.forEach { tag ->
+                            ToggleChip(tag, tag.lowercase() in filters.tags, { actions.onTag(tag) }, selectedColor = Mint)
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-/** One row of chips that scrolls sideways instead of wrapping, so the list starts high on the screen. */
+/** Square button beside search that opens the filter panel; the badge counts chips that are on. */
 @Composable
-private fun ChipStrip(content: @Composable () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) { content() }
+private fun FilterButton(open: Boolean, chosen: Int, onClick: () -> Unit) {
+    val label = if (chosen > 0) "Filters, $chosen on" else "Filters"
+    Box(
+        Modifier
+            .size(width = 56.dp, height = 59.dp)
+            .pressableLedge(MaterialTheme.shapes.medium, if (open || chosen > 0) Sun else Arcade.colors.surface, 3.dp, onClick)
+            .semantics { contentDescription = label; stateDescription = if (open) "Open" else "Closed" },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(ArcadeIcons.Sliders, contentDescription = null, tint = if (open || chosen > 0) Ink else Arcade.colors.text, modifier = Modifier.size(24.dp))
+        if (chosen > 0) {
+            Text(
+                "$chosen",
+                Modifier.align(Alignment.TopEnd).padding(5.dp).size(18.dp).background(Ink, CircleShape).wrapContentHeight(),
+                style = NumberStyle.copy(fontSize = 11.sp), color = Sun, textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Composable
+private fun FilterGroup(title: String, chips: @Composable () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        CapsLabel(title)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { chips() }
+    }
 }
 
 @Composable
