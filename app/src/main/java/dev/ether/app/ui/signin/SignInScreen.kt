@@ -1,6 +1,12 @@
 package dev.ether.app.ui.signin
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -159,30 +165,48 @@ fun SignInContent(
     val colors = Arcade.colors
     BackHandler(enabled = state.step != SignInStep.WELCOME && !state.busy, onBack = onBack)
     Column(Modifier.fillMaxSize().background(colors.background).safeDrawingPadding().imePadding()) {
-        if (state.step != SignInStep.WELCOME) {
-            Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-                LedgeIconButton(ArcadeIcons.Back, "Back", onBack, size = 42.dp)
-            }
-        }
+      // Etha is one shared element across steps: leaving the welcome screen it flies from the burst's centre
+      // into its spot above the form, while the bubbles scatter outward and the form rises in.
+      SharedTransitionLayout(Modifier.weight(1f)) {
         AnimatedContent(
             state.step,
-            Modifier.weight(1f),
+            Modifier.fillMaxSize(),
             transitionSpec = {
-                // Deeper steps slide in from the right; going back slides the other way.
-                val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
-                (slideInHorizontally { dir * it / 4 } + fadeIn()) togetherWith (slideOutHorizontally { -dir * it / 4 } + fadeOut())
+                when {
+                    initialState == SignInStep.WELCOME ->
+                        (fadeIn(tween(320, delayMillis = 140)) + slideInVertically(tween(420, delayMillis = 100)) { it / 10 }) togetherWith
+                            fadeOut(tween(360))
+                    targetState == SignInStep.WELCOME ->
+                        fadeIn(tween(360, delayMillis = 80)) togetherWith
+                            (fadeOut(tween(200)) + slideOutVertically(tween(260)) { it / 10 })
+                    else -> {
+                        // Deeper steps slide in from the right; going back slides the other way.
+                        val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
+                        (slideInHorizontally { dir * it / 4 } + fadeIn()) togetherWith (slideOutHorizontally { -dir * it / 4 } + fadeOut())
+                    }
+                }
             },
             label = "step",
         ) { step ->
+            val ethaShared = Modifier.sharedElement(
+                rememberSharedContentState("etha"), this@AnimatedContent,
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.75f, stiffness = 260f) },
+            )
             if (step == SignInStep.WELCOME) {
-                Welcome(onGoogle, onContinueWithEmail, busy = state.busy, error = state.error)
+                // 0 while shown, 1 once gone: drives the bubbles' scatter out and back in.
+                val scatter by transition.animateFloat({ tween(420) }, label = "scatter") { if (it == EnterExitState.Visible) 0f else 1f }
+                Welcome(onGoogle, onContinueWithEmail, busy = state.busy, error = state.error, ethaModifier = ethaShared, scatter = { scatter })
                 return@AnimatedContent
             }
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp)) {
+            Column(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+                LedgeIconButton(ArcadeIcons.Back, "Back", onBack, size = 42.dp)
+            }
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp)) {
                 when (step) {
                     SignInStep.WELCOME -> Unit
                     SignInStep.CREDENTIALS -> {
-                        EthaLive(Modifier.staggerIn(0).padding(bottom = 4.dp), size = 88.dp)
+                        EthaLive(ethaShared.padding(bottom = 4.dp), size = 88.dp)
                         val creating = state.mode == SignInMode.CREATE_ACCOUNT
                         // The heading swaps with a short rise when the mode flips.
                         AnimatedContent(
@@ -238,7 +262,9 @@ fun SignInContent(
                     ErrorText(it)
                 }
             }
+            }
         }
+      }
         if (state.step == SignInStep.VERIFY || state.step == SignInStep.RESET) {
             LedgeButton(
                 if (state.step == SignInStep.RESET) "Set new password" else "Verify", onSubmit, Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),

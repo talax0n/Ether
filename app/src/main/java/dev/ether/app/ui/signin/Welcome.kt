@@ -103,10 +103,19 @@ private val bubbles = listOf(
  * student bubbles, then the two ways in. [onGoogle] is null when this build has no Google sign-in.
  */
 @Composable
-internal fun Welcome(onGoogle: (() -> Unit)?, onEmail: () -> Unit, busy: Boolean, error: String?) {
+internal fun Welcome(
+    onGoogle: (() -> Unit)?,
+    onEmail: () -> Unit,
+    busy: Boolean,
+    error: String?,
+    /** Applied to Etha, so a shared-element transition can fly it to the next screen. */
+    ethaModifier: Modifier = Modifier,
+    /** 0 while shown, 1 when gone: bubbles fly outward and fade as it rises. */
+    scatter: () -> Float = { 0f },
+) {
     val colors = Arcade.colors
     Column(Modifier.fillMaxSize()) {
-        Burst(Modifier.weight(1f).fillMaxWidth())
+        Burst(Modifier.weight(1f).fillMaxWidth(), ethaModifier, scatter)
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -142,7 +151,7 @@ internal fun Welcome(onGoogle: (() -> Unit)?, onEmail: () -> Unit, busy: Boolean
  * every so often one sparks a heart, like a match happening; Etha and the wordmark land last.
  */
 @Composable
-private fun Burst(modifier: Modifier) {
+private fun Burst(modifier: Modifier, ethaModifier: Modifier, scatter: () -> Float) {
     val reduced = Arcade.reducedMotion
     val loop = rememberInfiniteTransition(label = "burst")
     val still = remember { mutableFloatStateOf(0f) }
@@ -183,7 +192,7 @@ private fun Burst(modifier: Modifier) {
                 )
             }
         }
-        bubbles.forEachIndexed { i, b -> BubbleView(b, i, { phase.value }, { orbit.value }, scale, spark) }
+        bubbles.forEachIndexed { i, b -> BubbleView(b, i, { phase.value }, { orbit.value }, scale, spark, scatter) }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.graphicsLayer {
@@ -193,7 +202,7 @@ private fun Burst(modifier: Modifier) {
                 compositingStrategy = CompositingStrategy.ModulateAlpha
             },
         ) {
-            FloatingEtha({ phase.value })
+            FloatingEtha({ phase.value }, ethaModifier)
             Wordmark(Modifier.offset(y = (-8).dp))
         }
     }
@@ -204,7 +213,7 @@ private fun Burst(modifier: Modifier) {
  * and a shadow under it shrinks as it rises. Tapping it still gets a giggle.
  */
 @Composable
-private fun FloatingEtha(bob: () -> Float) {
+private fun FloatingEtha(bob: () -> Float, modifier: Modifier) {
     val etha = rememberEthaController()
     val jump = remember { Animatable(0f) }
     LaunchedEffect(etha.take) {
@@ -229,7 +238,7 @@ private fun FloatingEtha(bob: () -> Float) {
             )
         }
         EthaLive(
-            Modifier.graphicsLayer {
+            modifier.graphicsLayer {
                 val b = bob()
                 translationY = (sin(b) * 7.dp.toPx()) - 10.dp.toPx() - jump.value * 34.dp.toPx()
                 rotationZ = sin(b * 2f) * 3f
@@ -248,7 +257,7 @@ private fun FloatingEtha(bob: () -> Float) {
 private data class Spark(val index: Int, val seq: Int)
 
 @Composable
-private fun BubbleView(b: Bubble, index: Int, bob: () -> Float, orbit: () -> Float, scale: Float, spark: Spark) {
+private fun BubbleView(b: Bubble, index: Int, bob: () -> Float, orbit: () -> Float, scale: Float, spark: Spark, scatter: () -> Float) {
     val reduced = Arcade.reducedMotion
     val pop = remember { Animatable(if (reduced) 1f else 0f) }
     LaunchedEffect(Unit) {
@@ -271,8 +280,11 @@ private fun BubbleView(b: Bubble, index: Int, bob: () -> Float, orbit: () -> Flo
             val a = if (b.far) -orbit() else orbit()
             // Rotate the hand-placed spot around the centre on an upright ellipse: the screen is taller than wide,
             // so students and their role tags stay on screen as they come round the sides.
-            translationX = (b.x * cos(a) - b.y * sin(a)) * scale * density * (if (b.far) 1f else 0.75f)
-            translationY = (b.x * sin(a) + b.y * cos(a)) * scale * density + sin(bob() + index) * lift.toPx()
+            // Leaving, every bubble flies straight out from the centre; far ones go further, for depth.
+            val out = 1f + scatter() * (if (b.far) 1.6f else 1.1f)
+            translationX = (b.x * cos(a) - b.y * sin(a)) * scale * density * (if (b.far) 1f else 0.75f) * out
+            translationY = (b.x * sin(a) + b.y * cos(a)) * scale * density * out + sin(bob() + index) * lift.toPx()
+            alpha = 1f - scatter()
         },
         contentAlignment = Alignment.Center,
     ) {
