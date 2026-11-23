@@ -27,6 +27,7 @@ class SignInViewModelTest {
     private val me = AuthState.SignedIn(ProfileId("p-me"))
 
     private fun credentials(mode: SignInMode, password: String = "hunter22") {
+        vm.continueWithEmail()
         vm.onModeChange(mode)
         vm.onEmailChange("ana@student.ac.id")
         vm.onPasswordChange(password)
@@ -39,7 +40,7 @@ class SignInViewModelTest {
 
         assertEquals(me, backend.authState.value)
         // Reset for the next sign-in after a sign-out.
-        assertEquals(SignInStep.CREDENTIALS, vm.state.value.step)
+        assertEquals(SignInStep.WELCOME, vm.state.value.step)
         assertEquals("", vm.state.value.email)
     }
 
@@ -114,6 +115,7 @@ class SignInViewModelTest {
             override suspend fun signOut() = Unit
         }
         val vm = SignInViewModel(unconfirmed)
+        vm.continueWithEmail()
         vm.onEmailChange("ana@student.ac.id")
         vm.onPasswordChange("hunter22")
         vm.submit()
@@ -157,15 +159,25 @@ class SignInViewModelTest {
     }
 
     @Test
-    fun `a failed Google sheet shows its message and stays on credentials`() = runTest {
+    fun `a failed Google sheet shows its message and stays on welcome`() = runTest {
         vm.googleFailed("No Google account on this phone. Add one in Settings, or use your email.")
 
-        assertEquals(SignInStep.CREDENTIALS, vm.state.value.step)
+        assertEquals(SignInStep.WELCOME, vm.state.value.step)
         assertEquals("No Google account on this phone. Add one in Settings, or use your email.", vm.state.value.error)
     }
 
     @Test
+    fun `the welcome screen leads to email, and back returns to it`() = runTest {
+        assertEquals(SignInStep.WELCOME, vm.state.value.step)
+        vm.continueWithEmail()
+        assertEquals(SignInStep.CREDENTIALS, vm.state.value.step)
+        vm.back()
+        assertEquals(SignInStep.WELCOME, vm.state.value.step)
+    }
+
+    @Test
     fun `forgot password needs the email first`() = runTest {
+        vm.continueWithEmail()
         vm.forgotPassword()
 
         assertEquals(SignInStep.CREDENTIALS, vm.state.value.step)

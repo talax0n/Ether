@@ -33,6 +33,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -71,7 +73,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ether.app.ui.components.ArcadeIcons
 import dev.ether.app.ui.components.ArcadeTextField
 import dev.ether.app.ui.components.ErrorText
-import dev.ether.app.ui.components.EtherMark
 import dev.ether.app.ui.components.LedgeButton
 import dev.ether.app.ui.components.LedgeIconButton
 import dev.ether.app.ui.components.ledge
@@ -102,7 +103,7 @@ fun SignInScreen(vm: SignInViewModel = koinViewModel()) {
         BuildConfig.USE_FAKE_BACKEND -> { -> vm.signInWithGoogle("demo-id-token", "demo-nonce") }
         else -> null
     }
-    SignInContent(state, vm::onEmailChange, vm::onPasswordChange, vm::onModeChange, vm::onCodeChange, vm::submit, vm::back, vm::resend, vm::forgotPassword, onGoogle)
+    SignInContent(state, vm::onEmailChange, vm::onPasswordChange, vm::onModeChange, vm::onCodeChange, vm::submit, vm::back, vm::resend, vm::forgotPassword, vm::continueWithEmail, onGoogle)
 }
 
 @Composable
@@ -116,32 +117,37 @@ fun SignInContent(
     onBack: () -> Unit,
     onResend: () -> Unit,
     onForgotPassword: () -> Unit,
+    onContinueWithEmail: () -> Unit,
     /** Null hides the Google button: no client ID is configured for this build. */
     onGoogle: (() -> Unit)?,
 ) {
     val colors = Arcade.colors
+    BackHandler(enabled = state.step != SignInStep.WELCOME && !state.busy, onBack = onBack)
     Column(Modifier.fillMaxSize().background(colors.background).safeDrawingPadding().imePadding()) {
-        Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (state.step != SignInStep.CREDENTIALS) {
+        if (state.step != SignInStep.WELCOME) {
+            Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
                 LedgeIconButton(ArcadeIcons.Back, "Back", onBack, size = 42.dp)
-            } else {
-                EtherMark(size = 40.dp)
             }
         }
         AnimatedContent(
             state.step,
             Modifier.weight(1f),
             transitionSpec = {
-                val dir = if (targetState != SignInStep.CREDENTIALS) 1 else -1
+                // Deeper steps slide in from the right; going back slides the other way.
+                val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
                 (slideInHorizontally { dir * it / 4 } + fadeIn()) togetherWith (slideOutHorizontally { -dir * it / 4 } + fadeOut())
             },
             label = "step",
         ) { step ->
+            if (step == SignInStep.WELCOME) {
+                Welcome(onGoogle, onContinueWithEmail, busy = state.busy, error = state.error)
+                return@AnimatedContent
+            }
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp)) {
                 when (step) {
+                    SignInStep.WELCOME -> Unit
                     SignInStep.CREDENTIALS -> {
-                        // Etha waves hello, then fidgets and waves again now and then while the user types.
-                        EthaLive(Modifier.padding(bottom = 8.dp), size = 112.dp, first = EthaMove.WAVE, pool = EthaMove.FIDGETS + EthaMove.WAVE)
+                        EthaLive(Modifier.padding(bottom = 4.dp), size = 88.dp)
                         val creating = state.mode == SignInMode.CREATE_ACCOUNT
                         Heading(
                             if (creating) "Create your\naccount" else "Welcome\nback",
@@ -166,14 +172,6 @@ fun SignInContent(
                             if (creating) "Create account" else "Sign in", onSubmit, Modifier.fillMaxWidth(),
                             enabled = state.canSubmit || state.busy, busy = state.busy, icon = ArcadeIcons.Bolt,
                         )
-                        onGoogle?.let { google ->
-                            Row(Modifier.padding(vertical = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.weight(1f).height(2.dp).background(colors.track))
-                                Text("or", Modifier.padding(horizontal = 12.dp), style = MaterialTheme.typography.bodyMedium, color = colors.muted)
-                                Box(Modifier.weight(1f).height(2.dp).background(colors.track))
-                            }
-                            GoogleButton(google, enabled = !state.busy)
-                        }
                     }
                     SignInStep.VERIFY -> {
                         Heading("Verify your\nemail", "Enter the code we sent to ${state.email.trim()} to finish creating your account.")
@@ -196,7 +194,7 @@ fun SignInContent(
                 }
             }
         }
-        if (state.step != SignInStep.CREDENTIALS) {
+        if (state.step == SignInStep.VERIFY || state.step == SignInStep.RESET) {
             LedgeButton(
                 if (state.step == SignInStep.RESET) "Set new password" else "Verify", onSubmit, Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
                 enabled = state.canSubmit || state.busy, busy = state.busy, icon = ArcadeIcons.Check,
@@ -254,10 +252,10 @@ private fun PasswordField(
 
 /** Google's sign-in guidelines ask for the multicolor G, so this can't use LedgeButton's single-tint icon. */
 @Composable
-private fun GoogleButton(onClick: () -> Unit, enabled: Boolean) {
+internal fun GoogleButton(onClick: () -> Unit, enabled: Boolean, shape: Shape = MaterialTheme.shapes.medium) {
     Box(
         Modifier.fillMaxWidth().heightIn(min = 61.dp)
-            .pressableLedge(MaterialTheme.shapes.medium, Arcade.colors.surface, 5.dp, onClick, enabled),
+            .pressableLedge(shape, Arcade.colors.surface, 5.dp, onClick, enabled),
         contentAlignment = Alignment.Center,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -333,5 +331,5 @@ private fun ResendRow(resendIn: Int, enabled: Boolean, onResend: () -> Unit) {
 @Preview
 @Composable
 private fun SignInPreview() {
-    EtherTheme { SignInContent(SignInUiState(email = "ana@example.com"), {}, {}, {}, {}, {}, {}, {}, {}, {}) }
+    EtherTheme { SignInContent(SignInUiState(email = "ana@example.com"), {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) }
 }

@@ -18,14 +18,14 @@ import kotlinx.coroutines.launch
 enum class SignInMode { SIGN_IN, CREATE_ACCOUNT }
 
 /**
- * CREDENTIALS takes email and password. VERIFY takes the code that confirms a new account's email.
+ * WELCOME picks Google or email. CREDENTIALS takes email and password. VERIFY takes the code that confirms a new account's email.
  * RESET takes the code from a password-reset mail together with the new password.
  */
-enum class SignInStep { CREDENTIALS, VERIFY, RESET }
+enum class SignInStep { WELCOME, CREDENTIALS, VERIFY, RESET }
 
 data class SignInUiState(
     val mode: SignInMode = SignInMode.SIGN_IN,
-    val step: SignInStep = SignInStep.CREDENTIALS,
+    val step: SignInStep = SignInStep.WELCOME,
     val email: String = "",
     val password: String = "",
     val code: String = "",
@@ -36,6 +36,7 @@ data class SignInUiState(
 ) {
     val canSubmit: Boolean
         get() = !busy && when (step) {
+            SignInStep.WELCOME -> false
             SignInStep.CREDENTIALS -> email.isValidEmail() && when (mode) {
                 SignInMode.SIGN_IN -> password.isNotEmpty()
                 // A hint only: the auth server enforces its own password policy.
@@ -145,7 +146,7 @@ class SignInViewModel(private val auth: AuthRepository) : ViewModel() {
 
     fun resend() {
         val current = _state.value
-        if (current.step == SignInStep.CREDENTIALS || current.busy || current.resendIn > 0) return
+        if (current.step !in setOf(SignInStep.VERIFY, SignInStep.RESET) || current.busy || current.resendIn > 0) return
         _state.update { it.copy(busy = true, code = "", error = null) }
         viewModelScope.launch {
             runCatching {
@@ -157,9 +158,13 @@ class SignInViewModel(private val auth: AuthRepository) : ViewModel() {
         }
     }
 
+    fun continueWithEmail() = _state.update { it.copy(step = SignInStep.CREDENTIALS, error = null) }
+
+    /** One step back: a code screen returns to the credentials, the credentials return to the welcome screen. */
     fun back() {
         cooldown?.cancel()
-        _state.update { it.copy(step = SignInStep.CREDENTIALS, code = "", password = "", error = null, resendIn = 0) }
+        val previous = if (_state.value.step == SignInStep.CREDENTIALS) SignInStep.WELCOME else SignInStep.CREDENTIALS
+        _state.update { it.copy(step = previous, code = "", password = "", error = null, resendIn = 0) }
     }
 
     private var cooldown: Job? = null

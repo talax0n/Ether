@@ -142,6 +142,8 @@ fun OnboardingScreen(onDone: () -> Unit) {
             { if (last) onDone() else scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } },
             Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp),
             icon = if (last) ArcadeIcons.Bolt else null,
+            height = 61.dp,
+            shape = RoundedCornerShape(50),
         )
     }
 }
