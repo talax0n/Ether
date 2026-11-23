@@ -1,6 +1,6 @@
 # Ether database contract
 
-What the Android client can read, write, and call. Business rules live in the migrations; this file only describes the surface. All access is as the `authenticated` role. `anon` has no table or function access.
+What the Android client can read, write, and call. Business rules live in the migrations; this file only describes the surface. All access is as the `authenticated` role. `anon` (guests) can only read `competitions`.
 
 ## Enums
 
@@ -10,6 +10,7 @@ What the Android client can read, write, and call. Business rules live in the mi
 | `swipe_direction` | `left`, `right` |
 | `team_result` | `finalist`, `winner` |
 | `hackathon_result` | `participant`, `honorable_mention`, `finalist`, `winner` (declared in rank order) |
+| `competition_mode` | `online`, `offline`, `hybrid` |
 
 ## Tables
 
@@ -19,7 +20,7 @@ What the Android client can read, write, and call. Business rules live in the mi
 | `profile_contacts` | select (RLS: see below); insert own `profile_id, phone, instagram, line_id`; update own `phone, instagram, line_id` | Kept apart from `profiles` so RLS can hide it. All three are nullable; see formats below. |
 | `profile_hackathons` | select all; insert own `profile_id, name, year, result, project_name, url`; update own `name, year, result, project_name, url`; delete own | Past hackathons. Max 20 per profile (`hackathon_limit_reached`). See formats below. |
 | `profile_projects` | select all; insert own `profile_id, title, blurb, url, tags`; update own `title, blurb, url, tags`; delete own | Projects. Max 20 per profile (`project_limit_reached`). |
-| `competitions` | select | Seeded by hand. |
+| `competitions` | select (also as `anon`) | Seeded by hand. Columns: `id, name, description, url, registration_deadline, event_end, min_team_size, max_team_size, organizer, prize, mode, city, tags`. See formats below. |
 | `teams` | select; insert with `owner_id = auth.uid()`; owner updates `name, pitch, open_roles` | Inserting a team adds the owner to `team_members` automatically. Fails with `registration_closed` after the competition's `registration_deadline`, and `already_in_team` if the owner is already in a team in that competition. |
 | `team_members` | select | Written only by triggers (team creation, matches). Has a `competition_id` column (copied from the team); `(profile_id, competition_id)` is unique. |
 | `listings` | select; insert own (`solo`: `profile_id = auth.uid()`, `team`: you own the team); update own `active` | Inserting fails with `registration_closed` after the deadline, and a `solo` insert fails with `already_in_team` (even with `active = false`). Activating fails with `registration_closed` / `already_in_team` / `team_full`. |
@@ -51,6 +52,17 @@ A violation fails with SQLSTATE `23514`. Clear a field by writing `null`, not `'
 | `tags` | at most 6, each 1–30 characters, no surrounding whitespace |
 
 `id` and `created_at` are not writable. Lists are read with `profile_id = <uid>`; the app orders hackathons by `year desc, created_at desc` and projects by `created_at desc`.
+
+**Competition formats.** Check constraints; a violation fails with SQLSTATE `23514`. Written only by the team (SQL editor), never by clients.
+
+| Column | Format |
+|--------|--------|
+| `url` | the official page: `https://` with a dotted host, no whitespace, at most 500 characters; nullable |
+| `organizer` | 1–80 characters, no surrounding whitespace; nullable |
+| `prize` | free text as written (`Rp 50.000.000`, `$10,000 + swag`), 1–80 characters, no surrounding whitespace; nullable |
+| `mode` | `competition_mode`, not null, default `online` |
+| `city` | 1–60 characters, no surrounding whitespace; nullable, and must be null when `mode = 'online'` |
+| `tags` | `text[]`, not null, default `{}`; at most 8, each 1–30 characters with no surrounding whitespace, unique ignoring case |
 
 **Contact visibility.** A `profile_contacts` row is visible to its owner, to their teammates (any team they share), and to anyone on the other side of a match with them. A team listing's side means every current member of that team.
 
@@ -157,7 +169,7 @@ Each award happens once per (profile, reason, reference), so retries never doubl
 
 ## Sign-up
 
-Guests (the `anon` role) can read `competitions` and nothing else, so the app can be browsed before signing up.
+Guests (the `anon` role) can read `competitions` (every column, details included) and nothing else, so the app can be browsed before signing up.
 
 Sign-up is open to any email (email and password, no confirmation step) and to Google accounts. An `auth.users` insert trigger creates the `profiles` row. The name comes from `user_metadata.name`, then `user_metadata.full_name` (Google), then the email's local part. The avatar comes from `user_metadata.avatar_url` or `user_metadata.picture` (Google).
 
@@ -169,4 +181,4 @@ Errors raised from Postgres arrive as the PostgREST `message`. They are stable s
 
 ## Local dev
 
-`supabase start`, then `supabase db reset`. Demo logins are `demo1@student.example.ac.id` … `demo8@…` with the password `ether-demo` (local seed only). New accounts sign straight in. Competition `Campus Hackathon 2026` has 6 solo listings (demo1–6) and team `Byte Club` (demo7 + demo8). `Data Challenge 2026` has ended, and its team `Night Owls` (demo1–3) can endorse each other. Demo1, 2, 3, 5 and 8 have past hackathons and demo1, 3, 6 and 8 have projects, so deck cards show a track-record summary.
+`supabase start`, then `supabase db reset`. Demo logins are `demo1@student.example.ac.id` … `demo8@…` with the password `ether-demo` (local seed only). New accounts sign straight in. The seed has five competitions with details filled in: `Campus Hackathon 2026` (offline, Yogyakarta), `Data Challenge 2026` (online, ended), and three sample upcoming ones (`Nusantara AI Build Week`, `Green Cities Hack`, `Open Ledger Online Jam`) linking to `https://example.com/...`. The hosted dev DB gets the same rows from `supabase/snippets/competition_details_dev_data.sql` (idempotent; not a migration, so production never gets sample events). Competition `Campus Hackathon 2026` has 6 solo listings (demo1–6) and team `Byte Club` (demo7 + demo8). `Data Challenge 2026` has ended, and its team `Night Owls` (demo1–3) can endorse each other. Demo1, 2, 3, 5 and 8 have past hackathons and demo1, 3, 6 and 8 have projects, so deck cards show a track-record summary.

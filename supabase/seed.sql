@@ -42,13 +42,31 @@ select ('d0000000-0000-0000-0000-00000000000' || n)::uuid,
        case when n in (4, 5, 7) then 'demo' || n || '_line' end
 from generate_series(1, 8) n;
 
-insert into public.competitions (id, name, description, url, registration_deadline, event_end, min_team_size, max_team_size) values
+insert into public.competitions (id, name, description, url, registration_deadline, event_end, min_team_size, max_team_size,
+                                 organizer, prize, mode, city, tags) values
   ('c0000000-0000-0000-0000-000000000001', 'Campus Hackathon 2026',
    '48-hour hackathon on campus. Theme: tools for students.', 'https://example.ac.id/hackathon',
-   now() + interval '14 days', now() + interval '21 days', 2, 4),
+   now() + interval '14 days', now() + interval '21 days', 2, 4,
+   'Student Tech Society', 'Rp 50.000.000', 'offline', 'Yogyakarta', '{Mobile,Web,Social impact}'),
   ('c0000000-0000-0000-0000-000000000002', 'Data Challenge 2026',
    'Finished data science challenge, used to test endorsements.', 'https://example.ac.id/data',
-   now() - interval '30 days', now() - interval '7 days', 2, 3);
+   now() - interval '30 days', now() - interval '7 days', 2, 3,
+   'Data Science Student Association', 'Rp 25.000.000', 'online', null, '{Data,AI}'),
+  ('c0000000-0000-0000-0000-000000000003', 'Nusantara AI Build Week',
+   'Sample event. One week to ship an AI tool for small businesses, with a demo day in Bandung.',
+   'https://example.com/hackathons/nusantara-ai-build-week',
+   now() + interval '26 days', now() + interval '47 days', 2, 5,
+   'Nusantara Dev Community', 'Rp 75.000.000 + cloud credits', 'hybrid', 'Bandung', '{AI,Data,Web}'),
+  ('c0000000-0000-0000-0000-000000000004', 'Green Cities Hack',
+   'Sample event. A weekend on transport, waste and air quality in Indonesian cities.',
+   'https://example.com/hackathons/green-cities-hack',
+   now() + interval '52 days', now() + interval '69 days', 3, 5,
+   'Urban Futures Lab', 'Rp 40.000.000', 'offline', 'Surabaya', '{Social impact,Mobile,IoT}'),
+  ('c0000000-0000-0000-0000-000000000005', 'Open Ledger Online Jam',
+   'Sample event. Build an open-source app on a public blockchain testnet, fully remote.',
+   'https://example.com/hackathons/open-ledger-jam',
+   now() + interval '11 days', now() + interval '19 days', 1, 4,
+   'Open Ledger Guild', '$10,000 + swag', 'online', null, '{Web3,Web}');
 
 -- Finished competition: one full team, so its members can endorse each other. Team and listing
 -- are backdated to before the registration deadline, as if formed during registration.

@@ -1,5 +1,27 @@
 package dev.ether.app.ui.competitions
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextDecoration
+import dev.ether.app.domain.CompetitionMode
+import dev.ether.app.ui.components.ArcadeTextField
+import dev.ether.app.ui.components.BarIconButton
+import dev.ether.app.ui.components.ToggleChip
+import dev.ether.app.ui.theme.Mint
+import dev.ether.app.ui.theme.Sky
+import dev.ether.app.ui.theme.SkySoft
+import dev.ether.app.ui.theme.SunSoft
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -73,10 +95,22 @@ fun CompetitionListScreen(
                 MessageBox("No competitions yet. Check back soon.", tone = Tone.EMPTY, icon = ArcadeIcons.Trophy)
             }
         } else {
-            CompetitionList(s.sections, onOpen)
+            CompetitionList(
+                s, onOpen,
+                FilterActions(vm::setQuery, vm::toggleStatus, vm::toggleMode, vm::toggleTag, vm::clearFilters),
+            )
         }
     }
 }
+
+/** The list's search and filter callbacks, bundled so the composables below stay readable. */
+private class FilterActions(
+    val onQuery: (String) -> Unit,
+    val onStatus: (EventStatus) -> Unit,
+    val onMode: (CompetitionMode) -> Unit,
+    val onTag: (String) -> Unit,
+    val onClear: () -> Unit,
+)
 
 private sealed interface ListRow {
     data class Section(val status: EventStatus, val count: Int) : ListRow
@@ -84,15 +118,31 @@ private sealed interface ListRow {
 }
 
 @Composable
-private fun CompetitionList(sections: List<Pair<EventStatus, List<Competition>>>, onOpen: (CompetitionId) -> Unit) {
-    val openCount = sections.firstOrNull { it.first == EventStatus.OPEN }?.second?.size ?: 0
-    val rows = sections.flatMap { (status, list) -> listOf(ListRow.Section(status, list.size)) + list.map { ListRow.Event(it, status) } }
+private fun CompetitionList(s: CompetitionListUiState.Loaded, onOpen: (CompetitionId) -> Unit, actions: FilterActions) {
+    val rows = s.sections.flatMap { (status, list) -> listOf(ListRow.Section(status, list.size)) + list.map { ListRow.Event(it, status) } }
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 28.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item(key = "header") { Header(openCount, horizontal = 0.dp) }
+        item(key = "header") { Header(s.openCount, horizontal = 0.dp) }
+        item(key = "filters") { SearchAndFilters(s.filters, s.tags, actions) }
+        if (s.filters.isActive && s.results.isNotEmpty()) {
+            item(key = "result-count") { ResultCount(s.results.size, s.competitions.size, actions.onClear) }
+        }
+        if (s.results.isEmpty()) {
+            item(key = "no-results") {
+                MessageBox(
+                    "Try another word, or turn off a filter or two.",
+                    Modifier.fillParentMaxHeight(0.6f),
+                    title = "No hackathons match",
+                    action = "Clear filters",
+                    tone = Tone.EMPTY,
+                    icon = ArcadeIcons.Search,
+                    onAction = actions.onClear,
+                )
+            }
+        }
         itemsIndexed(rows, key = { _, r -> if (r is ListRow.Event) r.competition.id.value else "section-${(r as ListRow.Section).status}" }) { i, r ->
             when (r) {
                 is ListRow.Section -> SectionTitle(r.status, r.count, Modifier.staggerIn(i))
@@ -103,6 +153,67 @@ private fun CompetitionList(sections: List<Pair<EventStatus, List<Competition>>>
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SearchAndFilters(filters: CompetitionFilters, tags: List<String>, actions: FilterActions) {
+    val focus = LocalFocusManager.current
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        ArcadeTextField(
+            filters.query, actions.onQuery, "Search name, organizer, tag or city",
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
+            trailingIcon = {
+                if (filters.query.isEmpty()) {
+                    Icon(ArcadeIcons.Search, contentDescription = null, tint = Arcade.colors.muted, modifier = Modifier.size(22.dp))
+                } else {
+                    BarIconButton(ArcadeIcons.Close, "Clear search", { actions.onQuery("") })
+                }
+            },
+        )
+        Spacer(Modifier.height(4.dp))
+        ChipStrip {
+            EventStatus.entries.forEach { status ->
+                ToggleChip(status.filterLabel, status in filters.statuses, { actions.onStatus(status) })
+            }
+            Box(Modifier.padding(horizontal = 2.dp).width(2.dp).height(22.dp).background(Arcade.colors.line))
+            CompetitionMode.entries.forEach { mode ->
+                ToggleChip(mode.label, mode in filters.modes, { actions.onMode(mode) }, selectedColor = Sky)
+            }
+        }
+        if (tags.isNotEmpty()) {
+            ChipStrip {
+                tags.forEach { tag ->
+                    ToggleChip(tag, tag.lowercase() in filters.tags, { actions.onTag(tag) }, selectedColor = Mint)
+                }
+            }
+        }
+    }
+}
+
+/** One row of chips that scrolls sideways instead of wrapping, so the list starts high on the screen. */
+@Composable
+private fun ChipStrip(content: @Composable () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) { content() }
+}
+
+@Composable
+private fun ResultCount(shown: Int, total: Int, onClear: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            "$shown of $total hackathons", Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyMedium, color = Arcade.colors.muted,
+        )
+        Text(
+            "Clear filters",
+            Modifier.heightIn(min = 48.dp).clickable(role = Role.Button, onClick = onClear).padding(horizontal = 4.dp).wrapContentHeight(),
+            style = MaterialTheme.typography.titleSmall, color = Arcade.colors.text, textDecoration = TextDecoration.Underline,
+        )
     }
 }
 
@@ -151,7 +262,9 @@ private fun FeaturedCard(c: Competition, modifier: Modifier, onClick: () -> Unit
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             CapsLabel("Registration closes in")
             Countdown(c.registrationDeadline)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                WhereChip(c)
+                c.prize?.let { Chip(it, icon = ArcadeIcons.Trophy, color = SunSoft) }
                 Chip("Teams of ${c.minTeamSize}–${c.maxTeamSize}", icon = ArcadeIcons.Users)
                 Chip("Closes ${c.registrationDeadline.dayMonth()}", icon = ArcadeIcons.Calendar)
             }
@@ -199,8 +312,19 @@ private fun CompactCard(c: Competition, status: EventStatus, modifier: Modifier,
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.muted,
                 )
+                Text(
+                    listOfNotNull(c.whereLabel, c.prize).joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
             }
             Icon(ArcadeIcons.Back, null, tint = colors.muted, modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = 180f })
         }
     }
+}
+
+/** "Online", or the city with a pin for offline and hybrid events. */
+@Composable
+fun WhereChip(c: Competition) {
+    Chip(c.whereLabel, icon = if (c.mode == CompetitionMode.ONLINE) ArcadeIcons.Globe else ArcadeIcons.Pin, color = SkySoft)
 }

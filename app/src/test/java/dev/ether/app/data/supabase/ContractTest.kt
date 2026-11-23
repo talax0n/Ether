@@ -1,6 +1,7 @@
 package dev.ether.app.data.supabase
 
 import dev.ether.app.domain.CompetitionId
+import dev.ether.app.domain.CompetitionMode
 import dev.ether.app.domain.Contacts
 import dev.ether.app.domain.DeckCard
 import dev.ether.app.domain.ListingId
@@ -128,6 +129,22 @@ class ContractTest {
         assertEquals(Instant.parse("2026-10-07T19:57:30.815528Z"), c.eventEnd)
         assertEquals(2, c.minTeamSize)
         assertEquals(3, c.maxTeamSize)
+        assertEquals(CompetitionMode.ONLINE, c.mode)
+        assertEquals(emptyList<String>(), c.tags)
+        assertNull(c.organizer)
+    }
+
+    @Test
+    fun `competition with details`() {
+        val row = """[{"id":"c0000000-0000-0000-0000-000000000003","name":"Nusantara AI Build Week","description":"Sample event. One week to ship an AI tool for small businesses, with a demo day in Bandung.","url":"https://example.com/hackathons/nusantara-ai-build-week","registration_deadline":"2026-12-20T16:59:00+00:00","event_end":"2027-01-10T10:00:00+00:00","min_team_size":2,"max_team_size":5,"organizer":"Nusantara Dev Community","prize":"Rp 75.000.000 + cloud credits","mode":"hybrid","city":"Bandung","tags":["AI","Data","Web"]}]"""
+
+        val c = json.decodeFromString<List<CompetitionDto>>(row).single().toDomain()
+
+        assertEquals("Nusantara Dev Community", c.organizer)
+        assertEquals("Rp 75.000.000 + cloud credits", c.prize)
+        assertEquals(CompetitionMode.HYBRID, c.mode)
+        assertEquals("Bandung", c.city)
+        assertEquals(listOf("AI", "Data", "Web"), c.tags)
     }
 
     @Test

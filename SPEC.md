@@ -25,7 +25,8 @@ The key idea is the **Listing**. A Listing is "this solo user, or this team, is 
 ```
 Profile      (id = auth.uid, name, major, year, bio, skills[], roles[], contacts, avatarUrl, xp)
 Contacts     (phone?, instagram?, lineId?)               at least one for a complete profile
-Competition  (id, name, description, url, registrationDeadline, eventEnd, minTeamSize, maxTeamSize)
+Competition  (id, name, description, url, registrationDeadline, eventEnd, minTeamSize, maxTeamSize,
+              organizer?, prize?, mode: ONLINE | OFFLINE | HYBRID, city?, tags[])
 Team         (id, competitionId, ownerId, name, pitch, openRoles[])
 TeamMember   (teamId, profileId)                         unique(teamId, profileId)
 Listing      (id, competitionId, kind: SOLO | TEAM, profileId?, teamId?, active)
@@ -64,7 +65,9 @@ ProfileBadge (profileId, badgeCode, awardedAt)          unique(profileId, badgeC
 - Every signed-in user can read them; only the owner writes. Guests cannot read them.
 - The deck card shows a summary: the best result (best result first, then the most recent) with that hackathon's name and year, plus the hackathon and project counts. A team card summarizes all current members.
 
-**Kotlin side.** Mirror the enums as sealed types (`ListingKind`, `SwipeDirection`, `ContactKind`, `HackathonResult`). Parse Supabase rows into domain types at the repository boundary. UI code never sees raw JSON or nullable `profileId`/`teamId` pairs.
+**Competition details.** Hackathons are entered by hand by the team; there is no scraping. Each has an optional organizer (1–80 chars), a free-text prize as written (1–80, e.g. "Rp 50.000.000" or "$10,000 + swag"), a mode (online, offline or hybrid; default online), a city for offline and hybrid events (1–60; an online event has none), and up to 8 topic tags (1–30 chars each, unique ignoring case, e.g. AI, Web3, Mobile, Data, Social impact). The official page `url` is `https://` only. Guests can read all of it.
+
+**Kotlin side.** Mirror the enums as sealed types (`ListingKind`, `SwipeDirection`, `ContactKind`, `HackathonResult`, `CompetitionMode`). Parse Supabase rows into domain types at the repository boundary. UI code never sees raw JSON or nullable `profileId`/`teamId` pairs.
 
 ## 4. Gamification
 
@@ -103,7 +106,9 @@ The profile shows the level, its title, and progress to the next threshold. Leve
 - Sign in with email and password, or a Google account. Creating an account with email signs straight in; there are no email codes.
 - Profile create and edit: skills, roles, major, year, bio, contacts (phone for WhatsApp, Instagram, LINE ID; at least one), avatar.
 - Track record on the profile: add, edit and delete past hackathons and projects. The deck card shows the best result and the project count.
-- Competition list (seeded by hand in the database).
+- Competition list (seeded by hand in the database), grouped into Open for sign-up, Registration closed and Finished. Cards show the mode, city and prize.
+- Search and filter the list: a search box matching name, organizer, tags and city (case-insensitive, every word must match), and filter chips for status (Open / Closed / Finished), mode (Online / Offline / Hybrid) and the tags present in the data. Chips in one group are alternatives; groups combine. Filtering runs on the client over the loaded list. When nothing matches, the list says so and offers "Clear filters".
+- Competition detail: organizer, prize, mode and city, tags, and an "Open official page" button showing the link's host that opens it in the browser.
 - Join a competition as SOLO, or create a team and list it as TEAM.
 - Swipe deck per competition with drag, tilt, fling, and like/nope stamp, plus buttons for accessibility.
 - Mutual match → match screen with one button per contact the other side shared (WhatsApp, Instagram, LINE).

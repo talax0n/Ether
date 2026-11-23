@@ -12,6 +12,7 @@ import dev.ether.app.domain.ProjectId
 import dev.ether.app.domain.TrackRecordSummary
 import dev.ether.app.domain.Competition
 import dev.ether.app.domain.CompetitionId
+import dev.ether.app.domain.CompetitionMode
 import dev.ether.app.domain.Contacts
 import dev.ether.app.domain.DeckCard
 import dev.ether.app.domain.Listing
@@ -123,11 +124,30 @@ data class CompetitionDto(
     @SerialName("event_end") val eventEnd: String,
     @SerialName("min_team_size") val minTeamSize: Int,
     @SerialName("max_team_size") val maxTeamSize: Int,
+    val organizer: String? = null,
+    val prize: String? = null,
+    val mode: CompetitionModeDto = CompetitionModeDto.ONLINE,
+    val city: String? = null,
+    val tags: List<String> = emptyList(),
 ) {
     fun toDomain() = Competition(
         CompetitionId(id), name, description.orEmpty(), url,
         parseTimestamp(registrationDeadline), parseTimestamp(eventEnd), minTeamSize, maxTeamSize,
+        organizer = organizer, prize = prize, mode = mode.toDomain(), city = city, tags = tags,
     )
+}
+
+@Serializable
+enum class CompetitionModeDto {
+    @SerialName("online") ONLINE,
+    @SerialName("offline") OFFLINE,
+    @SerialName("hybrid") HYBRID;
+
+    fun toDomain() = when (this) {
+        ONLINE -> CompetitionMode.ONLINE
+        OFFLINE -> CompetitionMode.OFFLINE
+        HYBRID -> CompetitionMode.HYBRID
+    }
 }
 
 @Serializable

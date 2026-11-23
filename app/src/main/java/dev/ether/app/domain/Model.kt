@@ -46,7 +46,16 @@ data class Competition(
     val eventEnd: Instant,
     val minTeamSize: Int,
     val maxTeamSize: Int,
+    val organizer: String? = null,
+    /** Free text as entered, e.g. "Rp 50.000.000" or "$10,000 + swag". */
+    val prize: String? = null,
+    val mode: CompetitionMode = CompetitionMode.ONLINE,
+    /** Venue city for offline and hybrid events; always null when online. */
+    val city: String? = null,
+    val tags: List<String> = emptyList(),
 )
+
+enum class CompetitionMode { ONLINE, OFFLINE, HYBRID }
 
 data class Team(
     val id: TeamId,

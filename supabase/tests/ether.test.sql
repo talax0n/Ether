@@ -599,10 +599,87 @@ select lives_ok(
   'deleting frees a slot under the cap');
 reset role;
 
+-- ---------------------------------------------------------------- competition details
+-- Fixtures 30000000-…-0000000000d1..d3 only; the hosted DB has real competitions, so every count is
+-- scoped to these ids.
+select has_column('public', 'competitions', 'organizer', 'competitions have an organizer');
+select col_type_is('public', 'competitions', 'mode', 'competition_mode', 'mode is the competition_mode enum');
+select col_default_is('public', 'competitions', 'mode', 'online', 'mode defaults to online');
+select enum_has_labels('public', 'competition_mode', array['online', 'offline', 'hybrid'], 'competition_mode values');
+
+insert into competitions (id, name, url, registration_deadline, event_end, min_team_size, max_team_size,
+                          organizer, prize, mode, city, tags) values
+  ('30000000-0000-0000-0000-0000000000d1', 'Details Offline', 'https://dorahacks.io/hackathon/even-realities/detail',
+   now() + interval '7 days', now() + interval '14 days', 2, 4,
+   'Test Org', 'Rp 50.000.000', 'offline', 'Yogyakarta', '{AI,Mobile}');
+insert into competitions (id, name, registration_deadline, event_end, min_team_size, max_team_size) values
+  ('30000000-0000-0000-0000-0000000000d2', 'Details Defaults', now() + interval '7 days', now() + interval '14 days', 2, 4);
+select results_eq(
+  $$ select mode::text, tags, organizer, prize, city from competitions where id = '30000000-0000-0000-0000-0000000000d2' $$,
+  $$ values ('online'::text, '{}'::text[], null::text, null::text, null::text) $$,
+  'a competition without details is online with no tags');
+select results_eq(
+  $$ select mode::text, city, tags from competitions where id = '30000000-0000-0000-0000-0000000000d1' $$,
+  $$ values ('offline'::text, 'Yogyakarta'::text, '{AI,Mobile}'::text[]) $$,
+  'details are stored as written');
+
+select lives_ok(
+  $$ update competitions set mode = 'hybrid', prize = '$10,000 + swag', tags = '{a,b,c,d,e,f,g,h}'
+     where id = '30000000-0000-0000-0000-0000000000d1' $$,
+  'hybrid with a city, free-text prize and 8 tags is accepted');
+select throws_ok(
+  $$ update competitions set tags = '{a,b,c,d,e,f,g,h,i}' where id = '30000000-0000-0000-0000-0000000000d1' $$,
+  '23514', null, 'at most 8 tags');
+select throws_ok(
+  $$ update competitions set tags = '{AI,ai}' where id = '30000000-0000-0000-0000-0000000000d1' $$,
+  '23514', null, 'tags are unique ignoring case');
+select throws_ok(
+  $$ update competitions set tags = '{" AI"}' where id = '30000000-0000-0000-0000-0000000000d1' $$,
+  '23514', null, 'tags have no surrounding whitespace');
+select throws_ok(
+  $$ update competitions set tags = '{""}' where id = '30000000-0000-0000-0000-0000000000d1' $$,
+  '23514', null, 'tags are not empty');
+select throws_ok(
+  $$ update competitions set mode = 'online' where id = '30000000-0000-0000-0000-0000000000d1' $$,
+  '23514', null, 'an online competition has no city');
+select lives_ok(
+  $$ update competitions set mode = 'online', city = null where id = '30000000-0000-0000-0000-0000000000d1' $$,
+  'going online clears the city');
+select throws_ok(
+  $$ update competitions set organizer = '' where id = '30000000-0000-0000-0000-0000000000d1' $$,
+  '23514', null, 'organizer is null, not blank');
+select throws_ok(
+  $$ update competitions set prize = ' Rp 1 ' where id = '30000000-0000-0000-0000-0000000000d1' $$,
+  '23514', null, 'prize is trimmed');
+select throws_ok(
+  $$ update competitions set url = 'http://example.com/hack' where id = '30000000-0000-0000-0000-0000000000d1' $$,
+  '23514', null, 'the official page must be https');
+select throws_ok(
+  $$ update competitions set url = 'https://localhost/hack' where id = '30000000-0000-0000-0000-0000000000d1' $$,
+  '23514', null, 'the official page needs a dotted host');
+select throws_ok(
+  $$ insert into competitions (id, name, registration_deadline, event_end, max_team_size, mode)
+     values ('30000000-0000-0000-0000-0000000000d3', 'Bad mode', now(), now(), 3, 'metaverse') $$,
+  '22P02', null, 'mode is a closed set');
+
+select pg_temp.login('00000000-0000-0000-0000-00000000000a');
+select throws_ok(
+  $$ update competitions set prize = 'free' where id = '30000000-0000-0000-0000-0000000000d1' $$,
+  '42501', null, 'signed-in users cannot edit competitions');
+reset role;
+
+
 -- ---------------------------------------------------------------- guests (anon) browse competitions only
 set local role anon;
 select set_config('request.jwt.claims', json_build_object('role', 'anon')::text, true);
 select ok((select count(*) from competitions) > 0, 'guests can read competitions');
+select results_eq(
+  $$ select organizer, mode::text, tags from competitions where id = '30000000-0000-0000-0000-0000000000d1' $$,
+  $$ values ('Test Org'::text, 'online'::text, '{a,b,c,d,e,f,g,h}'::text[]) $$,
+  'guests can read competition details');
+select throws_ok(
+  $$ update competitions set prize = 'free' where id = '30000000-0000-0000-0000-0000000000d1' $$,
+  '42501', null, 'guests cannot edit competitions');
 select throws_ok($$ select count(*) from profiles $$, '42501', null, 'guests cannot read profiles');
 select throws_ok($$ select count(*) from listings $$, '42501', null, 'guests cannot read listings');
 select throws_ok($$ select count(*) from profile_contacts $$, '42501', null, 'guests cannot read contacts');

@@ -12,6 +12,7 @@ import dev.ether.app.domain.AuthState
 import dev.ether.app.domain.Badge
 import dev.ether.app.domain.Competition
 import dev.ether.app.domain.CompetitionId
+import dev.ether.app.domain.CompetitionMode
 import dev.ether.app.domain.Contacts
 import dev.ether.app.domain.DeckCard
 import dev.ether.app.domain.EtherError
@@ -247,16 +248,35 @@ object DemoData {
         Competition(
             gemastik, "GEMASTIK 2026", "National ICT competition. Software dev, UX, and data mining tracks.",
             "https://gemastik.kemdikbud.go.id", days(-3), days(18), minTeamSize = 2, maxTeamSize = 3,
+            tags = listOf("Software", "UX", "Data"),
         ),
         Competition(
             campusHack, "Campus Hackathon", "48-hour build sprint on campus. Theme announced at kickoff.",
-            null, days(4).plus(7, ChronoUnit.HOURS), days(12),
+            "https://example.ac.id/hackathon", days(4).plus(7, ChronoUnit.HOURS), days(12),
             minTeamSize = 3, maxTeamSize = 5,
+            organizer = "Student Tech Society", prize = "Rp 50.000.000", mode = CompetitionMode.OFFLINE,
+            city = "Yogyakarta", tags = listOf("Mobile", "Web", "Social impact"),
+        ),
+        Competition(
+            CompetitionId("c-ai-build-week"), "Nusantara AI Build Week",
+            "Sample event. One week to ship an AI tool for small businesses, with a demo day in Bandung.",
+            "https://example.com/hackathons/nusantara-ai-build-week", days(26), days(47),
+            minTeamSize = 2, maxTeamSize = 5,
+            organizer = "Nusantara Dev Community", prize = "Rp 75.000.000 + cloud credits",
+            mode = CompetitionMode.HYBRID, city = "Bandung", tags = listOf("AI", "Data", "Web"),
+        ),
+        Competition(
+            CompetitionId("c-ledger-jam"), "Open Ledger Online Jam",
+            "Sample event. Build an open-source app on a public blockchain testnet, fully remote.",
+            "https://example.com/hackathons/open-ledger-jam", days(11), days(19),
+            minTeamSize = 1, maxTeamSize = 4,
+            organizer = "Open Ledger Guild", prize = "$10,000 + swag", tags = listOf("Web3", "Web"),
         ),
         Competition(
             dataChallenge, "Data Challenge 2026", "Finished data science challenge.",
-            null, days(-30), days(-7),
+            "https://example.ac.id/data", days(-30), days(-7),
             minTeamSize = 2, maxTeamSize = 3,
+            organizer = "Data Science Student Association", prize = "Rp 25.000.000", tags = listOf("Data", "AI"),
         ),
     )
 

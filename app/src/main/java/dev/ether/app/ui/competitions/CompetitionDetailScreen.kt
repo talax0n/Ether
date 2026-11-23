@@ -68,6 +68,8 @@ import dev.ether.app.ui.theme.Mint
 import dev.ether.app.ui.theme.NumberStyle
 import dev.ether.app.ui.theme.Motion
 import dev.ether.app.ui.theme.SkySoft
+import dev.ether.app.ui.theme.SunSoft
+import androidx.compose.ui.text.style.TextOverflow
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -86,8 +88,6 @@ fun CompetitionDetailScreen(
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
             LedgeIconButton(ArcadeIcons.Back, "Back", onBack, size = 42.dp)
-            Spacer(Modifier.weight(1f))
-            competition?.url?.let { url -> LedgeIconButton(ArcadeIcons.Link, "Official page", { openContact(context, url) }, size = 42.dp) }
         }
         when {
             state.loading -> LoadingBox()
@@ -99,8 +99,14 @@ fun CompetitionDetailScreen(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Overview(competition, Modifier.staggerIn(0))
+                    competition.url?.let { url ->
+                        LinkRow(
+                            ArcadeIcons.Link, "Open official page", { openContact(context, url) },
+                            Modifier.staggerIn(1), detail = officialHost(url),
+                        )
+                    }
                     if (competition.status() == EventStatus.OPEN) {
-                        LedgeCard(Modifier.fillMaxWidth().staggerIn(1)) {
+                        LedgeCard(Modifier.fillMaxWidth().staggerIn(2)) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 CapsLabel("Registration closes in")
                                 Countdown(competition.registrationDeadline)
@@ -134,12 +140,24 @@ private fun Overview(c: Competition, modifier: Modifier) {
         Chip(status.label, color = status.chip)
         Spacer(Modifier.height(12.dp))
         Text(c.name, Modifier.semantics { heading() }, style = MaterialTheme.typography.displaySmall, color = Arcade.colors.text)
+        c.organizer?.let {
+            Spacer(Modifier.height(4.dp))
+            Text("by $it", style = MaterialTheme.typography.titleSmall, color = Arcade.colors.text)
+        }
         Spacer(Modifier.height(8.dp))
         Text(c.description, style = MaterialTheme.typography.bodyLarge, color = Arcade.colors.muted)
         Spacer(Modifier.height(14.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            WhereChip(c)
+            c.prize?.let { Chip(it, icon = ArcadeIcons.Trophy, color = SunSoft) }
             Chip("Teams of ${c.minTeamSize}–${c.maxTeamSize}", icon = ArcadeIcons.Users)
             Chip("${if (status == EventStatus.ENDED) "Ended" else "Ends"} ${c.eventEnd.dayMonth()}", icon = ArcadeIcons.Calendar)
+        }
+        if (c.tags.isNotEmpty()) {
+            Spacer(Modifier.height(14.dp))
+            CapsLabel("Tracks")
+            Spacer(Modifier.height(8.dp))
+            TagRow(c.tags, MintSoft)
         }
     }
 }
@@ -238,13 +256,17 @@ private fun StatusCard(icon: ImageVector, color: Color, title: String, body: Str
     }
 }
 
+/** A full-width row that goes somewhere. [detail] sits under the label, e.g. the host of a link. */
 @Composable
-private fun LinkRow(icon: ImageVector, label: String, onClick: () -> Unit) {
-    LedgeCard(Modifier.fillMaxWidth(), ledge = 4.dp, onClick = onClick) {
+private fun LinkRow(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier, detail: String? = null) {
+    LedgeCard(modifier.fillMaxWidth(), ledge = 4.dp, onClick = onClick) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, contentDescription = null, tint = Arcade.colors.text, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(12.dp))
-            Text(label, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = Arcade.colors.text)
+            Column(Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.titleSmall, color = Arcade.colors.text)
+                detail?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Arcade.colors.muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            }
             Chevron()
         }
     }

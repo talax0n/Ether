@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -76,6 +77,7 @@ import dev.ether.app.ui.theme.Motion
 import dev.ether.app.ui.theme.NumberStyle
 import dev.ether.app.ui.theme.Paper
 import dev.ether.app.ui.theme.Peach
+import dev.ether.app.ui.theme.Sun
 import dev.ether.app.ui.theme.SkySoft
 import dev.ether.app.ui.theme.SunSoft
 import dev.ether.app.ui.theme.MintSoft
@@ -231,6 +233,24 @@ fun Chip(text: String, modifier: Modifier = Modifier, color: Color = Paper, icon
     ) {
         icon?.let { Icon(it, contentDescription = null, tint = contentColor, modifier = Modifier.size(15.dp)) }
         Text(text, color = contentColor, style = if (numeric) NumberStyle.copy(fontSize = 12.5.sp) else MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** A [Chip] that toggles: filled with [selectedColor] and a check when on. Announced as a checkbox. */
+@Composable
+fun ToggleChip(text: String, selected: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier, selectedColor: Color = Sun) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.92f else 1f, Motion.pop(), label = "chip-press")
+    Row(
+        modifier
+            .heightIn(min = 48.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .toggleable(selected, interaction, indication = null, role = Role.Checkbox, onValueChange = { onToggle() }),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Chip(text, color = if (selected) selectedColor else Arcade.colors.surface, icon = if (selected) ArcadeIcons.Check else null,
+            contentColor = if (selected) Ink else Arcade.colors.text)
     }
 }
 

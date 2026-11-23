@@ -34,6 +34,9 @@ object ArcadeIcons {
     val Link = icon("M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1")
     val WifiOff = icon("M3 3l18 18M8.5 16.5a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 5-2.7M19 12.9a10 10 0 0 0-2.5-1.8M2 8.8a15 15 0 0 1 4.3-2.7M22 8.8A15 15 0 0 0 11 5M12 20h.01")
     val Plus = icon("M12 5v14M5 12h14")
+    val Search = icon("M4 11a7 7 0 1 0 14 0a7 7 0 1 0-14 0M16.2 16.2L20 20")
+    val Pin = icon("M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11zM9.8 10a2.2 2.2 0 1 0 4.4 0a2.2 2.2 0 1 0-4.4 0")
+    val Globe = icon("M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z")
     val Logout = icon("M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11")
 
     private fun icon(path: String, filled: Boolean = false, autoMirror: Boolean = false): ImageVector =
