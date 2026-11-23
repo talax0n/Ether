@@ -1,6 +1,13 @@
 package dev.ether.app.di
 
+import android.os.SystemClock
 import dev.ether.app.BuildConfig
+import dev.ether.app.data.fake.FakeNearbyPeers
+import dev.ether.app.data.nearby.AccelerometerShakeDetector
+import dev.ether.app.data.nearby.GoogleNearbyPeers
+import dev.ether.app.data.nearby.NearbyPeers
+import dev.ether.app.data.nearby.ShakeDetector
+import dev.ether.app.ui.nearby.NearbyViewModel
 import dev.ether.app.data.AuthRepository
 import dev.ether.app.data.CompetitionRepository
 import dev.ether.app.data.DeckRepository
@@ -44,6 +51,7 @@ private val fakeData = module {
         AuthRepository::class, ProfileRepository::class, CompetitionRepository::class,
         DeckRepository::class, MatchRepository::class, TeamRepository::class, TrackRecordRepository::class,
     )
+    factory<NearbyPeers> { FakeNearbyPeers() }
 }
 
 private val supabaseData = module {
@@ -60,6 +68,7 @@ private val supabaseData = module {
     single<MatchRepository> { SupabaseMatchRepository(get()) }
     single<TeamRepository> { SupabaseTeamRepository(get()) }
     single<TrackRecordRepository> { SupabaseTrackRecordRepository(get()) }
+    factory<NearbyPeers> { GoogleNearbyPeers(androidContext(), SystemClock::elapsedRealtime) }
 }
 
 private val viewModels = module {
@@ -76,6 +85,13 @@ private val viewModels = module {
     // No parameter: matches across every competition (the Matches tab).
     viewModel { params -> MatchesViewModel(params.getOrNull<String>()?.let(::CompetitionId), get(), get()) }
     viewModel { TeamsViewModel(get()) }
+    single<ShakeDetector> { AccelerometerShakeDetector(androidContext()) }
+    viewModel { (competitionId: String, listingId: String) ->
+        NearbyViewModel(
+            CompetitionId(competitionId), ListingId(listingId), get(), get(), get(), get(), get(), get(), get(),
+            clock = SystemClock::elapsedRealtime,
+        )
+    }
 }
 
 val appModules = listOf(if (BuildConfig.USE_FAKE_BACKEND) fakeData else supabaseData, viewModels)

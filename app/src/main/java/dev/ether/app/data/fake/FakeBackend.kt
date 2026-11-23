@@ -132,6 +132,11 @@ class FakeBackend(
         else deck.filter { (from to it.listingId) !in swiped }.take(limit)
 
     override suspend fun swipe(from: ListingId, to: ListingId, direction: SwipeDirection): SwipeResult {
+        // Like the DB: retrying an existing swipe returns its current outcome and isn't counted again.
+        if ((from to to) in swiped) {
+            val match = matches.firstOrNull { it.otherListingId == to && listings.any { l -> l.id == from && l.competitionId == it.competitionId } }
+            return SwipeResult(match != null, match?.id, remaining)
+        }
         if (registrationClosed) throw EtherError.RegistrationClosed()
         if (from in inactive) throw EtherError.ListingInactive()
         if (remaining <= 0) throw EtherError.SwipeCapReached()

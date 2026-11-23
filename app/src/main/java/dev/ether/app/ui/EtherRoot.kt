@@ -82,6 +82,7 @@ import dev.ether.app.ui.theme.SunSoft
 import dev.ether.app.ui.competitions.CompetitionDetailScreen
 import dev.ether.app.ui.competitions.CompetitionListScreen
 import dev.ether.app.ui.deck.DeckScreen
+import dev.ether.app.ui.nearby.NearbyScreen
 import dev.ether.app.ui.matches.MatchesScreen
 import dev.ether.app.ui.profile.ProfileEditScreen
 import dev.ether.app.ui.profile.ProfileScreen
@@ -99,6 +100,7 @@ import kotlin.reflect.KClass
 @Serializable data object CompetitionsRoute
 @Serializable data class CompetitionDetailRoute(val competitionId: String)
 @Serializable data class DeckRoute(val competitionId: String, val listingId: String)
+@Serializable data class NearbyRoute(val competitionId: String, val listingId: String)
 @Serializable data class MatchesRoute(val competitionId: String)
 @Serializable data object AllMatchesRoute
 @Serializable data object TeamsRoute
@@ -197,6 +199,7 @@ private fun MainNavHost(guest: Boolean) {
                 CompetitionDetailScreen(
                     competitionId = route.competitionId,
                     onOpenDeck = { listingId -> nav.navigate(DeckRoute(route.competitionId, listingId.value)) },
+                    onOpenNearby = { listingId -> nav.navigate(NearbyRoute(route.competitionId, listingId.value)) },
                     onOpenMatches = { nav.navigate(MatchesRoute(route.competitionId)) },
                     onOpenTeams = { nav.navigateToTab(Tab.TEAMS) },
                     onBack = nav::popBackStack,
@@ -208,6 +211,15 @@ private fun MainNavHost(guest: Boolean) {
                     competitionId = route.competitionId,
                     listingId = route.listingId,
                     onOpenMatches = { nav.navigate(MatchesRoute(route.competitionId)) },
+                    onOpenTeams = { nav.navigateToTab(Tab.TEAMS) },
+                    onBack = nav::popBackStack,
+                )
+            }
+            composable<NearbyRoute> { entry ->
+                val route = entry.toRoute<NearbyRoute>()
+                NearbyScreen(
+                    competitionId = route.competitionId,
+                    listingId = route.listingId,
                     onOpenTeams = { nav.navigateToTab(Tab.TEAMS) },
                     onBack = nav::popBackStack,
                 )

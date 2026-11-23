@@ -77,6 +77,7 @@ import org.koin.core.parameter.parametersOf
 fun CompetitionDetailScreen(
     competitionId: String,
     onOpenDeck: (ListingId) -> Unit,
+    onOpenNearby: (ListingId) -> Unit,
     onOpenMatches: () -> Unit,
     onOpenTeams: () -> Unit,
     onBack: () -> Unit,
@@ -121,7 +122,7 @@ fun CompetitionDetailScreen(
                     )
                     if (state.teamForm == null) state.error?.let { ErrorText(it) }
                     Column(Modifier.staggerIn(3), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        EntryContent(entry, state.busy, gated(vm::joinSolo), gated(vm::openTeamForm), onOpenMatches)
+                        EntryContent(entry, state.busy, gated(vm::joinSolo), gated(vm::openTeamForm), onOpenMatches, onOpenNearby)
                     }
                 }
                 BottomAction(entry, onOpenDeck, onOpenTeams)
@@ -163,7 +164,14 @@ private fun Overview(c: Competition, modifier: Modifier) {
 }
 
 @Composable
-private fun EntryContent(entry: Entry, busy: Boolean, onJoinSolo: () -> Unit, onCreateTeam: () -> Unit, onOpenMatches: () -> Unit) {
+private fun EntryContent(
+    entry: Entry,
+    busy: Boolean,
+    onJoinSolo: () -> Unit,
+    onCreateTeam: () -> Unit,
+    onOpenMatches: () -> Unit,
+    onOpenNearby: (ListingId) -> Unit,
+) {
     when (entry) {
         Entry.Choose -> {
             ChoiceCard(ArcadeIcons.User, MintSoft, "Join solo", "Get matched into a team. Swipe on teams and other solos.", busy, onJoinSolo)
@@ -188,6 +196,13 @@ private fun EntryContent(entry: Entry, busy: Boolean, onJoinSolo: () -> Unit, on
                     else -> "Swipe on solos to fill your open roles."
                 },
             ) { team?.let { TeamSeats(listOf("ME") + it.teammates.map { m -> initials(m.name) }, it.competition.maxTeamSize) } }
+            // Next to "Start swiping": the same swipe, for someone standing right there.
+            if (entry.canSwipe) {
+                LinkRow(
+                    ArcadeIcons.Nearby, "Match nearby", gated { onOpenNearby(entry.listing.id) },
+                    detail = "Both shake your phones at the same time",
+                )
+            }
             LinkRow(ArcadeIcons.Heart, "Your matches", onOpenMatches)
         }
         is Entry.OnTeam -> {

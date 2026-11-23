@@ -113,6 +113,11 @@ The profile shows the level, its title, and progress to the next threshold. Leve
 - Swipe deck per competition with drag, tilt, fling, and like/nope stamp, plus buttons for accessibility.
 - Mutual match → match screen with one button per contact the other side shared (WhatsApp, Instagram, LINE).
 - Matches list per competition.
+- **Match nearby.** Two people at the same event, in the same competition, open "Match nearby" from the competition detail (needs an active listing that can swipe) and shake their phones within 3 seconds of each other. Each phone then records a RIGHT swipe on the other's listing through the normal `swipe()` RPC, so the usual match trigger forms the match and every rule still applies (cap, deadline, team-to-team, a previous left swipe). A match shows the normal match screen with contacts.
+  - Transport: Google Nearby Connections, `P2P_CLUSTER`, service id `dev.ether.app.nearby`. The endpoint name is the listing id; on connecting, each phone sends a small hello (competition, listing, display name, role) and later a "shook" message. Peers in another competition are dropped.
+  - Pairing: a shake is the accelerometer above about 2.7g, at most one per second (or a tap on the shake card, for anyone who can't shake). Times are receipt times on the phone's own monotonic clock, never compared across phones. Only peers who also shook count; each peer pairs at most once per window.
+  - The first swipe to land sees no match yet, so the phone retries the same swipe for a few seconds. A retry returns the current outcome without counting again, so it turns into the match once the other side's swipe arrives. No backend change and no client-side "force match".
+  - Permissions, asked with a rationale and a clear denied state: Bluetooth scan/advertise/connect on Android 12+, Nearby Wi-Fi devices on 13+, fine location below 13. Nearby and the sensor run only while the screen is visible.
 - Team membership update on accept (solo joins team, or two solos form a team).
 - Post-event endorsement prompt.
 - XP, badges, and reliability score on the profile and card.
@@ -127,6 +132,7 @@ The profile shows the level, its title, and progress to the next threshold. Leve
 - `supabase-kt` (Auth, Postgrest, Storage).
 - Single `app` module. Split into modules only when build time hurts.
 - Swipe card hand-rolled with `Modifier.pointerInput` + `Animatable`. No third-party swipe library.
+- Google Play services Nearby Connections for Match nearby, behind a `NearbyPeers` interface (with an in-memory fake for the demo build).
 
 **Layering**
 ```
@@ -168,6 +174,8 @@ Business rules live in Postgres (constraints, triggers, RLS) because they must h
 - 🟡 **Google sign-in setup.** Needs a Google Cloud OAuth web client ID (shared with Supabase) and an Android client registered with the app's signing SHA-1. Without them the Google button stays hidden.
 - 🟡 **Cold start.** An empty deck kills the app. Mitigation: launch tied to one specific upcoming competition, seeded with friends and a campus org. When the deck runs dry it says nobody new has joined yet and offers "Invite friends" (a share-sheet link to the GitHub releases page until there is a store listing), Refresh, and the user's matches.
 - 🟡 **Contact abuse.** Contacts are only visible to matched listings and teammates. Enforce that with RLS, not in the client.
+- 🟡 **Match nearby friction.** Bluetooth or Wi-Fi turned off, a denied permission, or Play services missing stops it; the screen says which and the deck still works. Nearby discovery can be slow or flaky in a crowded hall, and the two-phone path can only be tested on real devices, not emulators.
+- 🟢 **Match nearby abuse.** It can't match anyone the deck couldn't: both people must shake within 3 seconds, and each phone only records a right swipe that Postgres validates like any other. A stranger in range only sees a name and a role, never contacts; contacts appear only after a match, enforced by RLS.
 - 🟡 **Swipe gesture feel.** The hand-rolled card needs tuning (threshold, rotation, spring). Prototype it early on a real device.
 - 🟢 **Matching logic.** It is a single trigger guarded by unique constraints. Low risk, cover it with SQL tests.
 - 🟢 **Anon key in the APK.** The Supabase anon key is public by design. Security comes from RLS. The service role key never ships in the app.
