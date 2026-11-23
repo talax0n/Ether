@@ -37,10 +37,33 @@ from unnest(array['0a', '0b', '0c', '0d', '0e', '0f', '1a']) x;
 select is((select name from profiles where id = '00000000-0000-0000-0000-00000000000a'), 'user0a',
   'allowed domain creates a profile named after the email');
 
-insert into profile_contacts (profile_id, contact_url) values
-  ('00000000-0000-0000-0000-00000000000a', 'https://wa.me/a'),
-  ('00000000-0000-0000-0000-00000000000b', 'https://wa.me/b'),
-  ('00000000-0000-0000-0000-00000000000c', 'https://wa.me/c');
+insert into profile_contacts (profile_id, phone, instagram, line_id) values
+  ('00000000-0000-0000-0000-00000000000a', '6281200000001', null, null),
+  ('00000000-0000-0000-0000-00000000000b', '6281200000002', 'user.b', null),
+  ('00000000-0000-0000-0000-00000000000c', null, null, 'user-c');
+
+-- ---------------------------------------------------------------- contact formats
+
+select throws_ok($$ update profile_contacts set phone = '0812-3456' where profile_id = '00000000-0000-0000-0000-00000000000a' $$,
+  '23514', null, 'phone must be digits only');
+select throws_ok($$ update profile_contacts set phone = '1234567' where profile_id = '00000000-0000-0000-0000-00000000000a' $$,
+  '23514', null, 'phone needs at least 8 digits');
+select throws_ok($$ update profile_contacts set phone = '12345678901234567' where profile_id = '00000000-0000-0000-0000-00000000000a' $$,
+  '23514', null, 'phone allows at most 16 digits');
+select lives_ok($$ update profile_contacts set phone = '+6281200000001' where profile_id = '00000000-0000-0000-0000-00000000000a' $$,
+  'phone may carry a leading +');
+update profile_contacts set phone = '6281200000001' where profile_id = '00000000-0000-0000-0000-00000000000a';
+select throws_ok($$ update profile_contacts set instagram = '@user.a' where profile_id = '00000000-0000-0000-0000-00000000000a' $$,
+  '23514', null, 'instagram is stored without the @');
+select throws_ok($$ update profile_contacts set instagram = repeat('a', 31) where profile_id = '00000000-0000-0000-0000-00000000000a' $$,
+  '23514', null, 'instagram allows at most 30 characters');
+select throws_ok($$ update profile_contacts set instagram = '' where profile_id = '00000000-0000-0000-0000-00000000000a' $$,
+  '23514', null, 'instagram cannot be empty (use null)');
+select throws_ok($$ update profile_contacts set line_id = 'abc' where profile_id = '00000000-0000-0000-0000-00000000000a' $$,
+  '23514', null, 'line_id needs at least 4 characters');
+select throws_ok($$ update profile_contacts set line_id = 'has space' where profile_id = '00000000-0000-0000-0000-00000000000a' $$,
+  '23514', null, 'line_id rejects spaces');
+select hasnt_column('public', 'profile_contacts', 'contact_url', 'contact_url is gone');
 
 insert into competitions (id, name, registration_deadline, event_end, min_team_size, max_team_size) values
   ('30000000-0000-0000-0000-000000000001', 'Upcoming', now() + interval '7 days', now() + interval '14 days', 2, 3),
@@ -65,7 +88,7 @@ select pg_temp.login('00000000-0000-0000-0000-00000000000a');
 
 select is(
   (select count(*)::int from profile_contacts where profile_id = '00000000-0000-0000-0000-00000000000b'), 0,
-  'contact_url hidden before match');
+  'contacts hidden before match');
 
 select is(
   swipe('10000000-0000-0000-0000-00000000000a', '10000000-0000-0000-0000-00000000000b', 'right'),
@@ -89,7 +112,7 @@ select throws_ok(
   '42501', null, 'client cannot award badges');
 
 reset role;
-select is((select count(*)::int from matches), 0, 'no match after one-sided right');
+select is((select count(*)::int from matches where competition_id = '30000000-0000-0000-0000-000000000001'), 0, 'no match after one-sided right');
 
 select pg_temp.login('00000000-0000-0000-0000-00000000000b');
 create temp table ab_result as
@@ -102,8 +125,10 @@ select is(
   'retrying the same swipe returns the same result');
 
 reset role;
-select is((select count(*)::int from matches), 1, 'mutual right creates exactly one match');
-select is((select count(*)::int from swipes), 2, 'retry did not insert a second swipe');
+select is((select count(*)::int from matches where competition_id = '30000000-0000-0000-0000-000000000001'), 1, 'mutual right creates exactly one match');
+select is((select count(*)::int from swipes where from_listing_id in
+  ('10000000-0000-0000-0000-00000000000a', '10000000-0000-0000-0000-00000000000b')), 2,
+  'retry did not insert a second swipe');
 
 select is(
   (select owner_id from teams where id = (select team_id from team_members
@@ -148,16 +173,20 @@ update listings set active = false where id = '10000000-0000-0000-0000-000000000
 alter table listings enable trigger listing_active_guard;
 
 select pg_temp.login('00000000-0000-0000-0000-00000000000a');
-select is((select contact_url from profile_contacts where profile_id = '00000000-0000-0000-0000-00000000000b'),
-  'https://wa.me/b', 'contact_url visible after match');
-select is((select contact_url from my_matches('30000000-0000-0000-0000-000000000001')),
-  'https://wa.me/b', 'my_matches returns the other side''s contact');
+select results_eq(
+  $$ select phone, instagram, line_id from profile_contacts where profile_id = '00000000-0000-0000-0000-00000000000b' $$,
+  $$ values ('6281200000002'::text, 'user.b'::text, null::text) $$,
+  'contacts visible after match');
+select results_eq(
+  $$ select phone, instagram, line_id from my_matches('30000000-0000-0000-0000-000000000001') $$,
+  $$ values ('6281200000002'::text, 'user.b'::text, null::text) $$,
+  'my_matches returns the other side''s contacts');
 
 reset role;
 select pg_temp.login('00000000-0000-0000-0000-00000000000d');
 select is(
   (select count(*)::int from profile_contacts where profile_id = '00000000-0000-0000-0000-00000000000a'), 0,
-  'unmatched profile cannot read contact_url');
+  'unmatched profile cannot read another user''s contacts');
 select is((select count(*)::int from matches), 0, 'unmatched profile cannot read other matches');
 
 -- ---------------------------------------------------------------- one team per competition, listing creation
@@ -233,8 +262,10 @@ select is((select active from listings where id = '10000000-0000-0000-0000-00000
   'team listing stays active below max size');
 
 select pg_temp.login('00000000-0000-0000-0000-00000000000e');
-select is((select contact_url from my_matches('30000000-0000-0000-0000-000000000001')),
-  'https://wa.me/c', 'solo sees the team owner''s contact');
+select results_eq(
+  $$ select phone, instagram, line_id from my_matches('30000000-0000-0000-0000-000000000001') $$,
+  $$ values (null::text, null::text, 'user-c'::text) $$,
+  'solo sees the team owner''s contacts');
 reset role;
 
 select pg_temp.login('00000000-0000-0000-0000-00000000000f');
@@ -247,8 +278,8 @@ select is((select active from listings where id = '10000000-0000-0000-0000-00000
   'team listing inactive once it reaches max_team_size');
 
 select pg_temp.login('00000000-0000-0000-0000-00000000000f');
-select is((select contact_url from profile_contacts where profile_id = '00000000-0000-0000-0000-00000000000c'),
-  'https://wa.me/c', 'matched solo reads team owner contact via RLS');
+select is((select line_id from profile_contacts where profile_id = '00000000-0000-0000-0000-00000000000c'),
+  'user-c', 'matched solo reads team owner contact via RLS');
 reset role;
 
 -- ---------------------------------------------------------------- deck and swipe cap (user G)
@@ -337,11 +368,29 @@ select is((select xp from profiles where id = '00000000-0000-0000-0000-000000000
 -- ---------------------------------------------------------------- profile completion
 
 select pg_temp.login('00000000-0000-0000-0000-00000000000d');
-insert into profile_contacts (profile_id, contact_url) values ('00000000-0000-0000-0000-00000000000d', 'https://t.me/d');
+insert into profile_contacts (profile_id, instagram) values ('00000000-0000-0000-0000-00000000000d', 'user.d');
 update profiles set major = 'CS', year = 2, bio = 'hi', skills = '{Go}', roles = '{Backend}'
 where id = '00000000-0000-0000-0000-00000000000d';
+select throws_ok(
+  $$ insert into profile_contacts (profile_id, phone) values ('00000000-0000-0000-0000-00000000000e', '6281200000009') $$,
+  '42501', null, 'cannot write another user''s contacts');
 reset role;
-select is((select xp from profiles where id = '00000000-0000-0000-0000-00000000000d'), 50, 'profile completed awards 50 XP');
+select is((select xp from profiles where id = '00000000-0000-0000-0000-00000000000d'), 50,
+  'profile completed with only an Instagram handle awards 50 XP');
+
+-- A contacts row with every field empty does not complete a profile; adding a LINE ID does.
+select pg_temp.login('00000000-0000-0000-0000-0000000000ff');
+insert into profile_contacts (profile_id) values ('00000000-0000-0000-0000-0000000000ff');
+update profiles set major = 'CS', year = 2, bio = 'hi', skills = '{Go}', roles = '{Backend}'
+where id = '00000000-0000-0000-0000-0000000000ff';
+reset role;
+select is((select xp from profiles where id = '00000000-0000-0000-0000-0000000000ff'), 0,
+  'profile without any contact is not complete');
+select pg_temp.login('00000000-0000-0000-0000-0000000000ff');
+update profile_contacts set line_id = 'mallory.l' where profile_id = '00000000-0000-0000-0000-0000000000ff';
+reset role;
+select is((select xp from profiles where id = '00000000-0000-0000-0000-0000000000ff'), 50,
+  'adding a LINE ID completes the profile');
 
 -- ---------------------------------------------------------------- create_team RPC
 
@@ -389,8 +438,8 @@ select throws_ok($$ select create_team('30000000-0000-0000-0000-000000000003', '
 
 insert into team_members (team_id, profile_id) values ((select id from c3), '00000000-0000-0000-0000-00000000000d');
 select pg_temp.login('00000000-0000-0000-0000-00000000000d');
-select is((select contact_url from profile_contacts where profile_id = '00000000-0000-0000-0000-00000000000c'),
-  'https://wa.me/c', 'teammates can read each other''s contact without a match');
+select is((select line_id from profile_contacts where profile_id = '00000000-0000-0000-0000-00000000000c'),
+  'user-c', 'teammates can read each other''s contact without a match');
 reset role;
 
 -- ---------------------------------------------------------------- guests (anon) browse competitions only

@@ -1,6 +1,7 @@
 package dev.ether.app.data.supabase
 
 import dev.ether.app.domain.CompetitionId
+import dev.ether.app.domain.Contacts
 import dev.ether.app.domain.DeckCard
 import dev.ether.app.domain.ListingId
 import dev.ether.app.domain.ListingKind
@@ -51,7 +52,7 @@ class ContractTest {
 
     @Test
     fun `my_matches row`() {
-        val row = """[{"match_id":"4b49221f-7914-402b-ae87-b2e6ffb903ed","matched_at":"2026-10-14T20:01:26.761224+00:00","my_listing_id":"b0000000-0000-0000-0000-000000000001","listing_id":"af01b8a2-0e16-4407-8d5d-98ac8302435a","kind":"team","profile_id":null,"team_id":"a0000000-0000-0000-0000-000000000001","name":"Byte Club","headline":"Campus marketplace for used textbooks.","skills":["Canva","Finance","Go","Kotlin","Pitching","PostgreSQL","React","Supabase","TypeScript"],"roles":["Backend","Business","Frontend","PM"],"open_roles":["Mobile","Designer"],"member_count":3,"xp":750,"reliability_score":0,"avatar_url":null,"contact_url":"https://wa.me/628120000007"}]"""
+        val row = """[{"match_id":"4b49221f-7914-402b-ae87-b2e6ffb903ed","matched_at":"2026-10-14T20:01:26.761224+00:00","my_listing_id":"b0000000-0000-0000-0000-000000000001","listing_id":"af01b8a2-0e16-4407-8d5d-98ac8302435a","kind":"team","profile_id":null,"team_id":"a0000000-0000-0000-0000-000000000001","name":"Byte Club","headline":"Campus marketplace for used textbooks.","skills":["Canva","Finance","Go","Kotlin","Pitching","PostgreSQL","React","Supabase","TypeScript"],"roles":["Backend","Business","Frontend","PM"],"open_roles":["Mobile","Designer"],"member_count":3,"xp":750,"reliability_score":0,"avatar_url":null,"phone":null,"instagram":null,"line_id":"demo7_line"}]"""
         val competition = CompetitionId("c0000000-0000-0000-0000-000000000001")
 
         val match = json.decodeFromString<List<MatchRowDto>>(row).single().toDomain(competition)
@@ -62,8 +63,18 @@ class ContractTest {
         assertEquals(ListingKind.TEAM, match.otherKind)
         assertEquals("Byte Club", match.name)
         assertNull(match.avatarUrl)
-        assertEquals("https://wa.me/628120000007", match.contactUrl)
+        assertEquals(Contacts(lineId = "demo7_line"), match.contacts)
+        assertEquals("https://line.me/ti/p/~demo7_line", match.contacts.entries.single().url)
         assertEquals(Instant.parse("2026-10-14T20:01:26.761224Z"), match.createdAt)
+    }
+
+    @Test
+    fun `profile_contacts row is normalized into contacts`() {
+        val row = """[{"profile_id":"d0000000-0000-0000-0000-000000000002","phone":"+628120000002","instagram":"Demo2.Ether","line_id":null}]"""
+
+        val contacts = json.decodeFromString<List<ProfileContactDto>>(row).single().toDomain()
+
+        assertEquals(Contacts(phone = "628120000002", instagram = "demo2.ether"), contacts)
     }
 
     @Test
@@ -86,7 +97,7 @@ class ContractTest {
     fun `profile with null major and year`() {
         val row = """[{"id":"d0000000-0000-0000-0000-000000000005","name":"Eka Putri","major":null,"year":null,"bio":"Data science, Kaggle bronze.","skills":["Python","Pandas","PyTorch"],"roles":["Data","ML"],"avatar_url":null,"xp":50,"created_at":"2026-10-14T19:57:30.815528+00:00"}]"""
 
-        val p = json.decodeFromString<List<ProfileDto>>(row).single().toDomain(contactUrl = "https://wa.me/628120000005")
+        val p = json.decodeFromString<List<ProfileDto>>(row).single().toDomain(Contacts(instagram = "demo5.ether", lineId = "demo5_line"))
 
         assertEquals(ProfileId("d0000000-0000-0000-0000-000000000005"), p.id)
         assertEquals("Eka Putri", p.name)
@@ -95,7 +106,7 @@ class ContractTest {
         assertEquals("Data science, Kaggle bronze.", p.bio)
         assertEquals(listOf("Python", "Pandas", "PyTorch"), p.skills)
         assertEquals(listOf("Data", "ML"), p.roles)
-        assertEquals("https://wa.me/628120000005", p.contactUrl)
+        assertEquals(Contacts(instagram = "demo5.ether", lineId = "demo5_line"), p.contacts)
         assertEquals(50, p.xp)
     }
 

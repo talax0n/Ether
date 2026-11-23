@@ -1,5 +1,6 @@
 package dev.ether.app.ui.matches
 
+import dev.ether.app.ui.components.ContactButtons
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,7 +15,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import dev.ether.app.ui.components.LedgeIconButton
 import dev.ether.app.ui.theme.Coral
-import dev.ether.app.ui.theme.Ink
 import java.time.Duration
 import java.time.Instant
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,7 +27,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -43,8 +42,6 @@ import dev.ether.app.ui.components.MessageBox
 import dev.ether.app.ui.components.SectionHeader
 import dev.ether.app.ui.components.Tone
 import dev.ether.app.ui.components.staggerIn
-import dev.ether.app.ui.contactLabel
-import dev.ether.app.ui.openContact
 import dev.ether.app.ui.shortDate
 import dev.ether.app.ui.theme.Arcade
 import dev.ether.app.ui.theme.GrapeSoft
@@ -138,7 +135,6 @@ private fun Header(loaded: MatchesUiState.Loaded?, topLevel: Boolean, horizontal
 
 @Composable
 private fun MatchRow(match: Match, now: Instant, modifier: Modifier) {
-    val context = LocalContext.current
     val team = match.otherKind == ListingKind.TEAM
     val fresh = Duration.between(match.createdAt, now) < Duration.ofDays(1)
     LedgeCard(modifier.fillMaxWidth(), ledge = 4.dp) {
@@ -153,11 +149,8 @@ private fun MatchRow(match: Match, now: Instant, modifier: Modifier) {
                 }
                 Text(matchedAgo(match.createdAt, now), style = MaterialTheme.typography.bodySmall, color = Arcade.colors.muted, maxLines = 1)
             }
-            match.contactUrl?.let { url ->
-                Spacer(Modifier.width(10.dp))
-                LedgeIconButton(ArcadeIcons.Chat, contactLabel(url), { openContact(context, url) }, size = 48.dp, color = Mint, tint = Ink)
-            }
         }
+        ContactButtons(match.contacts, Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp), color = Mint)
     }
 }
 

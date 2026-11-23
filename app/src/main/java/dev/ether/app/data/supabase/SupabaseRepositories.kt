@@ -10,6 +10,7 @@ import dev.ether.app.data.TeamRepository
 import dev.ether.app.domain.AuthState
 import dev.ether.app.domain.Competition
 import dev.ether.app.domain.CompetitionId
+import dev.ether.app.domain.Contacts
 import dev.ether.app.domain.DeckCard
 import dev.ether.app.domain.Listing
 import dev.ether.app.domain.ListingId
@@ -99,7 +100,7 @@ class SupabaseProfileRepository(private val client: SupabaseClient) : ProfileRep
             ?: return@backend null
         val contact = client.from("profile_contacts").select { filter { eq("profile_id", uid) } }
             .decodeSingleOrNull<ProfileContactDto>()
-        row.toDomain(contact?.contactUrl)
+        row.toDomain(contact?.toDomain() ?: Contacts.NONE)
     }
 
     override suspend fun mySummary(): ProfileSummary = backend {
@@ -119,12 +120,12 @@ class SupabaseProfileRepository(private val client: SupabaseClient) : ProfileRep
         client.from("profiles").update(
             ProfileUpdateDto(draft.name, draft.major, draft.year, draft.bio, draft.skills, draft.roles),
         ) { filter { eq("id", uid) } }
-        // No upsert: on conflict PostgREST also rewrites profile_id, and only contact_url is granted for UPDATE.
-        val updated = client.from("profile_contacts").update({ set("contact_url", draft.contactUrl) }) {
+        // No upsert: on conflict PostgREST also rewrites profile_id, and only the contact columns are granted for UPDATE.
+        val updated = client.from("profile_contacts").update(ProfileContactWriteDto(draft.contacts)) {
             filter { eq("profile_id", uid) }
             select()
         }.decodeList<ProfileContactDto>()
-        if (updated.isEmpty()) client.from("profile_contacts").insert(ProfileContactDto(uid, draft.contactUrl))
+        if (updated.isEmpty()) client.from("profile_contacts").insert(ProfileContactInsertDto(uid, draft.contacts))
     }
 }
 
@@ -213,7 +214,7 @@ class SupabaseTeamRepository(private val client: SupabaseClient) : TeamRepositor
             // RLS returns only the contacts of people who share a team or a match with the caller.
             val contacts = async {
                 client.from("profile_contacts").select().decodeList<ProfileContactDto>()
-                    .associate { it.profileId to it.contactUrl }
+                    .associate { it.profileId to it.toDomain() }
             }
             val endorsed = async {
                 client.from("endorsements").select(Columns.list("to_profile_id", "competition_id")) {
@@ -232,7 +233,7 @@ class SupabaseTeamRepository(private val client: SupabaseClient) : TeamRepositor
                     ownerId = ProfileId(t.ownerId),
                     teammates = t.members.filter { it.profileId != uid }.map { m ->
                         Teammate(
-                            ProfileId(m.profileId), m.profiles.name, contacts.await()[m.profileId],
+                            ProfileId(m.profileId), m.profiles.name, contacts.await()[m.profileId] ?: Contacts.NONE,
                             endorsedByMe = EndorsementKeyDto(m.profileId, t.competitions.id) in endorsed.await(),
                         )
                     }.sortedBy { it.name },

@@ -34,8 +34,12 @@ from (values
 ) d(n, name, major, year, bio, skills, roles)
 where p.id = ('d0000000-0000-0000-0000-00000000000' || d.n)::uuid;
 
-insert into public.profile_contacts (profile_id, contact_url)
-select ('d0000000-0000-0000-0000-00000000000' || n)::uuid, 'https://wa.me/62812000000' || n
+-- A mix of contacts: WhatsApp only, Instagram only, LINE only, and combinations.
+insert into public.profile_contacts (profile_id, phone, instagram, line_id)
+select ('d0000000-0000-0000-0000-00000000000' || n)::uuid,
+       case when n in (1, 2, 4, 6, 8) then '62812000000' || n end,
+       case when n in (2, 3, 5, 8) then 'demo' || n || '.ether' end,
+       case when n in (4, 5, 7) then 'demo' || n || '_line' end
 from generate_series(1, 8) n;
 
 insert into public.competitions (id, name, description, url, registration_deadline, event_end, min_team_size, max_team_size) values

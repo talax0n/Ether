@@ -3,6 +3,7 @@ package dev.ether.app.data.supabase
 import dev.ether.app.domain.Badge
 import dev.ether.app.domain.Competition
 import dev.ether.app.domain.CompetitionId
+import dev.ether.app.domain.Contacts
 import dev.ether.app.domain.DeckCard
 import dev.ether.app.domain.Listing
 import dev.ether.app.domain.ListingId
@@ -54,8 +55,8 @@ data class ProfileDto(
     @SerialName("avatar_url") val avatarUrl: String? = null,
     val xp: Int = 0,
 ) {
-    fun toDomain(contactUrl: String?) = Profile(
-        ProfileId(id), name, major, year, bio.orEmpty(), skills, roles, contactUrl, avatarUrl, xp,
+    fun toDomain(contacts: Contacts) = Profile(
+        ProfileId(id), name, major, year, bio.orEmpty(), skills, roles, contacts, avatarUrl, xp,
     )
 }
 
@@ -69,11 +70,39 @@ data class ProfileUpdateDto(
     val roles: List<String>,
 )
 
+/** A `profile_contacts` row, as read back (RLS decides whose rows come back). */
 @Serializable
 data class ProfileContactDto(
     @SerialName("profile_id") val profileId: String,
-    @SerialName("contact_url") val contactUrl: String,
-)
+    val phone: String? = null,
+    val instagram: String? = null,
+    @SerialName("line_id") val lineId: String? = null,
+) {
+    fun toDomain() = Contacts.of(phone, instagram, lineId)
+}
+
+/**
+ * The writable `profile_contacts` columns. Nulls are encoded explicitly so clearing a field in the
+ * form clears it in the database.
+ */
+@Serializable
+data class ProfileContactWriteDto(
+    val phone: String?,
+    val instagram: String?,
+    @SerialName("line_id") val lineId: String?,
+) {
+    constructor(contacts: Contacts) : this(contacts.phone, contacts.instagram, contacts.lineId)
+}
+
+@Serializable
+data class ProfileContactInsertDto(
+    @SerialName("profile_id") val profileId: String,
+    val phone: String?,
+    val instagram: String?,
+    @SerialName("line_id") val lineId: String?,
+) {
+    constructor(profileId: String, contacts: Contacts) : this(profileId, contacts.phone, contacts.instagram, contacts.lineId)
+}
 
 @Serializable
 data class CompetitionDto(
@@ -157,7 +186,7 @@ data class SwipeResultDto(
     fun toDomain() = SwipeResult(matched, matchId?.let(::MatchId), remaining)
 }
 
-/** One row of `my_matches(p_competition)`: the other side's card plus its contact link. */
+/** One row of `my_matches(p_competition)`: the other side's card plus its contacts. */
 @Serializable
 data class MatchRowDto(
     @SerialName("match_id") val matchId: String,
@@ -166,11 +195,13 @@ data class MatchRowDto(
     val kind: ListingKindDto,
     val name: String,
     @SerialName("avatar_url") val avatarUrl: String? = null,
-    @SerialName("contact_url") val contactUrl: String? = null,
+    val phone: String? = null,
+    val instagram: String? = null,
+    @SerialName("line_id") val lineId: String? = null,
 ) {
     fun toDomain(competitionId: CompetitionId) = Match(
         MatchId(matchId), competitionId, ListingId(listingId), kind.toDomain(),
-        name, avatarUrl, contactUrl, parseTimestamp(matchedAt),
+        name, avatarUrl, Contacts.of(phone, instagram, lineId), parseTimestamp(matchedAt),
     )
 }
 

@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.core.net.toUri
+import dev.ether.app.domain.ContactKind
+import dev.ether.app.domain.Contacts
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -25,11 +27,20 @@ fun Instant.shortDate(): String = atZone(ZoneId.systemDefault()).format(dateForm
 private val dayMonthFormat = DateTimeFormatter.ofPattern("d MMM")
 fun Instant.dayMonth(): String = atZone(ZoneId.systemDefault()).format(dayMonthFormat)
 
-/** The chat app a contact link opens, or null for any other link. */
-fun contactApp(url: String): String? = when {
-    "wa.me" in url || "whatsapp" in url -> "WhatsApp"
-    "t.me" in url || "telegram" in url -> "Telegram"
-    else -> null
-}
+/** The app a contact opens in. */
+val ContactKind.appName: String
+    get() = when (this) {
+        ContactKind.WHATSAPP -> "WhatsApp"
+        ContactKind.INSTAGRAM -> "Instagram"
+        ContactKind.LINE -> "LINE"
+    }
 
-fun contactLabel(url: String): String = contactApp(url)?.let { "Message on $it" } ?: "Open contact"
+/** "WhatsApp, Instagram and LINE", or null when there are no contacts. */
+fun Contacts.appsSummary(): String? {
+    val names = entries.map { it.kind.appName }
+    return when (names.size) {
+        0 -> null
+        1 -> names[0]
+        else -> names.dropLast(1).joinToString(", ") + " and " + names.last()
+    }
+}

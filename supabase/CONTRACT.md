@@ -15,7 +15,7 @@ What the Android client can read, write, and call. Business rules live in the mi
 | Table | Client can | Notes |
 |-------|-----------|-------|
 | `profiles` | select all; update own `name, major, year, bio, skills, roles, avatar_url` | Row is created at sign-up. `xp` is read-only. |
-| `profile_contacts` | select (RLS: see below); insert/update own `contact_url` | Kept apart from `profiles` so RLS can hide it. |
+| `profile_contacts` | select (RLS: see below); insert own `profile_id, phone, instagram, line_id`; update own `phone, instagram, line_id` | Kept apart from `profiles` so RLS can hide it. All three are nullable; see formats below. |
 | `competitions` | select | Seeded by hand. |
 | `teams` | select; insert with `owner_id = auth.uid()`; owner updates `name, pitch, open_roles` | Inserting a team adds the owner to `team_members` automatically. Fails with `registration_closed` after the competition's `registration_deadline`, and `already_in_team` if the owner is already in a team in that competition. |
 | `team_members` | select | Written only by triggers (team creation, matches). Has a `competition_id` column (copied from the team); `(profile_id, competition_id)` is unique. |
@@ -25,6 +25,16 @@ What the Android client can read, write, and call. Business rules live in the mi
 | `endorsements` | select given/received; insert with `from_profile_id = auth.uid()` | Fails with `not_teammates` / `event_not_ended`. Unique per (from, to, competition). |
 | `badges`, `profile_badges`, `team_results`, `app_config` | select | Badges are awarded by triggers only. |
 | `xp_events` | select own | XP ledger; `profiles.xp` is its sum. |
+
+**Contact formats.** Check constraints on `profile_contacts`; store values normalized, as the app does:
+
+| Column | Format | Opens |
+|--------|--------|-------|
+| `phone` | `^\+?[0-9]{8,16}$`, country code included (the app writes digits only, `08…` → `628…`) | `https://wa.me/<phone>` |
+| `instagram` | `^[A-Za-z0-9._]{1,30}$`, no `@` (the app lowercases) | `https://instagram.com/<instagram>` |
+| `line_id` | `^[A-Za-z0-9._-]{4,20}$` (the app lowercases) | `https://line.me/ti/p/~<line_id>` |
+
+A violation fails with SQLSTATE `23514`. Clear a field by writing `null`, not `''`.
 
 **Contact visibility.** A `profile_contacts` row is visible to its owner, to their teammates (any team they share), and to anyone on the other side of a match with them. A team listing's side means every current member of that team.
 
@@ -81,7 +91,7 @@ Output columns (one row per card):
 
 ### `my_matches(p_competition uuid) → setof record`
 
-The caller's matches in one competition, newest first. Columns: `match_id, matched_at, my_listing_id`, then the other side's card (`listing_id, kind, profile_id, team_id, name, headline, skills, roles, open_roles, member_count, xp, reliability_score, avatar_url`), then `contact_url`. For a team, `contact_url` is the owner's contact.
+The caller's matches in one competition, newest first. Columns: `match_id, matched_at, my_listing_id`, then the other side's card (`listing_id, kind, profile_id, team_id, name, headline, skills, roles, open_roles, member_count, xp, reliability_score, avatar_url`), then `phone, instagram, line_id`. For a team, these are the owner's contacts. Any of them can be null.
 
 ### `reliability_score(p_profile uuid) → int`
 
@@ -113,7 +123,7 @@ After a competition's `registration_deadline`, nothing new can form in it: listi
 
 | Trigger | XP | Badge |
 |---------|----|-------|
-| Profile complete: name, major, year, bio, skills, roles, contact | 50 | |
+| Profile complete: name, major, year, bio, skills, roles, and at least one of phone / instagram / line_id | 50 | |
 | First match (solo profile / team owner) | 25 | |
 | Team formed or joined (team reaches 2 members, or you join one) | 100 per team | `first_team` |
 | `finish_competition` (per competition) | 150 | `three_hackathons` at 3 |

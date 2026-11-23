@@ -2,6 +2,7 @@ package dev.ether.app
 
 import dev.ether.app.data.fake.DemoData
 import dev.ether.app.data.fake.FakeBackend
+import dev.ether.app.domain.Contacts
 import dev.ether.app.ui.AppUiState
 import dev.ether.app.ui.AppViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -39,7 +40,7 @@ class AppViewModelTest {
     }
 
     @Test
-    fun `a profile missing its contact link goes to profile setup`() = runTest {
-        assertEquals(AppUiState.NeedsProfile(DemoData.me.id), stateFor(FakeBackend(signedIn = true, profile = DemoData.me.copy(contactUrl = null))))
+    fun `a profile without any contact goes to profile setup`() = runTest {
+        assertEquals(AppUiState.NeedsProfile(DemoData.me.id), stateFor(FakeBackend(signedIn = true, profile = DemoData.me.copy(contacts = Contacts.NONE))))
     }
 }

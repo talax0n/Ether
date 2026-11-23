@@ -12,7 +12,8 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import dev.ether.app.ui.components.LedgeIconButton
 import dev.ether.app.ui.components.TagRow
-import dev.ether.app.ui.contactApp
+import dev.ether.app.domain.ContactKind
+import dev.ether.app.ui.components.icon
 import dev.ether.app.ui.theme.CoralSoft
 import dev.ether.app.ui.theme.SkySoft
 import androidx.compose.foundation.layout.Column
@@ -63,7 +64,8 @@ fun ProfileEditScreen(isSetup: Boolean, onDone: () -> Unit, onBack: () -> Unit, 
         if (state.loading) return@Column LoadingBox()
         state.loadError?.let { return@Column MessageBox(it, action = "Retry", tone = Tone.ERROR, onAction = vm::load) }
         val form = state.form
-        val filled = listOf(form.name, form.major, form.year, form.bio, form.skills, form.roles, form.contactUrl).count { it.isNotBlank() }
+        val filled = listOf(form.name, form.major, form.year, form.bio, form.skills, form.roles).count { it.isNotBlank() } +
+            (if (form.contactsOrNull() != null) 1 else 0)
         Column(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = if (isSetup) 24.dp else 4.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -92,20 +94,17 @@ fun ProfileEditScreen(isSetup: Boolean, onDone: () -> Unit, onBack: () -> Unit, 
             if (form.skillTags.isNotEmpty()) TagRow(form.skillTags, SkySoft)
             Field("Roles, comma separated", form.roles, 7) { vm.edit { copy(roles = it) } }
             if (form.roleTags.isNotEmpty()) TagRow(form.roleTags, CoralSoft)
-            Field("Contact link (https://wa.me/… or https://t.me/…)", form.contactUrl, 8, KeyboardType.Uri) {
-                vm.edit { copy(contactUrl = it) }
-            }
+            Text("How matches reach you", Modifier.padding(top = 6.dp), style = MaterialTheme.typography.titleMedium, color = colors.text)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(ArcadeIcons.Lock, contentDescription = null, tint = colors.muted, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    form.contactUrl.trim().takeIf { it.startsWith("https://") }
-                        ?.let { url -> "Only matches and teammates see it." + (contactApp(url)?.let { " They'll reach you on $it." } ?: "") }
-                        ?: "Only matches and teammates see your contact link. It must start with https://.",
+                    "Add at least one. Only matches and teammates see them.",
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.muted,
                 )
             }
+            ContactKind.entries.forEach { kind -> ContactField(form, kind, 8) { vm.edit { withContact(kind, it) } } }
             state.error?.let { ErrorText(it) }
         }
         LedgeButton(
@@ -133,4 +132,49 @@ private fun Field(
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         modifier = Modifier.staggerIn(index),
     )
+}
+
+private val ContactKind.fieldLabel get() = when (this) {
+    ContactKind.WHATSAPP -> "Phone (WhatsApp)"
+    ContactKind.INSTAGRAM -> "Instagram"
+    ContactKind.LINE -> "LINE ID"
+}
+
+private val ContactKind.hint get() = when (this) {
+    ContactKind.WHATSAPP -> "Your WhatsApp number, e.g. 0812 3456 7890 or +62 812 3456 7890."
+    ContactKind.INSTAGRAM -> "Your handle, e.g. @ana.designs."
+    ContactKind.LINE -> "Your LINE ID (Settings › Profile), not your display name."
+}
+
+/** Mirrors the profile_contacts check constraints. */
+private val ContactKind.formatError get() = when (this) {
+    ContactKind.WHATSAPP -> "Use 8 to 16 digits, with the country code or a leading 0."
+    ContactKind.INSTAGRAM -> "Up to 30 letters, numbers, dots or underscores."
+    ContactKind.LINE -> "4 to 20 letters, numbers, dots, underscores or hyphens."
+}
+
+@Composable
+private fun ContactField(form: ProfileForm, kind: ContactKind, index: Int, onChange: (String) -> Unit) {
+    val colors = Arcade.colors
+    Column(Modifier.staggerIn(index), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        ArcadeTextField(
+            value = form.raw(kind),
+            onValueChange = onChange,
+            label = kind.fieldLabel,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = if (kind == ContactKind.WHATSAPP) KeyboardType.Phone else KeyboardType.Ascii,
+                autoCorrectEnabled = false,
+            ),
+            trailingIcon = { Icon(kind.icon, contentDescription = null, tint = colors.muted, modifier = Modifier.size(20.dp)) },
+        )
+        val value = form.normalized(kind)
+        when {
+            form.isInvalid(kind) -> ErrorText(kind.formatError, Modifier.padding(horizontal = 4.dp))
+            value != null -> Text(
+                "Opens ${kind.url(value).removePrefix("https://")}",
+                Modifier.padding(horizontal = 4.dp), style = MaterialTheme.typography.bodySmall, color = colors.muted,
+            )
+            else -> Text(kind.hint, Modifier.padding(horizontal = 4.dp), style = MaterialTheme.typography.bodySmall, color = colors.muted)
+        }
+    }
 }

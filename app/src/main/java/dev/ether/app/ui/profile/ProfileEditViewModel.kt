@@ -3,6 +3,9 @@ package dev.ether.app.ui.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.ether.app.data.ProfileRepository
+import dev.ether.app.domain.ContactKind
+import dev.ether.app.domain.Contacts
+import dev.ether.app.domain.Profile
 import dev.ether.app.domain.ProfileDraft
 import dev.ether.app.ui.userMessage
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,18 +22,63 @@ data class ProfileForm(
     val bio: String = "",
     val skills: String = "",
     val roles: String = "",
-    val contactUrl: String = "",
+    val phone: String = "",
+    val instagram: String = "",
+    val lineId: String = "",
 ) {
     val skillTags get() = skills.splitTags()
     val roleTags get() = roles.splitTags()
 
+    /** Raw text of one contact field. */
+    fun raw(kind: ContactKind): String = when (kind) {
+        ContactKind.WHATSAPP -> phone
+        ContactKind.INSTAGRAM -> instagram
+        ContactKind.LINE -> lineId
+    }
+
+    fun withContact(kind: ContactKind, value: String): ProfileForm = when (kind) {
+        ContactKind.WHATSAPP -> copy(phone = value)
+        ContactKind.INSTAGRAM -> copy(instagram = value)
+        ContactKind.LINE -> copy(lineId = value)
+    }
+
+    /** The field's normalized value; null when it is blank or invalid. */
+    fun normalized(kind: ContactKind): String? = raw(kind).takeIf { it.isNotBlank() }?.let {
+        when (kind) {
+            ContactKind.WHATSAPP -> Contacts.normalizePhone(it)
+            ContactKind.INSTAGRAM -> Contacts.normalizeInstagram(it)
+            ContactKind.LINE -> Contacts.normalizeLineId(it)
+        }
+    }
+
+    /** Filled in but not in a format the database accepts. */
+    fun isInvalid(kind: ContactKind): Boolean = raw(kind).isNotBlank() && normalized(kind) == null
+
+    /** At least one contact, and none of the filled-in ones invalid; otherwise null. */
+    fun contactsOrNull(): Contacts? {
+        if (ContactKind.entries.any(::isInvalid)) return null
+        return Contacts(normalized(ContactKind.WHATSAPP), normalized(ContactKind.INSTAGRAM), normalized(ContactKind.LINE))
+            .takeUnless { it.isEmpty }
+    }
+
     fun toDraftOrNull(): ProfileDraft? {
         val yearValue = year.trim().toIntOrNull()?.takeIf { it in 1..10 } ?: return null
         // Everything is required: the database only counts a profile as complete with all of it.
-        if (name.isBlank() || major.isBlank() || bio.isBlank() || !contactUrl.trim().startsWith("https://")) return null
+        if (name.isBlank() || major.isBlank() || bio.isBlank()) return null
+        val contacts = contactsOrNull() ?: return null
         val skillTags = skills.splitTags().ifEmpty { return null }
         val roleTags = roles.splitTags().ifEmpty { return null }
-        return ProfileDraft(name.trim(), major.trim(), yearValue, bio.trim(), skillTags, roleTags, contactUrl.trim())
+        return ProfileDraft(name.trim(), major.trim(), yearValue, bio.trim(), skillTags, roleTags, contacts)
+    }
+
+    companion object {
+        fun of(p: Profile) = ProfileForm(
+            p.name, p.major.orEmpty(), p.year?.toString().orEmpty(), p.bio,
+            p.skills.joinToString(", "), p.roles.joinToString(", "),
+            phone = p.contacts.phone?.let { "+$it" }.orEmpty(),
+            instagram = p.contacts.instagram?.let { "@$it" }.orEmpty(),
+            lineId = p.contacts.lineId.orEmpty(),
+        )
     }
 }
 
@@ -59,12 +107,7 @@ class ProfileEditViewModel(private val profiles: ProfileRepository) : ViewModel(
         viewModelScope.launch {
             runCatching { profiles.myProfile() }
                 .onSuccess { p ->
-                    val form = p?.let {
-                        ProfileForm(
-                            it.name, it.major.orEmpty(), it.year?.toString().orEmpty(), it.bio,
-                            it.skills.joinToString(", "), it.roles.joinToString(", "), it.contactUrl.orEmpty(),
-                        )
-                    } ?: ProfileForm()
+                    val form = p?.let(ProfileForm::of) ?: ProfileForm()
                     _state.update { it.copy(loading = false, form = form) }
                 }
                 .onFailure { e -> _state.update { it.copy(loading = false, loadError = e.userMessage()) } }

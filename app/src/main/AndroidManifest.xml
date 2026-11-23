@@ -3,7 +3,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Contact links open in WhatsApp / Telegram / browser; Android 11+ hides them unless declared. -->
+    <!-- Contact links open in WhatsApp / Instagram / LINE / browser; Android 11+ hides them unless declared. -->
     <queries>
         <intent>
             <action android:name="android.intent.action.VIEW" />

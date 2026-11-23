@@ -12,7 +12,7 @@
 
 - **Per-competition decks.** You swipe inside one competition, so every card shares your deadline and goal.
 - **Two-sided consent.** A solo student swipes on teams and other solos. A team owner swipes on solos for the team. A match needs both sides to swipe right. Neither side gets cold-pitched.
-- **Contact handoff.** A match reveals both contact links (WhatsApp / Telegram). Conversation happens where students already are.
+- **Contact handoff.** A match reveals both sides' contacts: a phone number (opened in WhatsApp), an Instagram handle, and/or a LINE ID. Conversation happens where students already are.
 - **Reputation.** After the competition ends, teammates endorse each other. The resulting reliability score shows on your card.
 - **Outcome-based gamification.** XP and badges come from forming teams, finishing events, and receiving endorsements. A daily swipe cap keeps swipes deliberate.
 
@@ -23,7 +23,8 @@
 The key idea is the **Listing**. A Listing is "this solo user, or this team, is looking within this competition." Swipes and matches happen between listings. That gives solo and team cards one code path.
 
 ```
-Profile      (id = auth.uid, name, major, year, bio, skills[], roles[], contactUrl, avatarUrl, xp)
+Profile      (id = auth.uid, name, major, year, bio, skills[], roles[], contacts, avatarUrl, xp)
+Contacts     (phone?, instagram?, lineId?)               at least one for a complete profile
 Competition  (id, name, description, url, registrationDeadline, eventEnd, minTeamSize, maxTeamSize)
 Team         (id, competitionId, ownerId, name, pitch, openRoles[])
 TeamMember   (teamId, profileId)                         unique(teamId, profileId)
@@ -52,7 +53,9 @@ ProfileBadge (profileId, badgeCode, awardedAt)          unique(profileId, badgeC
 - Daily cap of 30 swipes per profile, enforced in the database. The client only displays the remaining count.
 - A listing goes inactive when the team reaches `maxTeamSize` or the solo joins a team.
 
-**Kotlin side.** Mirror the enums as sealed types (`ListingKind`, `SwipeDirection`). Parse Supabase rows into domain types at the repository boundary. UI code never sees raw JSON or nullable `profileId`/`teamId` pairs.
+**Contacts.** Each is optional, but a complete profile needs at least one. Stored normalized: `phone` is 8–16 digits with the country code (an Indonesian `08…` is entered as is and stored as `628…`), `instagram` is 1–30 letters, digits, dots or underscores without the `@`, `lineId` is 4–20 letters, digits, dots, underscores or hyphens. Each opens its app: `https://wa.me/<phone>`, `https://instagram.com/<handle>`, `https://line.me/ti/p/~<id>`. Telegram is not supported.
+
+**Kotlin side.** Mirror the enums as sealed types (`ListingKind`, `SwipeDirection`, `ContactKind`). Parse Supabase rows into domain types at the repository boundary. UI code never sees raw JSON or nullable `profileId`/`teamId` pairs.
 
 ## 4. Gamification
 
@@ -89,11 +92,11 @@ The profile shows the level, its title, and progress to the next threshold. Leve
 **In scope:**
 - Browse without an account: the intro, then the competition list and details. Sign-in is asked for only when the user acts (joining, starting a team, swiping) or opens Matches, Teams, or Profile.
 - Sign in with email and password, or a Google account. Creating an account with email signs straight in; there are no email codes.
-- Profile create and edit: skills, roles, major, year, bio, contact link, avatar.
+- Profile create and edit: skills, roles, major, year, bio, contacts (phone for WhatsApp, Instagram, LINE ID; at least one), avatar.
 - Competition list (seeded by hand in the database).
 - Join a competition as SOLO, or create a team and list it as TEAM.
 - Swipe deck per competition with drag, tilt, fling, and like/nope stamp, plus buttons for accessibility.
-- Mutual match → match screen with the other side's contact link.
+- Mutual match → match screen with one button per contact the other side shared (WhatsApp, Instagram, LINE).
 - Matches list per competition.
 - Team membership update on accept (solo joins team, or two solos form a team).
 - Post-event endorsement prompt.
@@ -149,7 +152,7 @@ Business rules live in Postgres (constraints, triggers, RLS) because they must h
 - 🟡 **Open sign-up.** Anyone with an email or a Google account can join, so the deck is no longer limited to one campus. Trust comes from per-competition decks, mutual consent, and endorsements. Revisit if decks fill with people who never show up.
 - 🟡 **Google sign-in setup.** Needs a Google Cloud OAuth web client ID (shared with Supabase) and an Android client registered with the app's signing SHA-1. Without them the Google button stays hidden.
 - 🟡 **Cold start.** An empty deck kills the app. Mitigation: launch tied to one specific upcoming competition, seeded with friends and a campus org.
-- 🟡 **Contact link abuse.** Contact links are only visible to matched listings. Enforce that with RLS, not in the client.
+- 🟡 **Contact abuse.** Contacts are only visible to matched listings and teammates. Enforce that with RLS, not in the client.
 - 🟡 **Swipe gesture feel.** The hand-rolled card needs tuning (threshold, rotation, spring). Prototype it early on a real device.
 - 🟢 **Matching logic.** It is a single trigger guarded by unique constraints. Low risk, cover it with SQL tests.
 - 🟢 **Anon key in the APK.** The Supabase anon key is public by design. Security comes from RLS. The service role key never ships in the app.
@@ -157,7 +160,7 @@ Business rules live in Postgres (constraints, triggers, RLS) because they must h
 ## 9. Launch checklist
 
 - [ ] Google sign-in configured for the release signing key
-- [ ] RLS on every table, with a test that a non-matched user cannot read another user's `contactUrl`
+- [ ] RLS on every table, with a test that a non-matched user cannot read another user's contacts
 - [ ] Matching, swipe cap, and XP triggers covered by SQL tests
 - [ ] One real upcoming competition seeded
 - [ ] Signed release APK, or a Play Store internal testing track

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dev.ether.app.data.DeckRepository
 import dev.ether.app.data.MatchRepository
 import dev.ether.app.domain.CompetitionId
+import dev.ether.app.domain.Contacts
 import dev.ether.app.domain.DeckCard
 import dev.ether.app.domain.ListingId
 import dev.ether.app.domain.ListingKind
@@ -105,7 +106,7 @@ class DeckViewModel(
         }
     }
 
-    /** The swipe RPC only returns the match id; the contact link comes from `my_matches`. */
+    /** The swipe RPC only returns the match id; the contacts come from `my_matches`. */
     private suspend fun findMatch(card: DeckCard, result: SwipeResult): Match {
         val found = runCatching { matches.matches(competitionId) }.getOrNull()?.firstOrNull { it.id == result.matchId }
         return found ?: Match(
@@ -115,7 +116,7 @@ class DeckViewModel(
             otherKind = if (card is DeckCard.Team) ListingKind.TEAM else ListingKind.SOLO,
             name = card.name,
             avatarUrl = card.avatarUrl,
-            contactUrl = null,
+            contacts = Contacts.NONE,
             createdAt = Instant.now(),
         )
     }

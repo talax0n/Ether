@@ -7,7 +7,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import dev.ether.app.domain.Profile
 import dev.ether.app.ui.components.CapsLabel
-import dev.ether.app.ui.contactApp
+import dev.ether.app.ui.appsSummary
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -140,8 +140,8 @@ private fun CardPreview(p: Profile, modifier: Modifier) {
                 Icon(ArcadeIcons.Lock, contentDescription = null, tint = colors.muted, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    p.contactUrl?.let { url -> "Matches and teammates reach you " + (contactApp(url)?.let { "on $it" } ?: "through your contact link") }
-                        ?: "No contact link yet. Matches can't reach you until you add one.",
+                    p.contacts.appsSummary()?.let { "Matches and teammates reach you on $it." }
+                        ?: "No contacts yet. Matches can't reach you until you add one.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = colors.muted,
                 )

@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -54,9 +53,8 @@ import dev.ether.app.ui.components.Confetti
 import dev.ether.app.ui.components.LedgeButton
 import dev.ether.app.ui.components.Rays
 import dev.ether.app.ui.components.ledge
-import dev.ether.app.ui.contactApp
-import dev.ether.app.ui.contactLabel
-import dev.ether.app.ui.openContact
+import dev.ether.app.ui.appsSummary
+import dev.ether.app.ui.components.ContactButton
 import dev.ether.app.ui.theme.Arcade
 import dev.ether.app.ui.theme.Ink
 import dev.ether.app.ui.theme.Mint
@@ -86,7 +84,7 @@ private fun rewardsFor(match: Match) = listOfNotNull(
     },
     Reward(
         ArcadeIcons.Chat, Mint, "Contact unlocked",
-        match.contactUrl?.let { url -> contactApp(url)?.let { "$it link shared" } ?: "Contact link shared" } ?: "Their link lands in Matches shortly",
+        match.contacts.appsSummary()?.let { "$it shared" } ?: "Their contacts land in Matches shortly",
         null,
     ),
     Reward(ArcadeIcons.Trophy, Sky, "XP on its way", "Check your profile for the new total", null),
@@ -101,7 +99,6 @@ private fun rewardsFor(match: Match) = listOfNotNull(
 fun MatchCelebration(match: Match, canKeepSwiping: Boolean, onDismiss: () -> Unit, onOpenTeams: () -> Unit) {
     val reduced = Arcade.reducedMotion
     val haptics = LocalHapticFeedback.current
-    val context = LocalContext.current
     val rewards = remember(match.id) { rewardsFor(match) }
     val start = if (reduced) 1f else 0f
     val headline = remember { Animatable(start) }
@@ -158,10 +155,9 @@ fun MatchCelebration(match: Match, canKeepSwiping: Boolean, onDismiss: () -> Uni
                     },
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    match.contactUrl?.let { url ->
-                        LedgeButton(contactLabel(url), { openContact(context, url) }, Modifier.fillMaxWidth(), color = Mint, icon = ArcadeIcons.Chat)
-                    } ?: Text(
-                        "Their contact link will show in Matches shortly.",
+                    match.contacts.entries.forEach { entry -> ContactButton(entry, Modifier.fillMaxWidth(), color = Mint) }
+                    if (match.contacts.isEmpty) Text(
+                        "Their contacts will show in Matches shortly.",
                         Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyMedium, color = Paper, textAlign = TextAlign.Center,
                     )
                     LedgeButton(

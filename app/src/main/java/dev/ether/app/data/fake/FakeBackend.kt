@@ -11,6 +11,7 @@ import dev.ether.app.domain.AuthState
 import dev.ether.app.domain.Badge
 import dev.ether.app.domain.Competition
 import dev.ether.app.domain.CompetitionId
+import dev.ether.app.domain.Contacts
 import dev.ether.app.domain.DeckCard
 import dev.ether.app.domain.EtherError
 import dev.ether.app.domain.Listing
@@ -87,7 +88,7 @@ class FakeBackend(
         val base = profile ?: DemoData.me.copy(xp = 0)
         profile = base.copy(
             name = draft.name, major = draft.major, year = draft.year, bio = draft.bio,
-            skills = draft.skills, roles = draft.roles, contactUrl = draft.contactUrl,
+            skills = draft.skills, roles = draft.roles, contacts = draft.contacts,
         )
     }
 
@@ -130,7 +131,7 @@ class FakeBackend(
             otherKind = if (card is DeckCard.Team) ListingKind.TEAM else ListingKind.SOLO,
             name = card.name,
             avatarUrl = card.avatarUrl,
-            contactUrl = contact,
+            contacts = contact,
             createdAt = clock(),
         )
         matches += match
@@ -185,7 +186,7 @@ object DemoData {
         bio = "Android dev who likes shipping fast.",
         skills = listOf("Kotlin", "Compose", "Postgres"),
         roles = listOf("Mobile"),
-        contactUrl = "https://t.me/ether_demo",
+        contacts = Contacts(phone = "6281298765432", instagram = "ether.demo"),
         avatarUrl = null,
         xp = 225,
     )
@@ -219,8 +220,8 @@ object DemoData {
             competition = competitions.last(),
             ownerId = me.id,
             teammates = listOf(
-                Teammate(ProfileId("p-ana"), "Ana Putri", "https://wa.me/6281234567890", endorsedByMe = false),
-                Teammate(ProfileId("p-budi"), "Budi Santoso", "https://t.me/budi", endorsedByMe = false),
+                Teammate(ProfileId("p-ana"), "Ana Putri", Contacts(phone = "6281234567890", instagram = "ana.designs"), endorsedByMe = false),
+                Teammate(ProfileId("p-budi"), "Budi Santoso", Contacts(lineId = "budi.s"), endorsedByMe = false),
             ),
             result = ReportedResult(TeamResult.FINALIST, "Ana Putri", reportedByMe = false, confirmed = false),
         ),
@@ -261,10 +262,10 @@ object DemoData {
         ),
     )
 
-    /** Listings that already swiped right on the demo user, mapped to the contact revealed on match. */
+    /** Listings that already swiped right on the demo user, mapped to the contacts revealed on match. */
     val likesYouBack = mapOf(
-        ListingId("l-ana") to "https://wa.me/6281234567890",
-        ListingId("l-byte-brigade") to "https://t.me/bytebrigade",
+        ListingId("l-ana") to Contacts(phone = "6281234567890", instagram = "ana.designs"),
+        ListingId("l-byte-brigade") to Contacts(instagram = "bytebrigade", lineId = "bytebrigade"),
     )
 
     val badges = listOf(

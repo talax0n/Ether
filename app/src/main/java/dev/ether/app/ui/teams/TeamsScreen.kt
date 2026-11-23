@@ -1,5 +1,6 @@
 package dev.ether.app.ui.teams
 
+import dev.ether.app.ui.components.ContactButtons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,7 +14,6 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import dev.ether.app.ui.components.LedgeIconButton
 import dev.ether.app.ui.dayMonth
 import dev.ether.app.ui.theme.CoralSoft
 import dev.ether.app.ui.theme.Paper
@@ -34,7 +34,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -53,9 +52,6 @@ import dev.ether.app.ui.components.LoadingBox
 import dev.ether.app.ui.components.MessageBox
 import dev.ether.app.ui.components.Tone
 import dev.ether.app.ui.components.staggerIn
-import dev.ether.app.ui.contactApp
-import dev.ether.app.ui.contactLabel
-import dev.ether.app.ui.openContact
 import dev.ether.app.ui.theme.Arcade
 import dev.ether.app.ui.theme.GrapeSoft
 import dev.ether.app.ui.theme.Ink
@@ -186,33 +182,27 @@ private val EndedFill = Color(0xFFD9D3C7)
 
 @Composable
 private fun TeammateRow(mate: Teammate, isCaptain: Boolean, eventEnded: Boolean, busy: Boolean, onEndorse: (Teammate) -> Unit) {
-    val context = LocalContext.current
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Avatar(mate.name, null, 48.dp, color = Peach, ledge = 3.dp)
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(mate.name, style = MaterialTheme.typography.titleMedium, color = Arcade.colors.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            val detail = listOfNotNull(
-                "Captain".takeIf { isCaptain },
-                mate.contactUrl?.let(::contactApp),
-            ).joinToString(" · ")
-            if (detail.isNotEmpty()) Text(detail, style = MaterialTheme.typography.bodySmall, color = Arcade.colors.muted)
-        }
-        mate.contactUrl?.let { url ->
-            Spacer(Modifier.width(8.dp))
-            LedgeIconButton(ArcadeIcons.Chat, contactLabel(url), { openContact(context, url) }, size = 44.dp, color = MintSoft, tint = Ink)
-        }
-        if (eventEnded) {
-            Spacer(Modifier.width(8.dp))
-            if (mate.endorsedByMe) {
-                Chip("Endorsed", color = MintSoft, icon = ArcadeIcons.Check)
-            } else {
-                LedgeButton(
-                    "Endorse", { onEndorse(mate) }, Modifier.testTag("endorse ${mate.name}"),
-                    color = Sun, enabled = !busy, height = 44.dp, shape = RoundedCornerShape(14.dp),
-                )
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Avatar(mate.name, null, 48.dp, color = Peach, ledge = 3.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(mate.name, style = MaterialTheme.typography.titleMedium, color = Arcade.colors.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (isCaptain) Text("Captain", style = MaterialTheme.typography.bodySmall, color = Arcade.colors.muted)
+            }
+            if (eventEnded) {
+                Spacer(Modifier.width(8.dp))
+                if (mate.endorsedByMe) {
+                    Chip("Endorsed", color = MintSoft, icon = ArcadeIcons.Check)
+                } else {
+                    LedgeButton(
+                        "Endorse", { onEndorse(mate) }, Modifier.testTag("endorse ${mate.name}"),
+                        color = Sun, enabled = !busy, height = 44.dp, shape = RoundedCornerShape(14.dp),
+                    )
+                }
             }
         }
+        ContactButtons(mate.contacts, Modifier.padding(start = 60.dp))
     }
 }
 

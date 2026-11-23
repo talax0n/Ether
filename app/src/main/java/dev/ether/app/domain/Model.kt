@@ -16,14 +16,14 @@ data class Profile(
     val bio: String,
     val skills: List<String>,
     val roles: List<String>,
-    val contactUrl: String?,
+    val contacts: Contacts,
     val avatarUrl: String?,
     val xp: Int,
 ) {
     /** Mirrors the database's profile-completion rule (check_profile_complete): the app gates on it, the DB awards XP for it. */
     val isComplete: Boolean
         get() = name.isNotBlank() && !major.isNullOrBlank() && year != null && bio.isNotBlank() &&
-            skills.isNotEmpty() && roles.isNotEmpty() && !contactUrl.isNullOrBlank()
+            skills.isNotEmpty() && roles.isNotEmpty() && !contacts.isEmpty
 }
 
 /** What the user can edit about themselves. XP and id are owned by the database. */
@@ -34,7 +34,7 @@ data class ProfileDraft(
     val bio: String,
     val skills: List<String>,
     val roles: List<String>,
-    val contactUrl: String,
+    val contacts: Contacts,
 )
 
 data class Competition(
@@ -149,7 +149,7 @@ sealed interface DeckCard {
     ) : DeckCard
 }
 
-/** A match seen from the current user's side: [name] and [contactUrl] belong to the other listing. */
+/** A match seen from the current user's side: [name] and [contacts] belong to the other listing. */
 data class Match(
     val id: MatchId,
     val competitionId: CompetitionId,
@@ -157,7 +157,7 @@ data class Match(
     val otherKind: ListingKind,
     val name: String,
     val avatarUrl: String?,
-    val contactUrl: String?,
+    val contacts: Contacts,
     val createdAt: Instant,
 )
 
@@ -165,7 +165,7 @@ enum class TeamResult { FINALIST, WINNER }
 
 data class ReportedResult(val result: TeamResult, val reporterName: String, val reportedByMe: Boolean, val confirmed: Boolean)
 
-data class Teammate(val id: ProfileId, val name: String, val contactUrl: String?, val endorsedByMe: Boolean)
+data class Teammate(val id: ProfileId, val name: String, val contacts: Contacts, val endorsedByMe: Boolean)
 
 /** A team the signed-in user belongs to. [teammates] excludes the user. */
 data class MyTeam(

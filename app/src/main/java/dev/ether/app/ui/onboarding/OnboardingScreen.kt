@@ -83,7 +83,7 @@ import kotlin.math.sin
 
 enum class OnboardingPage(val title: String, val body: String) {
     SWIPE("Swipe to find\nyour hackathon team", "Right on the builders you want. Left to pass. Every card is someone entering the same competition."),
-    MATCH("Match, then\nmessage", "Two right swipes make a team. WhatsApp and Telegram links unlock only for the people you matched."),
+    MATCH("Match, then\nmessage", "Two right swipes make a team. WhatsApp, Instagram and LINE contacts unlock only for the people you matched."),
     LEVEL("Level up with\nevery event", "Earn XP for joining, shipping and winning. Teammates endorse you once the event ends."),
 }
 
@@ -242,9 +242,11 @@ private fun MatchHero() {
         Column(Modifier.align(Alignment.BottomCenter), horizontalAlignment = Alignment.CenterHorizontally) {
             Chip("It's a match!", color = Sun, icon = ArcadeIcons.Star)
             Spacer(Modifier.height(14.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Chip("WhatsApp", color = MintSoft, icon = ArcadeIcons.Chat)
-                Chip("Telegram", color = SkySoft, icon = ArcadeIcons.Chat)
+            // Three chips in a 300dp hero: no icons, so they fit side by side.
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Chip("WhatsApp", color = MintSoft)
+                Chip("Instagram", color = SkySoft)
+                Chip("LINE", color = SunSoft)
             }
         }
     }

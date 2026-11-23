@@ -25,6 +25,8 @@ object ArcadeIcons {
     val Flag = icon("M5 21V4M5 4h11l-2 4 2 4H5")
     val Shield = icon("M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6zM9 12l2 2 4-4")
     val Chat = icon("M4 20l1.5-4A8 8 0 1 1 9 19.5z")
+    val Phone = icon("M6 3h3l2 5-2.5 1.5a11 11 0 0 0 5 5L15 12l5 2v3a2 2 0 0 1-2 2A15 15 0 0 1 4 5a2 2 0 0 1 2-2z")
+    val Camera = icon("M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4zM8.5 12a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0-7 0M17 7h.01")
     val Edit = icon("M4 20h4L19 9l-4-4L4 16zM14 6l4 4")
     val ThumbUp = icon("M7 11v9H4v-9zM7 11l4-7a2 2 0 0 1 3 2l-1 4h5a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 16.8 20H7")
     val Check = icon("M5 12.5l4.5 4.5L19 7.5")

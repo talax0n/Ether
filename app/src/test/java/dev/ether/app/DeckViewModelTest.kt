@@ -3,6 +3,7 @@ package dev.ether.app
 import dev.ether.app.data.fake.DemoData
 import dev.ether.app.data.fake.FakeBackend
 import dev.ether.app.data.DeckRepository
+import dev.ether.app.domain.Contacts
 import dev.ether.app.domain.EtherError
 import dev.ether.app.domain.ListingId
 import dev.ether.app.domain.SwipeDirection
@@ -33,7 +34,7 @@ class DeckViewModelTest {
 
         val state = vm.state.value
         assertEquals("Ana Putri", state.match?.name)
-        assertEquals("https://wa.me/6281234567890", state.match?.contactUrl)
+        assertEquals(Contacts(phone = "6281234567890", instagram = "ana.designs"), state.match?.contacts)
         assertEquals(29, state.remaining)
         // The match put this solo on a team, so their solo listing is closed.
         assertEquals(DeckPhase.LISTING_CLOSED, state.phase)

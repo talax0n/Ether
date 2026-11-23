@@ -44,7 +44,7 @@ Ether gives each competition its own deck, so everyone you see shares your deadl
 - **Open sign-in.** Email and password, or a Google account.
 - **A deck for each competition.** You can enter one as a solo student, or create a team with open roles.
 - **Tinder-style swiping.** Drag with tilt and LIKE/NOPE stamps, plus buttons for accessibility.
-- **Mutual matches form teams automatically.** The match reveals the WhatsApp or Telegram link.
+- **Mutual matches form teams automatically.** The match reveals their WhatsApp number, Instagram handle or LINE ID.
 - **Outcome-based gamification.** You earn XP for forming teams, finishing events, receiving endorsements and confirmed results, not for swiping. You also get 8 levels, from Rookie to Legend, plus badges and a reliability score.
 - **Daily cap of 30 swipes,** so swipes stay deliberate.
 - **Arcade UI.** Outlined cards with solid offset shadows, springy press feedback, confetti on a match, an XP bar that counts up, haptics, a dark theme, and a reduced-motion mode.

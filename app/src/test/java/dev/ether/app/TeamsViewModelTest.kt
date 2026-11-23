@@ -2,6 +2,7 @@ package dev.ether.app
 
 import dev.ether.app.data.fake.DemoData
 import dev.ether.app.data.fake.FakeBackend
+import dev.ether.app.domain.ContactKind
 import dev.ether.app.domain.TeamResult
 import dev.ether.app.ui.teams.TeamsUiState
 import dev.ether.app.ui.teams.TeamsViewModel
@@ -31,7 +32,8 @@ class TeamsViewModelTest {
         val team = loaded(vm).teams.single()
         assertEquals("Night Owls", team.team.name)
         assertEquals(listOf("Ana Putri", "Budi Santoso"), team.team.teammates.map { it.name })
-        assertEquals("https://wa.me/6281234567890", team.team.teammates[0].contactUrl)
+        assertEquals("https://wa.me/6281234567890", team.team.teammates[0].contacts.entries.first().url)
+        assertEquals(listOf(ContactKind.LINE), team.team.teammates[1].contacts.entries.map { it.kind })
         assertTrue(team.eventEnded)
     }
 
