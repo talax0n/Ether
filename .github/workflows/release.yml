@@ -56,7 +56,7 @@ jobs:
           if [ -n "${{ secrets.SUPABASE_ANON_KEY }}" ]; then
             backend="Connects to the hosted Supabase backend."
           else
-            backend="**Demo mode:** runs on built-in sample data with no server. Sign in with any email and the code \`123456\`."
+            backend="**Demo mode:** runs on built-in sample data with no server. Sign in with any email and any password. Creating an account asks for the code \`123456\`."
           fi
           notes="Download \`ether-$TAG.apk\` below and open it on an Android 8.0+ phone (allow installs from your browser or file manager when asked).
 
