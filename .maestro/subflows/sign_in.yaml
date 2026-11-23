@@ -1,6 +1,8 @@
 appId: dev.ether.app
 ---
 # Signs in an existing account (the seeded demo users use the password ether-demo).
+- tapOn: "Continue with email"
+# First launch only: the intro pages play after the welcome screen.
 - tapOn:
     text: "Skip"
     optional: true

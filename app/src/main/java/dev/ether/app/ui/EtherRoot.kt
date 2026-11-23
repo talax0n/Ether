@@ -80,7 +80,6 @@ import dev.ether.app.ui.deck.DeckScreen
 import dev.ether.app.ui.matches.MatchesScreen
 import dev.ether.app.ui.profile.ProfileEditScreen
 import dev.ether.app.ui.profile.ProfileScreen
-import dev.ether.app.ui.onboarding.OnboardingScreen
 import dev.ether.app.ui.signin.SignInScreen
 import dev.ether.app.data.DeviceStore
 import kotlinx.coroutines.delay
@@ -117,8 +116,8 @@ fun EtherRoot(vm: AppViewModel = koinViewModel()) {
     val introMs = if (Arcade.reducedMotion) 300L else 1_100L
     LaunchedEffect(Unit) { delay(introMs); introDone = true }
     val screen = if (!introDone) AppUiState.Loading else state
-    Crossfade(screen to seenOnboarding, animationSpec = tween(Motion.SCREEN_MS), label = "root") { (s, seen) ->
-        RootScreen(s, seen, vm, onboarding::markOnboardingSeen)
+    Crossfade(screen, animationSpec = tween(Motion.SCREEN_MS), label = "root") { s ->
+        RootScreen(s, seenOnboarding, vm, onboarding::markOnboardingSeen)
     }
 }
 
@@ -126,7 +125,8 @@ fun EtherRoot(vm: AppViewModel = koinViewModel()) {
 private fun RootScreen(s: AppUiState, seenOnboarding: Boolean, vm: AppViewModel, onOnboarded: () -> Unit) {
     when (s) {
         AppUiState.Loading -> Splash()
-        AppUiState.SignedOut -> if (seenOnboarding) SignInScreen() else OnboardingScreen(onDone = onOnboarded)
+        // Welcome comes first; the intro pages play once, between choosing a way in and using it.
+        AppUiState.SignedOut -> SignInScreen(seenOnboarding, onOnboarded)
         // Keyed by user: this screen lives outside the NavHost, so its ViewModel would otherwise outlive a sign-out.
         is AppUiState.NeedsProfile -> ProfileEditScreen(
             isSetup = true, onDone = vm::recheck, onBack = {},
