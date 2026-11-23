@@ -40,7 +40,14 @@ data class ProfileDraft(
 )
 
 /** Illustrated faces a user can pick as their picture; it shows instead of a photo or initials. */
-enum class AvatarFace { NADIA, BUDI, CITRA, DIMAS, EKA, FAJAR }
+enum class AvatarFace {
+    NADIA, BUDI, CITRA, DIMAS, EKA, FAJAR, AYU, RIZKY,
+    PUTRI, ARIF, SARI, BAGUS, DEWI, HENDRA, RINA, YOGA,
+    INTAN, BIMA, MAYA, GALIH, LARAS, RAFI, WULAN, ALDI,
+    TIARA, KEVIN, ANISA, FARHAN, FITRI, ILHAM, RAHMA, REZA,
+    SALSA, DIKA, NABILA, RENDI, KIRANA, GILANG, DINDA, ANDRA,
+    VANIA, FIKRI, AULIA, SATRIA, MELATI, WAHYU, ZAHRA, IQBAL,
+}
 
 data class Competition(
     val id: CompetitionId,

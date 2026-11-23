@@ -172,7 +172,7 @@ Each award happens once per (profile, reason, reference), so retries never doubl
 
 Guests (the `anon` role) can read `competitions` (every column, details included) and nothing else, so the app can be browsed before signing up.
 
-Sign-up is open to any email (email and password, no confirmation step) and to Google accounts. An `auth.users` insert trigger creates the `profiles` row. The name comes from `user_metadata.name`, then `user_metadata.full_name` (Google), then the email's local part. The avatar comes from `user_metadata.avatar_url` or `user_metadata.picture` (Google). `avatar_face` (enum: `nadia, budi, citra, dimas, eka, fajar`) is a picked illustrated face; the app shows it instead of the photo or initials.
+Sign-up is open to any email (email and password, no confirmation step) and to Google accounts. An `auth.users` insert trigger creates the `profiles` row. The name comes from `user_metadata.name`, then `user_metadata.full_name` (Google), then the email's local part. The avatar comes from `user_metadata.avatar_url` or `user_metadata.picture` (Google). `avatar_face` (enum of 48 first names, one bundled drawing each) is a picked illustrated face; the app shows it instead of the photo or initials.
 
 ## Error messages
 

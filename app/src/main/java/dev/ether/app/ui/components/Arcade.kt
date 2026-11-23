@@ -273,6 +273,48 @@ val AvatarFace.drawable: Int
         AvatarFace.DIMAS -> R.drawable.face_dimas
         AvatarFace.EKA -> R.drawable.face_eka
         AvatarFace.FAJAR -> R.drawable.face_fajar
+        AvatarFace.AYU -> R.drawable.face_ayu
+        AvatarFace.RIZKY -> R.drawable.face_rizky
+        AvatarFace.PUTRI -> R.drawable.face_putri
+        AvatarFace.ARIF -> R.drawable.face_arif
+        AvatarFace.SARI -> R.drawable.face_sari
+        AvatarFace.BAGUS -> R.drawable.face_bagus
+        AvatarFace.DEWI -> R.drawable.face_dewi
+        AvatarFace.HENDRA -> R.drawable.face_hendra
+        AvatarFace.RINA -> R.drawable.face_rina
+        AvatarFace.YOGA -> R.drawable.face_yoga
+        AvatarFace.INTAN -> R.drawable.face_intan
+        AvatarFace.BIMA -> R.drawable.face_bima
+        AvatarFace.MAYA -> R.drawable.face_maya
+        AvatarFace.GALIH -> R.drawable.face_galih
+        AvatarFace.LARAS -> R.drawable.face_laras
+        AvatarFace.RAFI -> R.drawable.face_rafi
+        AvatarFace.WULAN -> R.drawable.face_wulan
+        AvatarFace.ALDI -> R.drawable.face_aldi
+        AvatarFace.TIARA -> R.drawable.face_tiara
+        AvatarFace.KEVIN -> R.drawable.face_kevin
+        AvatarFace.ANISA -> R.drawable.face_anisa
+        AvatarFace.FARHAN -> R.drawable.face_farhan
+        AvatarFace.FITRI -> R.drawable.face_fitri
+        AvatarFace.ILHAM -> R.drawable.face_ilham
+        AvatarFace.RAHMA -> R.drawable.face_rahma
+        AvatarFace.REZA -> R.drawable.face_reza
+        AvatarFace.SALSA -> R.drawable.face_salsa
+        AvatarFace.DIKA -> R.drawable.face_dika
+        AvatarFace.NABILA -> R.drawable.face_nabila
+        AvatarFace.RENDI -> R.drawable.face_rendi
+        AvatarFace.KIRANA -> R.drawable.face_kirana
+        AvatarFace.GILANG -> R.drawable.face_gilang
+        AvatarFace.DINDA -> R.drawable.face_dinda
+        AvatarFace.ANDRA -> R.drawable.face_andra
+        AvatarFace.VANIA -> R.drawable.face_vania
+        AvatarFace.FIKRI -> R.drawable.face_fikri
+        AvatarFace.AULIA -> R.drawable.face_aulia
+        AvatarFace.SATRIA -> R.drawable.face_satria
+        AvatarFace.MELATI -> R.drawable.face_melati
+        AvatarFace.WAHYU -> R.drawable.face_wahyu
+        AvatarFace.ZAHRA -> R.drawable.face_zahra
+        AvatarFace.IQBAL -> R.drawable.face_iqbal
     }
 
 fun initials(name: String) = name.split(' ').filter { it.isNotBlank() }.take(2).joinToString("") { it.take(1).uppercase() }
