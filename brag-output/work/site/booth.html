@@ -1,0 +1,163 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ether booth loop</title>
+<style>
+@font-face{font-family:N;src:url(a/nunito_black.ttf);font-weight:900}
+@font-face{font-family:N;src:url(a/nunito_extrabold.ttf);font-weight:800}
+:root{--ink:#1E1B2E;--cream:#FFF7EA;--coral:#FF5A36;--sun:#FFC233;--mint:#2BD47D;--sky:#3BA7FF;--grape:#8B5CF6;--muted:#5B5670;
+  --sunsoft:#FFE7A8;--skysoft:#CFE7FF;--coralsoft:#FFD6CB}
+*{box-sizing:border-box;margin:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:var(--cream)}
+#stage{position:relative;width:1920px;height:1080px;overflow:hidden;background:var(--cream);font-family:N;color:var(--ink)}
+.abs{position:absolute;left:0;top:0;transform-origin:0 0}
+#dots{position:absolute;inset:-40px;background-image:radial-gradient(rgba(30,27,46,.09) 2px,transparent 2.5px);background-size:36px 36px}
+#burst{position:absolute;inset:0;background:var(--grape)}
+#rays{position:absolute;left:50%;top:50%;width:3200px;height:3200px;margin:-1600px 0 0 -1600px;background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.10) 0 7.5deg,transparent 7.5deg 15deg)}
+#logo{display:flex;align-items:center;gap:22px}
+#logo img{width:96px}
+#logo div{font-weight:900;font-size:92px;letter-spacing:-3px;color:var(--coral);text-shadow:5px 5px 0 var(--ink);line-height:1}
+.blk{width:820px}
+.h{font-weight:900;font-size:128px;line-height:1;letter-spacing:-3px}
+.h .w{display:inline-block}
+.hl{color:var(--coral);text-shadow:6px 6px 0 var(--ink)}
+.sub{font-weight:800;font-size:44px;color:var(--muted);margin-top:26px}
+.chip{display:inline-flex;align-items:center;gap:14px;border:4px solid var(--ink);border-radius:999px;padding:7px 28px 7px 7px;font-weight:900;font-size:38px;background:#fff;box-shadow:5px 5px 0 var(--ink);margin-bottom:30px;transform-origin:0 50%}
+.chip i{width:56px;height:56px;border-radius:50%;border:3.5px solid var(--ink);display:grid;place-items:center}
+.chip svg{width:30px;height:30px;fill:none;stroke:var(--ink);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+#steps{display:flex;gap:14px}
+#steps span{width:22px;height:22px;border-radius:999px;border:3.5px solid var(--ink);background:#fff}
+#phone{width:452px;height:986px;border-radius:64px;background:var(--ink);padding:16px;box-shadow:16px 16px 0 rgba(30,27,46,.92);transform-origin:50% 50%}
+#phone .scr{position:relative;width:420px;height:934px;border-radius:50px;overflow:hidden;background:var(--cream)}
+#phone .scr img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#phone .notch{position:absolute;left:50%;top:14px;width:22px;height:22px;margin-left:-11px;border-radius:50%;background:var(--ink);z-index:3}
+#qrcard{background:#fff;border:5px solid var(--ink);border-radius:36px;box-shadow:12px 12px 0 var(--ink);padding:26px;text-align:center;width:380px}
+#qrcard img{width:322px;height:322px;display:block;image-rendering:pixelated}
+#qrcard b{display:block;font-weight:900;font-size:38px;margin-top:12px;line-height:1.1}
+.pill{display:inline-block;border:4px solid var(--ink);border-radius:999px;padding:10px 26px;font-weight:900;font-size:32px;background:var(--mint);box-shadow:5px 5px 0 var(--ink)}
+#band{position:absolute;left:-10px;right:-10px;top:1004px;height:90px;background:var(--coral);border-top:5px solid var(--ink);overflow:hidden}
+#tick{position:absolute;left:0;top:14px;white-space:nowrap;font-weight:900;font-size:44px;color:var(--cream);letter-spacing:1px}
+#etha{width:256px;height:256px;transform-origin:50% 100%}
+#etha .sp{width:256px;height:256px;background:url(a/etha_sheet.png) no-repeat;background-size:3072px 3584px}
+#shadow{width:170px;height:26px;border-radius:50%;background:rgba(30,27,46,.16);transform-origin:50% 50%}
+.conf{position:absolute;left:0;top:0;width:18px;height:28px;border:3px solid var(--ink);border-radius:4px}
+</style></head>
+<body><div id="stage">
+  <div id="dots"></div>
+  <div id="burst"><div id="rays"></div></div>
+  <div id="logo" class="abs"><img src="a/ether_mark.png"><div>ether</div></div>
+  <div id="blocks"></div>
+  <div id="steps" class="abs"><span></span><span></span><span></span><span></span></div>
+  <div id="phone" class="abs"><div class="scr"><img id="scr"><div class="notch"></div></div></div>
+  <div id="qr" class="abs"><div id="qrcard"><img src="a/qr.png"><b>Scan to get<br>the APK</b></div></div>
+  <div id="pill" class="abs"><span class="pill">Android · free</span></div>
+  <div id="confetti"></div>
+  <div id="shadow" class="abs"></div>
+  <div id="etha" class="abs"><div class="sp"></div></div>
+  <div id="band"><div id="tick"></div></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const seg=(t,a,b)=>clamp((t-a)/(b-a));
+const ex=x=>x>=1?1:1-Math.pow(2,-10*x);
+const eb=x=>{const c=1.7,c3=c+1;return 1+c3*Math.pow(x-1,3)+c*Math.pow(x-1,2)};
+const eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const lerp=(a,b,k)=>a+(b-a)*k;
+function put(el,x,y,{s=1,r=0,o=1,sx=1,sy=1}={}){el.style.transform=`translate(${x}px,${y}px) rotate(${r}deg) scale(${s*sx},${s*sy})`;el.style.opacity=o}
+
+const LOOP=24, SEG=6;                       // four steps, six seconds each; t=24 is t=0
+const wrap=(t,b)=>((t-b+LOOP/2)%LOOP+LOOP)%LOOP-LOOP/2;   // signed distance from boundary b, wrapping round the loop
+
+// ---------- the four steps ----------
+const ICON={
+  trophy:'<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M8.5 20h7"/>',
+  cards:'<rect x="8" y="4" width="11" height="15" rx="2.5" transform="rotate(8 13 12)"/><rect x="4.5" y="5" width="11" height="15" rx="2.5" transform="rotate(-8 10 12)" fill="#fff"/>',
+  heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="#FF5A36"/>',
+  bolt:'<path d="M13 3 5 14h6l-1 7 8-11h-6z" fill="#1E1B2E"/>'};
+const STEPS=[
+  {chip:['Compete','var(--sunsoft)','trophy'], h:'<span class="w">Need</span> <span class="w">a</span> <span class="w hl">team?</span>', sub:'Every hackathon gets its own deck.'},
+  {chip:['Swipe','var(--skysoft)','cards'], h:'<span class="w">Swipe</span> <span class="w">right</span><br><span class="w">on</span> <span class="w hl">builders.</span>', sub:'Left to pass.'},
+  {chip:['Match','var(--coralsoft)','heart'], h:'<span class="w">Both</span> <span class="w">say</span><br><span class="w" style="color:var(--sun);text-shadow:6px 6px 0 var(--ink)">yes.</span>', sub:'Team formed. WhatsApp unlocked.', dark:true},
+  {chip:['Level up','var(--sun)','bolt'], h:'<span class="w">Earn</span> <span class="w">XP</span> <span class="w">for</span><br><span class="w hl">shipping.</span>', sub:'Not for swiping.'}];
+const blocks=STEPS.map(st=>{const d=document.createElement('div');d.className='abs blk';
+  d.innerHTML=`<div class="chip"><i style="background:${st.chip[1]}"><svg viewBox="0 0 24 24">${ICON[st.chip[2]]}</svg></i>${st.chip[0]}</div><div class="h" ${st.dark?'style="color:#fff"':''}>${st.h}</div><div class="sub" ${st.dark?'style="color:#EDE6FF"':''}>${st.sub}</div>`;
+  $('blocks').appendChild(d);return {d,ws:[...d.querySelectorAll('.w')],chip:d.querySelector('.chip'),sub:d.querySelector('.sub')}});
+
+// ticker: one unit repeated; it travels exactly a whole number of units per loop
+$('tick').innerHTML=('SWIPE TO FIND YOUR HACKATHON TEAM&nbsp;&nbsp;✦&nbsp;&nbsp;SCAN THE QR TO GET ETHER&nbsp;&nbsp;✦&nbsp;&nbsp;').repeat(8);
+let unitW=0, units=1;
+
+// confetti for the match step, seeded
+let seed=11;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+const CC=['#FF5A36','#FFC233','#2BD47D','#3BA7FF','#fff','#FFD6CB'];
+const conf=[...Array(50)].map(()=>{const d=document.createElement('div');d.className='conf';d.style.background=CC[Math.floor(rnd()*CC.length)];$('confetti').appendChild(d);
+  return {d,vx:(rnd()-.5)*1600,vy:-700-rnd()*800,r:rnd()*360,vr:(rnd()-.5)*900}});
+
+const CLIPS={list:['list',126,1],dm:['dm',198,1],xp:['xp',110,26]};
+function clipSrc(name,local){const [d,n,f]=CLIPS[name];const i=Math.min(n,f+Math.max(0,Math.floor(local*30)));return `f/${d}/${String(i).padStart(3,'0')}.jpg`}
+const MOVE={idle:[0,12,83],wave:[1,11,68],celebrate:[2,11,68],levelup:[3,6,125],look:[5,8,100],tap:[7,8,100],react:[8,8,80],hop:[10,7,70]};
+function pose(name,local,loop=true){const [row,n,ms]=MOVE[name];let f=Math.floor(Math.max(0,local)*1000/ms);f=loop?f%n:Math.min(n-1,f);$('etha').firstChild.style.backgroundPosition=`${-f*256}px ${-row*256}px`}
+
+const EX=640, EG=990, ES=1.15;               // Etha's spot: right of the step dots, standing on the ticker
+window.render=async function(t){
+  t=((t%LOOP)+LOOP)%LOOP;
+  if(!unitW){unitW=$('tick').scrollWidth/8; units=Math.max(1,Math.round(90*LOOP/unitW))}
+  const i=Math.floor(t/SEG), u=t-i*SEG;
+  $('dots').style.transform=`translate(${(t*12)%36}px,${(t*6)%36}px)`;            // 288 px and 144 px per loop: whole tiles
+  $('tick').style.transform=`translateX(${-(t/LOOP)*units*unitW}px)`;
+  put($('logo'),110,64);
+
+  // ---- purple burst for the match step: grows out of Etha, shrinks back into Etha
+  const bk=eio(seg(t,12.15,12.8))*(1-eio(seg(t,17.35,17.95)));
+  $('burst').style.clipPath=`circle(${bk*2400}px at ${EX}px ${EG-150}px)`; $('burst').style.opacity=bk>0?1:0;
+  $('rays').style.transform=`rotate(${t*15}deg)`;
+  const dark=bk>.5;
+  $('logo').lastChild.style.textShadow='5px 5px 0 var(--ink)';
+
+  // ---- headline blocks: in at the start of a step, out at its end
+  blocks.forEach((b,j)=>{const a=j*SEG;
+    if(i!==j){b.d.style.opacity=0;return}
+    const out=eio(seg(u,SEG-.45,SEG-.1));b.d.style.opacity=1-out;
+    put(b.d,120,250-out*30,{o:1-out});
+    const ck=eb(seg(u,.25,.6));b.chip.style.opacity=clamp(ck*3);b.chip.style.transform=`rotate(${lerp(-12,-3,clamp(ck))}deg) scale(${ck})`;
+    b.ws.forEach((w,k)=>{const q=ex(seg(u,.45+k*.11,.9+k*.11));w.style.opacity=q;w.style.transform=`translateY(${(1-q)*40}px)`;w.style.filter=q<.98?`blur(${(1-q)*14}px)`:'none'});
+    const sq=ex(seg(u,1.2,1.7));b.sub.style.opacity=sq;b.sub.style.filter=sq<.98?`blur(${(1-sq)*10}px)`:'none'});
+  // step dots
+  [...$('steps').children].forEach((d,j)=>{d.style.background=j===i?(dark?'var(--sun)':'var(--coral)'):'#fff';d.style.width=j===i?'56px':'22px'});
+  put($('steps'),124,830);
+
+  // ---- phone: flips edge-on at every step boundary and swaps screens while it's edge-on
+  let flip=1; for(let j=0;j<4;j++){const k=wrap(t,j*SEG);if(Math.abs(k)<.28)flip=eio(Math.abs(k)/.28)}
+  const fy=60+Math.sin(2*Math.PI*t/(LOOP/4))*10;
+  $('phone').style.transform=`translate(970px,${fy}px) rotate(-3deg) scale(${.9*flip},.9)`;
+  let src;
+  if(i===0)src=clipSrc('list',u);
+  else if(i===1)src=clipSrc('dm',clamp(u-1.0,0,2.45));
+  else if(i===2)src=clipSrc('dm',2.62+u);
+  else src=clipSrc('xp',u);
+  const img=$('scr'); if(img.getAttribute('src')!==src){img.src=src;try{await img.decode()}catch(e){}}
+
+  // ---- QR is always there; a gentle sway so the eye finds it
+  put($('qr'),1500,170,{r:2+Math.sin(2*Math.PI*t/(LOOP/3))*1.5});
+  put($('pill'),1560,770);
+
+  // ---- confetti out of Etha when the match lands
+  conf.forEach(c=>{const lt=t-12.5;if(lt<0||t>17.3){c.d.style.opacity=0;return}
+    c.d.style.opacity=1-seg(t,16.6,17.3);c.d.style.transform=`translate(${EX+c.vx*lt*.5}px,${EG-200+c.vy*lt+1300*lt*lt}px) rotate(${c.r+c.vr*lt}deg)`});
+
+  // ---- Etha: a hop at every boundary, a move that fits each step in between
+  let hopK=null; for(let j=0;j<4;j++){const k=wrap(t,j*SEG);if(k>-.35&&k<.2)hopK=(k+.35)/.55}
+  let y=EG, sx=1, sy=1;
+  if(hopK!==null){y=EG-Math.sin(Math.PI*hopK)*150;sx=1-.08*Math.sin(Math.PI*hopK);sy=1+.12*Math.sin(Math.PI*hopK);pose('hop',.28,false)}
+  else{
+    const land=wrap(t,i*SEG)-.2; if(land<.4){const q=Math.exp(-land*8)*Math.cos(land*24);sy=1-.25*q;sx=1+.22*q}
+    if(i===0)pose('look',(u-.3)%1.6,false);
+    else if(i===1)pose(u<3?'tap':'react',u<3?u%.8:u-3,u<3);
+    else if(i===2)pose('celebrate',(u-.3)%1.4,false);
+    else pose(u<2.2?'levelup':'wave',u<2.2?u-.4:(u-2.2)%1.8,false);
+  }
+  $('etha').style.transform=`translate(${EX-128}px,${y-256}px) scale(${ES*sx},${ES*sy})`;
+  const lift=clamp((EG-y)/300);
+  $('shadow').style.transform=`translate(${EX-85}px,${EG-31}px) scale(${ES*(1-lift*.4)})`;$('shadow').style.opacity=.9-lift*.5;
+};
+window.ready=Promise.all([document.fonts.ready,...[...document.images].map(i=>i.decode().catch(()=>{}))]);
+</script></body></html>

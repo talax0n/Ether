@@ -1,0 +1,310 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ether</title>
+<style>
+@font-face{font-family:N;src:url(a/nunito_black.ttf);font-weight:900}
+@font-face{font-family:N;src:url(a/nunito_extrabold.ttf);font-weight:800}
+:root{--ink:#1E1B2E;--cream:#FFF7EA;--coral:#FF5A36;--sun:#FFC233;--mint:#2BD47D;--sky:#3BA7FF;--grape:#8B5CF6;--muted:#5B5670;
+  --sunsoft:#FFE7A8;--skysoft:#CFE7FF;--coralsoft:#FFD6CB;--mintsoft:#C9F5DD;--grapesoft:#E4D8FF}
+*{box-sizing:border-box;margin:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:var(--cream)}
+#stage{position:relative;width:1920px;height:1080px;overflow:hidden;background:var(--cream);font-family:N;color:var(--ink)}
+.abs{position:absolute;left:0;top:0;will-change:transform,opacity;transform-origin:50% 50%}
+#dots{position:absolute;inset:-40px;background-image:radial-gradient(rgba(30,27,46,.09) 2px,transparent 2.5px);background-size:36px 36px}
+#burst{position:absolute;inset:0;opacity:0;background:var(--grape)}
+#rays{position:absolute;left:50%;top:50%;width:3200px;height:3200px;margin:-1600px 0 0 -1600px;
+  background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.10) 0 7.5deg,transparent 7.5deg 15deg)}
+.bub{display:flex;align-items:center;gap:18px;white-space:nowrap}
+.bub img{width:72px;height:72px;border-radius:50%;border:4px solid var(--ink);background:#fff}
+.bub .b{background:#fff;border:4px solid var(--ink);border-radius:30px 30px 30px 8px;padding:16px 26px;font-weight:800;font-size:34px;box-shadow:6px 6px 0 var(--ink)}
+.bub.hero .b{font-size:64px;padding:26px 40px;border-radius:44px 44px 44px 10px;box-shadow:10px 10px 0 var(--ink)}
+.bub.hero img{width:120px;height:120px;border-width:5px}
+.caret{display:inline-block;width:5px;height:60px;background:var(--coral);vertical-align:-8px;margin-left:4px}
+.h{font-weight:900;font-size:104px;line-height:1.02;letter-spacing:-2px}
+.h .w{display:inline-block}
+.hl{color:var(--coral);text-shadow:5px 5px 0 var(--ink)}
+.sub{font-weight:800;font-size:38px;color:var(--muted);line-height:1.3}
+/* sticker chip in place of the old numbered labels; same shape as the app's stickers */
+.chip{display:inline-flex;align-items:center;gap:14px;border:4px solid var(--ink);border-radius:999px;padding:7px 28px 7px 7px;
+  font-weight:900;font-size:36px;background:#fff;box-shadow:5px 5px 0 var(--ink);margin-bottom:30px;transform-origin:0 50%}
+.chip i{width:52px;height:52px;border-radius:50%;border:3.5px solid var(--ink);display:grid;place-items:center}
+.chip svg{width:28px;height:28px;fill:none;stroke:var(--ink);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+#phone{width:452px;height:986px;border-radius:64px;background:var(--ink);padding:16px;box-shadow:16px 16px 0 rgba(30,27,46,.92)}
+#phone .scr{position:relative;width:420px;height:934px;border-radius:50px;overflow:hidden;background:var(--cream)}
+#phone .scr img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#phone .notch{position:absolute;left:50%;top:14px;width:22px;height:22px;margin-left:-11px;border-radius:50%;background:var(--ink);z-index:3}
+#etha{width:256px;height:256px;transform-origin:50% 100%}
+#etha .sp{width:256px;height:256px;background:url(a/etha_sheet.png) no-repeat;background-size:3072px 3584px}
+#shadow{width:170px;height:26px;border-radius:50%;background:rgba(30,27,46,.16)}
+#hi{background:#fff;border:4px solid var(--ink);border-radius:30px 30px 30px 8px;padding:12px 26px;font-weight:900;font-size:44px;box-shadow:6px 6px 0 var(--ink);transform-origin:0 100%}
+#mark{width:240px}
+#word{font-weight:900;font-size:220px;letter-spacing:-6px;color:var(--coral);text-shadow:9px 9px 0 var(--ink);line-height:1}
+#qrcard{background:#fff;border:5px solid var(--ink);border-radius:36px;box-shadow:12px 12px 0 var(--ink);padding:28px;text-align:center;width:360px}
+#qrcard img{width:300px;height:300px;display:block;image-rendering:pixelated}
+#qrcard div{font-weight:900;font-size:34px;margin-top:14px}
+.pill{display:inline-block;border:4px solid var(--ink);border-radius:999px;padding:10px 26px;font-weight:900;font-size:30px;background:var(--mint);box-shadow:5px 5px 0 var(--ink)}
+#qr{z-index:5}#etha{z-index:6}#fx{position:absolute;inset:0;z-index:7;pointer-events:none}
+#ring{width:200px;height:200px;margin:-100px 0 0 -100px;border-radius:50%;border:10px solid var(--sun)}
+.star{position:absolute;left:0;top:0;width:60px;height:60px;margin:-30px 0 0 -30px;font-size:56px;line-height:60px;text-align:center;-webkit-text-stroke:3px var(--ink);font-weight:900}
+.puff{position:absolute;left:0;top:0;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:50%;background:#fff;border:4px solid var(--ink)}
+#scan{z-index:8;background:var(--sun);border:4px solid var(--ink);border-radius:30px 30px 8px 30px;padding:12px 26px;font-weight:900;font-size:40px;box-shadow:6px 6px 0 var(--ink);transform-origin:100% 100%;white-space:nowrap}
+.conf{position:absolute;width:18px;height:28px;border:3px solid var(--ink);border-radius:4px}
+/* vertical 1080x1920: key content stays inside the centre 1080x1350 (4:5 feed crop) */
+body.v,body.v #stage{width:1080px;height:1920px}
+body.v .h{font-size:86px;letter-spacing:-2px}
+body.v .bub.hero .b{font-size:50px;padding:22px 32px}
+body.v .bub.hero img{width:100px;height:100px}
+body.v .sub{font-size:36px}
+body.v #t2 .h{font-size:130px!important;text-align:center}
+body.v #t2 .sub{text-align:center;width:900px!important}
+body.v #tag{font-size:64px!important}
+</style></head>
+<body><div id="stage">
+  <div id="dots"></div>
+  <div id="burst"><div id="rays"></div></div>
+  <div id="bubbles"></div>
+  <div id="hero" class="abs bub hero"><img src="a/face_dimas.png"><div class="b"><span id="heroText"></span><span class="caret" id="caret"></span></div></div>
+  <div id="logo" class="abs" style="display:flex;align-items:center;gap:40px"><img id="mark" src="a/ether_mark.png"><div id="word">ether</div></div>
+  <div id="tag" class="abs h" style="font-size:66px;letter-spacing:-1px"></div>
+  <div id="t2" class="abs"><div class="h" style="font-size:150px;letter-spacing:-4px"></div><div class="sub" style="margin-top:24px;font-size:44px;width:820px"></div></div>
+  <div id="t3" class="abs"><div class="chip"><i style="background:var(--sunsoft)"><svg viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M8.5 20h7"/></svg></i>Compete</div><div class="h"></div><div class="sub" style="margin-top:26px;width:640px"></div></div>
+  <div id="t4" class="abs"><div class="chip"><i style="background:var(--skysoft)"><svg viewBox="0 0 24 24"><rect x="8" y="4" width="11" height="15" rx="2.5" transform="rotate(8 13 12)"/><rect x="4.5" y="5" width="11" height="15" rx="2.5" transform="rotate(-8 10 12)" fill="#fff"/></svg></i>Swipe</div><div class="h"></div></div>
+  <div id="t5" class="abs"><div class="chip"><i style="background:var(--coralsoft)"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="var(--coral)"/></svg></i>Match</div><div class="h" style="color:#fff"></div><div class="sub" style="margin-top:26px;color:#EDE6FF"></div></div>
+  <div id="t6" class="abs"><div class="chip"><i style="background:var(--sun)"><svg viewBox="0 0 24 24"><path d="M13 3 5 14h6l-1 7 8-11h-6z" fill="var(--ink)"/></svg></i>Level up</div><div class="h"></div></div>
+  <div id="phone" class="abs"><div class="scr"><img id="scr"><div class="notch"></div></div></div>
+  <div id="qr" class="abs"><div id="qrcard"><img src="a/qr.png"><div>Scan to get the APK</div></div></div>
+  <div id="cta" class="abs"><span class="pill">Android · free</span></div>
+  <div id="shadow" class="abs"></div>
+  <div id="etha" class="abs"><div class="sp"></div></div>
+  <div id="hi" class="abs">hi! 👋</div>
+  <div id="fx"><div id="ring" class="abs"></div></div>
+  <div id="scan" class="abs">scan me! 👇</div>
+  <div id="confetti"></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const seg=(t,a,b)=>clamp((t-a)/(b-a));
+const ex=x=>x>=1?1:1-Math.pow(2,-10*x);
+const eb=x=>{const c=1.7,c3=c+1;return 1+c3*Math.pow(x-1,3)+c*Math.pow(x-1,2)};
+const eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const lerp=(a,b,k)=>a+(b-a)*k;
+function put(el,x,y,{s=1,r=0,o=1,blur=0}={}){el.style.transform=`translate(${x}px,${y}px) rotate(${r}deg) scale(${s})`;el.style.opacity=o;el.style.filter=blur>0.05?`blur(${blur}px)`:'none'}
+function words(el,text){el.innerHTML=text.split(' ').map(w=>`<span class="w">${w}</span>`).join(' ');return [...el.querySelectorAll('.w')]}
+function wordsIn(ws,t,start,step=.11){ws.forEach((w,i)=>{const k=ex(seg(t,start+i*step,start+i*step+.45));w.style.opacity=k;w.style.transform=`translateY(${(1-k)*40}px)`;w.style.filter=k<.98?`blur(${(1-k)*14}px)`:'none'})}
+const ws=el=>[...el.querySelectorAll('.w')];
+
+const V=location.search.includes('v'); if(V)document.body.classList.add('v');
+// every position that differs between the 16:9 and the 9:16 cut
+const G=V?{
+  heroX:90,heroY:860,heroW:900, runX0:1250,runV:1800,runG:1110,
+  pos:[[40,320],[420,200],[780,430],[60,1180],[380,1330],[700,560],[40,560],[560,1110],[120,1500],[600,1560],[300,700],[420,1450]],
+  logo:[0,560,.9], mark:[0,0], tag:[160,900,760], land:[540,1400],
+  meet:[540,1080,2.0], hi:[700,520], t2:[90,1130], t2w:900,
+  phoneIn:[314,1950], phone:[[314,697,-4],[314,697,3],[314,697,-3],[314,697,3]], phoneS:.78,
+  st:{compete:[890,1575,.9],swipe:[190,1575,.9],match:[890,1575,1.0],xp:[190,1575,.95],exitX:-320,exitRun:'runL'},
+  blk:{t3:[90,345],t4:[90,345],t5:[90,345],t6:[90,345]}, subW:900,
+  out:{logo:[0,340,.7],tag:[160,600,760,'center'],cta:[390,1505],qr:[360,1020],CX:540,TOP:1038,peek:[1300,1130],scan:[660,870]}
+}:{
+  heroX:440,heroY:400,heroW:1000, runX0:2100,runV:3000,runG:860,
+  pos:[[80,70],[1150,110],[1560,250],[110,760],[1080,800],[260,190],[40,300],[1380,560],[520,930],[1380,960],[860,230],[160,580]],
+  logo:[540,250,1], mark:[665,380], tag:[260,620,1400], land:[1570,560],
+  meet:[520,930,2.3], hi:[680,250], t2:[960,360], t2w:820,
+  phoneIn:[1230,1150], phone:[[1230,48,-4],[440,48,3],[1240,48,-3],[460,48,3]], phoneS:1,
+  st:{compete:[1760,1040,.95],swipe:[1010,1040,1],match:[560,1010,1.3],xp:[1720,1030,1.1],exitX:2300,exitRun:'runR'},
+  blk:{t3:[150,300],t4:[930,330],t5:[150,330],t6:[1030,250]}, subW:640,
+  out:{logo:[140,270,.82],tag:[200,580,1250,'left'],cta:[200,720],qr:[1420,300],CX:1605,TOP:318,peek:[600,430],scan:[1210,140]}
+};
+
+// ---------- timeline (seconds, on the 120 BPM grid) ----------
+const T={knock:2.55,reveal:3.5,meet:6.5,pick:8.5,swipe:12.5,match:16.5,xp:21,outro:24,end:30};
+const DM_START=T.match-2.67;   // deck→match take: the purple screen lands 2.67 s into it
+
+// ---------- scene 1: the group chat ----------
+const HERO='anyone need a designer?';
+const BUBS=[['face_nadia','need 1 backend for GEMASTIK 🙏'],['face_budi','still looking for a team…'],['face_eka','bump'],['face_fajar','anyone?? deadline friday'],
+ ['face_citra','DM me if you need a UI person'],['face_nadia','bump'],['face_budi','looking for 2 more, data + mobile'],['face_eka','is this team still open?'],
+ ['face_fajar','bump bump'],['face_citra','anyone need a designer??'],['face_dimas','pls'],['face_nadia','hackathon team? reply here']];
+const POS=G.pos;
+const bubEls=BUBS.map(([f,txt])=>{const d=document.createElement('div');d.className='abs bub';d.innerHTML=`<img src="a/${f}.png"><div class="b">${txt}</div>`;$('bubbles').appendChild(d);return d});
+// Etha runs right to left; each bubble flies off when Etha reaches its middle
+const RUN_V=G.runV, RUN_X0=G.runX0;
+const runX=t=>RUN_X0-(t-T.knock)*RUN_V;
+const hitTime=x=>T.knock+(RUN_X0-x)/RUN_V;
+let bubW=null;
+
+// ---------- copy ----------
+const tagW=words($('tag'),'Swipe to find your hackathon team.');
+$('t2').children[0].innerHTML='<span class="w">Meet</span> <span class="w hl">Etha.</span>';
+const t2w=ws($('t2').children[0]); const t2s=words($('t2').children[1],'Your team-finding sidekick.');
+$('t3').children[1].innerHTML='<span class="w">Pick</span> <span class="w">your</span><br><span class="w hl">competition.</span>';
+const t3w=ws($('t3').children[1]); const t3s=words($('t3').children[2],'Everyone in the deck shares your deadline.');
+$('t4').children[1].innerHTML='<span class="w">Left</span> <span class="w">to</span> <span class="w">pass.</span><br><span class="w">Right</span> <span class="w">to</span> <span class="w hl">team&nbsp;up.</span>';
+const t4w=ws($('t4').children[1]);
+$('t5').children[1].innerHTML='<span class="w">Both</span> <span class="w">say</span> <span class="w" style="color:var(--sun);text-shadow:5px 5px 0 var(--ink)">yes.</span>';
+const t5w=ws($('t5').children[1]); const t5s=words($('t5').children[2],'Team formed. WhatsApp unlocked.');
+$('t6').children[1].innerHTML='<span class="w">Level</span> <span class="w">up</span> <span class="w">for</span><br><span class="w hl">shipping,</span><br><span class="w">not</span> <span class="w">swiping.</span>';
+const t6w=ws($('t6').children[1]);
+
+let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+const CC=['#FF5A36','#FFC233','#2BD47D','#3BA7FF','#fff','#FFD6CB'];
+const conf=[...Array(70)].map(()=>{const d=document.createElement('div');d.className='conf';d.style.background=CC[Math.floor(rnd()*CC.length)];$('confetti').appendChild(d);
+  return {d,x:G.st.match[0]+(rnd()-.5)*120,y:G.st.match[1]-150,vx:(rnd()-.5)*2400,vy:-900-rnd()*900,r:rnd()*360,vr:(rnd()-.5)*900}});
+
+const CLIPS={list:['list',126,1],dm:['dm',198,1],xp:['xp',110,26]};
+function clipSrc(name,local){const [d,n,f]=CLIPS[name];const i=Math.min(n,f+Math.max(0,Math.floor(local*30)));return `f/${d}/${String(i).padStart(3,'0')}.jpg`}
+// Etha sprite rows, from Etha.kt: row, frames, ms per frame
+const MOVE={idle:[0,12,83],wave:[1,11,68],celebrate:[2,11,68],levelup:[3,6,125],look:[5,8,100],tap:[7,8,100],react:[8,8,80],hop:[10,7,70],runL:[13,8,80],runR:[12,8,80]};
+
+// ---------- Etha's one continuous path from "Meet Etha" to the outro ----------
+// Holds at a spot per scene; every scene change is Etha travelling (hop, run, jump) between spots.
+function track(t){
+  const M=T.meet,P=T.pick,S=T.swipe,X=T.match,L=T.xp,O=T.outro, PI=Math.PI;
+  const bob=Math.abs(Math.sin(t*20))*16;                       // running bounce
+  const [lx,lg]=G.land, [mx,mg,ms]=G.meet, C=G.st.compete, W=G.st.swipe, Mt=G.st.match, Xp=G.st.xp;
+  const runTo=(a,b)=>b[0]<a[0]?'runL':'runR';
+  if(t<P-.4){const k=eio(seg(t,M-.35,M+.25));
+    return {x:lerp(lx,mx,k),y:lerp(lg,mg,k),s:lerp(1.15,ms,k),pose:['wave',(t-M-.1)%1.4,false]}}
+  if(t<P+.25){const p=seg(t,P-.4,P+.25),pe=eio(p),g=lerp(mg,C[1],pe);   // A: hop down beside the phone
+    return {x:lerp(mx,C[0],pe),y:g-Math.sin(PI*p)*380,g,s:lerp(ms,C[2],pe),r:Math.sin(PI*p)*-10,sx:1-.1*Math.sin(PI*p),sy:1+.16*Math.sin(PI*p),pose:['hop',.28,false]}}
+  if(t<S-.15){const [sx,sy]=squash(t,P+.25);return {x:C[0],y:C[1],s:C[2],sx,sy,pose:['look',(t-P-.6)%1.6,false],dust:P+.25}}
+  if(t<S+.5){const p=seg(t,S-.15,S+.5);                          // B: run to the swipe spot, leading the phone
+    return {x:lerp(C[0],W[0],eio(p)),y:W[1]-bob*(1-p*p),g:W[1],s:lerp(C[2],W[2],p),pose:[runTo(C,W),t-S,true]}}
+  if(t<X-.2){const lt=t-DM_START;return {x:W[0],y:W[1],s:W[2],pose:lt<1.9?['tap',(t-S-.5)%.8,true]:['react',lt-1.9,false]}}
+  if(t<X+.35){const p=seg(t,X-.2,X+.35),pe=eio(p),g=lerp(W[1],Mt[1],pe); // C: leap, the purple bursts out of Etha
+    return {x:lerp(W[0],Mt[0],pe),y:g-Math.sin(PI*p)*330,g,s:lerp(W[2],Mt[2],pe),r:(Mt[0]<W[0]?-1:1)*pe*360,origin:'50% 60%',pose:['celebrate',.41,false]}}
+  if(t<L-.25){const [sx,sy]=squash(t,X+.35);return {x:Mt[0],y:Mt[1],s:Mt[2],sx,sy,pose:['celebrate',(t-X-.45)%1.6,false],dust:X+.35}}
+  if(t<L+.45){const p=seg(t,L-.25,L+.45);                         // D: run on, the purple shrinks back into Etha
+    return {x:lerp(Mt[0],Xp[0],eio(p)),y:lerp(Mt[1],Xp[1],p)-bob*(1-p*p),g:lerp(Mt[1],Xp[1],p),s:lerp(Mt[2],Xp[2],p),pose:[runTo(Mt,Xp),t-L,true]}}
+  if(t<O-.3)return {x:Xp[0],y:Xp[1],s:Xp[2],pose:['levelup',t-L-.55,false]};
+  if(t<O+.45){const p=seg(t,O-.3,O+.45);                          // E: run off screen
+    return {x:lerp(Xp[0],G.st.exitX,p*p),y:Xp[1]-bob,g:Xp[1],s:Xp[2],pose:[G.st.exitRun,t-O,true]}}
+  return null;
+}
+function drawTrack(st){const e=$('etha');e.style.transformOrigin=st.origin||'50% 100%';
+  etha(st.x,st.y,st.s,1,st.r||0,st.sx||1,st.sy||1); pose(st.pose[0],st.pose[1],st.pose[2]);
+  const g=st.g??st.y, lift=clamp((g-st.y)/400); put($('shadow'),st.x-85,g-13-16*st.s,{s:st.s*(1-lift*.5),o:.9*(1-lift*.6)})}
+const ethaCentre=t=>{const st=track(t);return st?[st.x,st.y-128*st.s]:[960,540]};
+function pose(name,local,loop=true){const [row,n,ms]=MOVE[name];let f=Math.floor(Math.max(0,local)*1000/ms);f=loop?f%n:Math.min(n-1,f);$('etha').firstChild.style.backgroundPosition=`${-f*256}px ${-row*256}px`}
+// place Etha by the feet: x = centre, y = ground line
+function etha(x,y,s,o=1,r=0,sx=1,sy=1){const e=$('etha');e.style.transform=`translate(${x-128}px,${y-256}px) rotate(${r}deg) scale(${s*sx},${s*sy})`;e.style.opacity=o;e.style.filter='none';put($('shadow'),x-85,y-13-16*s,{s:s*sx,o:o*.9})}
+// squash on landing, then a damped wobble back to round
+const squash=(t,a)=>{if(t<a)return [1,1];const q=t-a;const sy=1-.32*Math.exp(-q*7)*Math.cos(q*22);return [1+(1-sy)*.9,sy]};
+// sparkle burst: a ring and ten stars thrown out from (cx,cy); dust puffs on landing
+const STAR_C=['#FFC233','#FF5A36','#3BA7FF','#2BD47D','#8B5CF6'];
+const stars=[...Array(10)].map((_,i)=>{const d=document.createElement('div');d.className='star';d.textContent='✦';d.style.color=STAR_C[i%5];document.getElementById('fx').appendChild(d);return d});
+const puffs=[...Array(6)].map(()=>{const d=document.createElement('div');d.className='puff';document.getElementById('fx').appendChild(d);return d});
+function burst(cx,cy,t,a){const k=seg(t,a,a+.7);if(t<a||k>=1)return;
+  put($('ring'),cx,cy,{s:lerp(.2,2.6,ex(k)),o:1-k});$('ring').style.borderWidth=`${lerp(14,2,k)}px`;
+  stars.forEach((d,i)=>{const ang=i*36+12,dist=lerp(30,300+(i%3)*50,ex(k));put(d,cx+Math.cos(ang*Math.PI/180)*dist,cy+Math.sin(ang*Math.PI/180)*dist,{s:Math.sin(Math.PI*Math.min(1,k*1.3))*(1+(i%2)*.4),r:k*200,o:1-seg(k,.6,1)})})}
+function dust(cx,cy,t,a,sc=1){const k=seg(t,a,a+.55);if(t<a||k>=1)return;
+  puffs.forEach((d,i)=>{const side=i<3?-1:1,j=i%3;put(d,cx+side*(50+j*55)*ex(k)*sc,cy-(10+j*16)*ex(k)*sc,{s:(.9-j*.2)*(1-k*.7)*sc,o:1-k})})}
+function chipIn(el,t,a){const c=el.querySelector('.chip');const k=eb(seg(t,a-.2,a+.2));c.style.opacity=clamp(k*3);c.style.transform=`rotate(${lerp(-12,-3,clamp(k))}deg) scale(${k})`}
+
+const hide=(...els)=>els.forEach(e=>e.style.opacity=0);
+
+window.render=async function(t){
+  if(!bubW){bubW=bubEls.map(b=>b.offsetWidth);
+    if(V){const lg=$('logo'),W=lg.offsetWidth,H=lg.offsetHeight;G.logo[0]=G.out.logo[0]=(1080-W)/2;   // centre the logo; it scales about its centre
+      G.mark=[540+(120-W/2)*G.logo[2],G.logo[1]+H/2]}}
+  hide($('ring'),$('scan'),...stars,...puffs,$('hero'),$('logo'),$('tag'),$('etha'),$('shadow'),$('hi'),$('t2'),$('t3'),$('t4'),$('t5'),$('t6'),$('phone'),$('qr'),$('cta'));
+  bubEls.forEach(b=>b.style.opacity=0); conf.forEach(c=>c.d.style.opacity=0);
+  $('dots').style.transform=`translate(${(t*14)%36}px,${(t*9)%36}px)`;
+
+  // ---- S1 hook: the chat floods, then Etha runs through and knocks it all away
+  if(t<T.reveal+.3){
+    const n=Math.floor(clamp((t-.25)/.85)*HERO.length);
+    $('heroText').textContent=HERO.slice(0,n);
+    $('caret').style.opacity=(n<HERO.length||Math.floor(t*2.5)%2==0)?1:0;
+    const knock=(el,x0,y0,w,s0,i)=>{const th=hitTime(x0+w/2);const k=eio(seg(t,th,th+.5));
+      put(el,x0-k*1600,y0-k*(260+(i%3)*90),{s:s0,r:-k*(30+(i%4)*12),o:1-seg(t,th+.35,th+.5)})};
+    const crowd=seg(t,1.4,2.5);
+    knock($('hero'),G.heroX,G.heroY-crowd*10,G.heroW,eb(seg(t,0,.35))*(1-crowd*.08),1);
+    bubEls.forEach((b,i)=>{const st=1.35+i*.09; if(t<st)return; const [x,y]=POS[i];
+      knock(b,x,y,bubW[i],eb(seg(t,st,st+.3)),i)});
+    if(t>=T.knock&&t<T.knock+1){etha(runX(t),G.runG,1.3);pose('runL',t-T.knock)}
+  }
+  // ---- S2 reveal: logo pops, Etha hops in beside it and waves
+  if(t>=T.reveal-.1&&t<T.meet+.2){
+    const k=eb(seg(t,T.reveal,T.reveal+.45)), out=eio(seg(t,T.meet-.35,T.meet));
+    const charge=Math.sin(Math.PI*seg(t,T.reveal+.45,T.reveal+.7));   // the mark winds up before Etha pops out
+    put($('logo'),G.logo[0],G.logo[1]-out*60,{s:G.logo[2]*k*(1+charge*.06),o:1-out});
+    $('tag').style.width=G.tag[2]+'px';$('tag').style.textAlign='center';
+    put($('tag'),G.tag[0],G.tag[1]-out*60,{o:1-out}); wordsIn(tagW,t,T.reveal+.55,.1);
+    // Etha bursts out of the mark, spins through an arc and lands beside the wordmark
+    const L0=T.reveal+.65, L1=L0+.7, [MX,MY]=G.mark, [LX,LG]=G.land;
+    burst(MX,MY,t,L0-.05);
+    if(t>=L0&&t<T.meet-.35){
+      const e=$('etha');
+      if(t<L1){const p=seg(t,L0,L1),pe=eio(p);e.style.transformOrigin='50% 60%';
+        etha(lerp(MX,LX,pe),lerp(MY+80,LG,pe)-Math.sin(Math.PI*p)*(V?300:260),lerp(.3,1.15,ex(p*1.4)),1,-pe*360,1-.12*Math.sin(Math.PI*p),1+.18*Math.sin(Math.PI*p));
+        put($('shadow'),lerp(MX,LX,pe)-85,LG-13-16*1.15,{s:lerp(.3,1.15,p),o:.9*p*p}); pose('celebrate',.41,false)}  // shadow stays on the ground
+      else{e.style.transformOrigin='50% 100%';const [sx,sy]=squash(t,L1);etha(LX,LG,1.15,1,0,sx,sy);
+        if(t<L1+.25)pose('hop',.42,false); else pose('wave',t-L1-.25,false)}
+    }
+    dust(LX,LG,t,L1,1.1);
+  }
+  // ---- S2b Meet Etha: Etha grows into the hero of the frame
+  if(t>=T.meet-.35&&t<T.pick){
+    const k=eio(seg(t,T.meet-.35,T.meet+.25)), out=eio(seg(t,T.pick-.4,T.pick));
+    const hk=eb(seg(t,T.meet+.35,T.meet+.7)); put($('hi'),G.hi[0],G.hi[1],{s:hk,r:-4,o:clamp(hk*3)*(1-out)});
+    $('t2').style.width=G.t2w+'px'; put($('t2'),G.t2[0],G.t2[1]-out*30,{o:1-out,blur:out*8}); wordsIn(t2w,t,T.meet+.2,.14); wordsIn(t2s,t,T.meet+.6,.08);
+  }
+  // ---- phone
+  if(t>=T.pick-.1&&t<T.outro+.9){
+    const Ph=G.phone, inK=ex(seg(t,T.pick-.1,T.pick+.7)); let x=Ph[0][0],y=lerp(G.phoneIn[1],Ph[0][1],inK),r=lerp(-16,Ph[0][2],inK);
+    const move=(a,b,from,to)=>{const k=eio(seg(t,a,b));x=lerp(from[0],to[0],k);y=lerp(from[1],to[1],k);r=lerp(from[2],to[2],k)};
+    if(t>=T.swipe)move(T.swipe,T.swipe+.6,Ph[0],Ph[1]);
+    if(t>=T.match)move(T.match+.1,T.match+.7,Ph[1],Ph[2]);
+    if(t>=T.xp)move(T.xp,T.xp+.6,Ph[2],Ph[3]);
+    const out=eio(seg(t,T.outro,T.outro+.7)); y+=out*(V?1300:1150); r+=out*10;
+    y+=Math.sin(t*1.6)*8;
+    put($('phone'),x,y,{r,o:1,s:G.phoneS});
+    let src;
+    if(t<T.swipe+.25)src=clipSrc('list',t-T.pick);
+    else if(t<T.xp+.2)src=clipSrc('dm',t-DM_START);
+    else src=clipSrc('xp',t-T.xp-.2);
+    const img=$('scr'); if(img.getAttribute('src')!==src){img.src=src;try{await img.decode()}catch(e){}}
+  }
+  // ---- text blocks with sticker chips
+  const block=(el,wsArr,x,y,a,b,extra)=>{if(t<a-.3||t>b+.1)return;const out=eio(seg(t,b-.3,b));put(el,x,y-out*30,{o:1-out,blur:out*8});wordsIn(wsArr,t,a+.15);chipIn(el,t,a);if(extra)extra()};
+  $('t3').children[2].style.width=G.subW+'px';
+  block($('t3'),t3w,...G.blk.t3,T.pick+.5,T.swipe+.1,()=>wordsIn(t3s,t,T.pick+.95,.07));
+  block($('t4'),t4w,...G.blk.t4,T.swipe+.6,T.match,()=>{t4w.forEach((w,i)=>{if(i>=3){const a=T.swipe+2.5+(i-3)*.11;const k=ex(seg(t,a,a+.45));w.style.opacity=k;w.style.transform=`translateY(${(1-k)*40}px)`;w.style.filter=k<.98?`blur(${(1-k)*14}px)`:'none'}})});
+  block($('t5'),t5w,...G.blk.t5,T.match+.5,T.xp+.05,()=>wordsIn(t5s,t,T.match+1.3,.08));
+  block($('t6'),t6w,...G.blk.t6,T.xp+.6,T.outro+.1);
+  // ---- Etha beside the phone in every scene
+  const pop=a=>eb(seg(t,a,a+.4));
+  if(t>=T.meet-.35&&t<T.outro+.45){const st=track(t);if(st){drawTrack(st);if(st.dust)dust(st.x,st.y,t,st.dust,1.1*st.s)}}
+  // ---- match burst
+  // the purple grows out of Etha mid-leap and later shrinks back into Etha as it runs on
+  const bk=t<T.match?0:t<T.xp-.3?eio(seg(t,T.match-.05,T.match+.6)):1-eio(seg(t,T.xp-.3,T.xp+.35));
+  const [bx,by]=ethaCentre(t); $('burst').style.opacity=bk>0?1:0; $('burst').style.clipPath=`circle(${bk*2400}px at ${bx}px ${by}px)`;
+  $('rays').style.transform=`rotate(${t*8}deg)`;
+  if(t>=T.match+.35&&t<T.xp){const lt=t-T.match-.35;conf.forEach(c=>{const x=c.x+c.vx*lt*.55,y=c.y+c.vy*lt+1300*lt*lt;c.d.style.opacity=1-seg(t,T.xp-.6,T.xp-.1);c.d.style.transform=`translate(${x}px,${y}px) rotate(${c.r+c.vr*lt}deg)`})}
+  // ---- outro
+  if(t>=T.outro+.3){
+    const k=eb(seg(t,T.outro+.4,T.outro+.85));
+    const Ou=G.out;
+    put($('logo'),Ou.logo[0],Ou.logo[1],{s:k*Ou.logo[2],o:1});
+    $('tag').style.width=Ou.tag[2]+'px';$('tag').style.textAlign=Ou.tag[3];
+    put($('tag'),Ou.tag[0],Ou.tag[1],{o:1}); wordsIn(tagW,t,T.outro+.8,.09);
+    put($('cta'),Ou.cta[0],Ou.cta[1],{o:ex(seg(t,T.outro+1.6,T.outro+2)),s:eb(seg(t,T.outro+1.6,T.outro+2))});
+    const q=eb(seg(t,T.outro+1,T.outro+1.5)); put($('qr'),Ou.qr[0],Ou.qr[1]+(1-q)*80,{r:lerp(8,2,q),o:clamp(q*2)});
+    // Etha hops onto the QR card and waves on a loop
+    const P0=T.outro+1.5, J0=P0+.75, J1=J0+.5, CX=Ou.CX, TOP=Ou.TOP, e=$('etha');
+    e.style.transformOrigin='50% 100%';
+    if(t>=P0){
+      if(t<J0){ // peek over the card's top edge, look around
+        const pk=eb(seg(t,P0,P0+.35)); e.style.zIndex=4; etha(CX,lerp(Ou.peek[0],Ou.peek[1],pk),.85); pose('look',t-P0-.2,false)}
+      else if(t<J1){ // spring up and land on top
+        const p=seg(t,J0,J1); e.style.zIndex=p<.25?4:6;
+        etha(CX,lerp(Ou.peek[1],TOP,p)-Math.sin(Math.PI*p)*(V?50:120),.85,1,0,1-.1*Math.sin(Math.PI*p),1+.15*Math.sin(Math.PI*p)); pose('hop',.28,false)}
+      else{e.style.zIndex=6;const [sx,sy]=squash(t,J1);etha(CX,TOP,.85,1,0,sx,sy); pose('wave',(t-J1-.2)%1.8,false)}
+      $('shadow').style.opacity=0;
+    }
+    dust(CX,TOP-6,t,J1,.8);
+    const sk=eb(seg(t,J1+.3,J1+.65)); put($('scan'),Ou.scan[0],Ou.scan[1],{s:sk,r:-4,o:clamp(sk*3)});
+  }
+};
+window.ready=Promise.all([document.fonts.ready,...[...document.images].map(i=>i.decode().catch(()=>{}))]);
+</script></body></html>

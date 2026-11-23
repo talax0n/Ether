@@ -1,0 +1,10 @@
+# Render scratch: regenerable from work/site + work/*.cjs + work/*.py
+posts.zip
+work/frames*/
+work/clips/
+work/stills/
+work/site/f/
+work/site/*.bak.html
+work/*.wav
+work/*.png
+work/*.jpg

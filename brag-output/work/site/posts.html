@@ -1,0 +1,141 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ether posts</title>
+<style>
+@font-face{font-family:N;src:url(a/nunito_black.ttf);font-weight:900}
+@font-face{font-family:N;src:url(a/nunito_extrabold.ttf);font-weight:800}
+@font-face{font-family:M;src:url(a/jetbrains_mono_extrabold.ttf);font-weight:800}
+:root{--ink:#1E1B2E;--cream:#FFF7EA;--coral:#FF5A36;--sun:#FFC233;--mint:#2BD47D;--sky:#3BA7FF;--grape:#8B5CF6;--muted:#5B5670;
+  --sunsoft:#FFE7A8;--skysoft:#CFE7FF;--coralsoft:#FFD6CB;--mintsoft:#C9F5DD;--grapesoft:#E4D8FF;--peach:#FFE1D6}
+*{box-sizing:border-box;margin:0}
+html,body{width:1080px;height:1350px;overflow:hidden}
+#s{position:relative;width:1080px;height:1350px;overflow:hidden;background:var(--cream);font-family:N;color:var(--ink)}
+#s.dots::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(30,27,46,.09) 2px,transparent 2.5px);background-size:36px 36px}
+#s.purple{background:var(--grape)}
+#s.purple::after{content:"";position:absolute;left:50%;top:50%;width:2400px;height:2400px;margin:-1200px;background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.10) 0 7.5deg,transparent 7.5deg 15deg)}
+#s.coral{background:var(--coral)}
+.a{position:absolute;z-index:2}
+.h{font-weight:900;font-size:100px;line-height:1.02;letter-spacing:-2.5px}
+.hl{color:var(--coral);text-shadow:6px 6px 0 var(--ink)}
+.sun{color:var(--sun);text-shadow:6px 6px 0 var(--ink)}
+.sub{font-weight:800;font-size:40px;color:var(--muted);line-height:1.3}
+.chip{display:inline-flex;align-items:center;gap:14px;border:4px solid var(--ink);border-radius:999px;padding:7px 28px 7px 7px;font-weight:900;font-size:36px;background:#fff;box-shadow:5px 5px 0 var(--ink);transform:rotate(-3deg)}
+.chip i{width:54px;height:54px;border-radius:50%;border:3.5px solid var(--ink);display:grid;place-items:center;font-style:normal}
+.chip svg{width:30px;height:30px;fill:none;stroke:var(--ink);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.phone{width:560px;border-radius:78px;background:var(--ink);padding:18px;box-shadow:18px 18px 0 rgba(30,27,46,.92)}
+.phone .scr{position:relative;width:524px;height:1164px;border-radius:62px;overflow:hidden;background:var(--cream)}
+.phone .scr img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.etha{width:256px;height:256px;background:url(a/etha_sheet.png) no-repeat;background-size:3072px 3584px;transform-origin:50% 100%}
+.foot{position:absolute;left:60px;bottom:44px;display:flex;align-items:center;gap:14px;z-index:3}
+.foot img{width:54px}.foot b{font-weight:900;font-size:50px;color:var(--coral);text-shadow:3px 3px 0 var(--ink);letter-spacing:-1px}
+.count{position:absolute;right:60px;top:54px;font-family:M;font-weight:800;font-size:28px;letter-spacing:2px;border:4px solid var(--ink);border-radius:999px;padding:6px 18px;background:#fff;z-index:3}
+.bub{display:flex;align-items:center;gap:16px;white-space:nowrap}
+.bub img{width:76px;height:76px;border-radius:50%;border:4px solid var(--ink);background:#fff}
+.bub .b{background:#fff;border:4px solid var(--ink);border-radius:30px 30px 30px 8px;padding:16px 26px;font-weight:800;font-size:36px;box-shadow:6px 6px 0 var(--ink)}
+.card{background:#fff;border:5px solid var(--ink);border-radius:36px;box-shadow:10px 10px 0 var(--ink)}
+.pill{display:inline-block;border:4px solid var(--ink);border-radius:999px;padding:10px 28px;font-weight:900;font-size:34px;background:var(--mint);box-shadow:5px 5px 0 var(--ink)}
+.mono{font-family:M;font-weight:800}
+.hex{width:92px;height:104px;display:grid;place-items:center;font-family:M;font-weight:800;font-size:40px;position:relative}
+.hex::before,.hex::after{content:"";position:absolute;inset:0;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.hex::before{background:var(--ink)}.hex::after{inset:6px;background:var(--sun)}
+.hex span{position:relative;z-index:1}
+.row{display:flex;align-items:center;gap:26px}
+</style></head>
+<body><div id="s" class="dots"></div>
+<script>
+const s=document.getElementById('s');
+const P=new URLSearchParams(location.search).get('p')||'how-1';
+const MOVE={idle:[0,0],wave:[1,5],celebrate:[2,6],levelup:[3,3],sleep:[4,2],look:[5,6],scratch:[6,4],tap:[7,3],react:[8,3],hop:[10,3]};
+// Etha by the feet: x centre, y ground, sprite scale
+const etha=(m,x,y,sc=1,flip=false)=>{const [r,f]=MOVE[m];return `<div class="a etha" style="left:${x-128}px;top:${y-256}px;background-position:${-f*256}px ${-r*256}px;transform:scale(${flip?-sc:sc},${sc})"></div>`};
+const shadow=(x,y,sc=1)=>`<div class="a" style="left:${x-85*sc}px;top:${y-12-14*sc}px;width:${170*sc}px;height:${26*sc}px;border-radius:50%;background:rgba(30,27,46,.16)"></div>`;
+const phone=(img,x,y,r=0,sc=1)=>`<div class="a phone" style="left:${x}px;top:${y}px;transform:rotate(${r}deg) scale(${sc});transform-origin:50% 0"><div class="scr"><img src="a/${img}"></div></div>`;
+const foot=(dark)=>`<div class="foot"><img src="a/ether_mark.png"><b ${dark?'style="color:#fff"':''}>ether</b></div>`;
+const count=(i,n)=>`<div class="count">${i}/${n}</div>`;
+const ICON={trophy:'<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M8.5 20h7"/>',
+  cards:'<rect x="8" y="4" width="11" height="15" rx="2.5" transform="rotate(8 13 12)"/><rect x="4.5" y="5" width="11" height="15" rx="2.5" transform="rotate(-8 10 12)" fill="#fff"/>',
+  heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="#FF5A36"/>',
+  bolt:'<path d="M13 3 5 14h6l-1 7 8-11h-6z" fill="#1E1B2E"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
+  users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.5-5.5 6.5-5.5s5.5 2 6.5 5.5"/><path d="M15.5 4.8a3.5 3.5 0 0 1 0 6.4M18 14.8c1.8.8 3 2.6 3.5 5.2"/>',
+  flag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',shield:'<path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/>'};
+const chip=(label,bg,icon,extra='')=>`<div class="chip" style="${extra}"><i style="background:${bg}"><svg viewBox="0 0 24 24">${ICON[icon]}</svg></i>${label}</div>`;
+
+const POSTS={
+// ---------- carousel: how it works ----------
+'how-1':()=>`${count(1,6)}
+  <div class="a" style="left:70px;top:150px;width:940px"><div class="h" style="font-size:112px">How to find a<br>hackathon team</div>
+  <div class="h" style="font-size:112px;margin-top:10px">without the<br><span class="hl">group chat.</span></div></div>
+  <div class="a bub" style="left:80px;top:760px;transform:rotate(-3deg)"><img src="a/face_dimas.png"><div class="b" style="font-size:42px;text-decoration:line-through;text-decoration-thickness:5px;text-decoration-color:var(--coral)">anyone need a designer?</div></div>
+  <div class="a" style="right:70px;bottom:60px;transform:rotate(3deg)"><span class="pill" style="background:var(--sun)">Swipe →</span></div>
+  ${shadow(800,1180,1.6)}${etha('tap',800,1180,1.6)}${foot()}`,
+'how-2':()=>step(2,'Compete','var(--sunsoft)','trophy','Pick your<br><span class="hl">competition.</span>','Everyone in the deck shares your deadline.','scr_compete.png','look'),
+'how-3':()=>step(3,'Swipe','var(--skysoft)','cards','Left to pass.<br>Right to <span class="hl">team&nbsp;up.</span>','Solo students and teams with open roles.','scr_nope.png','tap'),
+'how-4':()=>{s.className='purple';return step(4,'Match','var(--coralsoft)','heart','<span style="color:#fff">Both say </span><span class="sun">yes.</span>','<span style="color:#EDE6FF">Team formed. WhatsApp unlocked.</span>','scr_match.png','celebrate',true)},
+'how-5':()=>step(5,'Level up','var(--sun)','bolt','Earn XP for<br><span class="hl">shipping.</span>','Not for swiping.','scr_xp.png','levelup'),
+'how-6':()=>cta(count(6,6)),
+// ---------- carousel: meet Etha ----------
+'etha-1':()=>`${count(1,3)}
+  <div class="a" style="left:0;top:150px;width:1080px;text-align:center"><div class="h" style="font-size:150px;letter-spacing:-4px">Meet <span class="hl">Etha.</span></div>
+  <div class="sub" style="margin-top:20px;font-size:46px">Ether’s mascot. Your team-finding sidekick.</div></div>
+  <div class="a card" style="left:640px;top:520px;padding:14px 28px;font-weight:900;font-size:50px;transform:rotate(-4deg);border-radius:34px 34px 34px 8px">hi! 👋</div>
+  ${shadow(540,1170,2.3)}${etha('wave',540,1170,2.3)}${foot()}`,
+'etha-2':()=>{const moods=[['wave','Waving','var(--skysoft)'],['celebrate','Celebrating','var(--coralsoft)'],['levelup','Levelling up','var(--sunsoft)'],
+    ['look','Curious','var(--mintsoft)'],['scratch','Thinking','var(--grapesoft)'],['sleep','Sleeping','var(--peach)']];
+  return `${count(2,3)}<div class="a" style="left:70px;top:120px"><div class="h" style="font-size:96px">Etha’s <span class="hl">moods.</span></div></div>`+
+  moods.map(([m,l,bg],i)=>{const x=70+(i%3)*323,y=330+Math.floor(i/3)*430;return `<div class="a card" style="left:${x}px;top:${y}px;width:293px;height:390px;background:${bg};transform:rotate(${(i%2?1.5:-1.5)}deg)">
+    <div style="position:absolute;left:0;right:0;bottom:26px;text-align:center;font-weight:900;font-size:36px">${l}</div></div>${etha(m,x+146,y+300,1.0)}`}).join('')+foot()},
+'etha-3':()=>{s.className='purple';return `${count(3,3)}
+  <div class="a" style="left:70px;top:130px;width:940px"><div class="h" style="color:#fff;font-size:96px">Etha shows up<br>when you <span class="sun">match.</span></div></div>
+  <div class="a" style="left:440px;top:470px;width:600px;height:880px;overflow:hidden">${phone('scr_match.png',20,0,-4,1)}</div>
+  ${shadow(250,1180,1.5)}${etha('celebrate',250,1180,1.5)}${foot(true)}`},
+// ---------- carousel: the group chat ----------
+'chat-1':()=>{const B=[['face_nadia','need 1 backend for GEMASTIK 🙏',60,420,-2],['face_budi','still looking for a team…',300,540,1],['face_eka','bump',760,640,3],['face_fajar','anyone?? deadline friday',90,700,-1],
+   ['face_citra','DM me if you need a UI person',200,820,2],['face_nadia','bump',60,940,-3],['face_budi','looking for 2 more, data + mobile',230,1010,-1],['face_eka','is this team still open?',380,1130,2],['face_dimas','pls',860,540,-2]];
+  return `${count(1,2)}<div class="a" style="left:70px;top:120px;width:940px"><div class="h" style="font-size:92px">Still asking<br>“anyone need a <span class="hl">designer?”</span></div></div>`+
+  B.map(([f,t,x,y,r])=>`<div class="a bub" style="left:${x}px;top:${y}px;transform:rotate(${r}deg)"><img src="a/${f}.png"><div class="b">${t}</div></div>`).join('')},
+'chat-2':()=>`${count(2,2)}
+  <div class="a" style="left:70px;top:150px;width:470px"><div class="h" style="font-size:120px;width:600px">Swipe<br><span class="hl">instead.</span></div>
+  <div class="sub" style="margin-top:30px">One deck per competition. Both sides say yes before anyone gets a message.</div></div>
+  ${phone('scr_like.png',510,215,4,.76)}
+  ${shadow(300,1180,1.2)}${etha('react',300,1180,1.2)}${foot()}`,
+// ---------- singles ----------
+'xp':()=>{const R=[['user','Profile completed','+50'],['heart','First match','+25'],['users','Team formed or joined','+100'],['flag','Competition finished','+150'],['shield','Endorsement received','+30'],['check','Result confirmed by a teammate','+200']];
+  return `<div class="a" style="left:70px;top:110px;width:940px"><div class="h" style="font-size:96px">How you earn <span class="hl">XP.</span></div>
+  <div class="sub" style="margin-top:14px">Outcomes, not swipes.</div></div>
+  <div class="a card" style="left:70px;top:390px;width:940px;padding:20px 34px">`+R.map(([ic,l,x],i)=>`<div class="row" style="padding:20px 0;${i?'border-top:3px dashed #E2DACB':''}">
+    <i style="width:64px;height:64px;border-radius:50%;border:3.5px solid var(--ink);display:grid;place-items:center;background:var(--sunsoft);flex:none"><svg viewBox="0 0 24 24" style="width:34px;height:34px;fill:none;stroke:var(--ink);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round">${ICON[ic]}</svg></i>
+    <div style="flex:1;font-weight:900;font-size:40px">${l}</div><div class="mono" style="font-size:40px;background:var(--sun);border:4px solid var(--ink);border-radius:16px;padding:4px 16px">${x}</div></div>`).join('')+`</div>
+  ${etha('levelup',920,1310,.8)}${foot()}`},
+'levels':()=>{const L=[['Rookie',0],['Hacker',100],['Maker',250],['Builder',400],['Captain',600],['Architect',850],['Mentor',1150],['Legend',1500]];
+  return `<div class="a" style="left:70px;top:100px;width:940px"><div class="h" style="font-size:96px">Rookie to <span class="hl">Legend.</span></div>
+  <div class="sub" style="margin-top:14px">8 levels. Every one earned by shipping.</div></div>`+
+  L.map(([n,x],i)=>{const y=1150-i*112, xo=70+i*26;return `<div class="a card row" style="left:${xo}px;top:${y-100+0}px;width:${560}px;padding:6px 26px 6px 8px;border-radius:26px;box-shadow:6px 6px 0 var(--ink);gap:20px;${i==7?'background:var(--sunsoft)':''}">
+    <div class="hex" style="transform:scale(.8);margin:-8px 0"><span>${i+1}</span></div><div style="flex:1;font-weight:900;font-size:38px">${n}</div><div class="mono" style="font-size:30px;color:var(--muted)">${x} XP</div></div>`}).join('')+
+  `${shadow(940,600,1.1)}${etha('levelup',940,600,1.1)}${foot()}`},
+'roles':()=>{const R=[['face_nadia','Android','var(--mintsoft)'],['face_budi','Designer','var(--sunsoft)'],['face_citra','Frontend','var(--skysoft)'],['face_dimas','Hardware','var(--peach)'],['face_eka','Data / ML','var(--grapesoft)'],['face_fajar','Backend','var(--sunsoft)']];
+  return `<div class="a" style="left:70px;top:110px;width:940px"><div class="h" style="font-size:96px">Every role<br>needs a <span class="hl">team.</span></div></div>`+
+  R.map(([f,l,bg],i)=>{const x=70+(i%3)*323,y=460+Math.floor(i/3)*380;return `<div class="a card" style="left:${x}px;top:${y}px;width:293px;height:340px;background:${bg};text-align:center;transform:rotate(${i%2?1.5:-1.5}deg)">
+    <img src="a/${f}.png" style="width:190px;height:190px;border-radius:50%;border:5px solid var(--ink);background:#fff;margin-top:30px"><div style="margin-top:16px;font-weight:900;font-size:40px">${l}</div></div>`}).join('')+
+  `<div class="a sub" style="left:70px;top:1230px;font-size:36px">Find yours in the deck.</div>${foot()}`.replace('class="foot"','class="foot" style="left:auto;right:60px"')},
+'swipe-quote':()=>{s.className='coral';return `
+  <div class="a" style="left:70px;top:110px;width:940px"><div class="h" style="font-size:130px;color:var(--cream);text-shadow:7px 7px 0 var(--ink)">Left to pass.<br>Right to<br>team up.</div></div>
+  <div class="a" style="left:520px;top:640px;width:560px;height:710px;overflow:hidden">${phone('scr_like.png',20,0,-5,.9)}</div>
+  ${shadow(280,1200,1.3)}${etha('react',280,1200,1.3)}<div class="foot"><img src="a/ether_mark.png"><b style="color:var(--cream)">ether</b></div>`},
+'download':()=>cta('')
+};
+function step(i,label,bg,icon,head,sub,img,m,dark){return `${count(i,6)}
+  <div class="a" style="left:70px;top:110px;width:940px">${chip(label,bg,icon)}
+  <div class="h" style="margin-top:34px">${head}</div><div class="sub" style="margin-top:22px">${sub}</div></div>
+  <div class="a" style="left:420px;top:560px;width:660px;height:790px;overflow:hidden">${phone(img,40,10,-4,1)}</div>
+  ${shadow(230,1170,1.25)}${etha(m,230,1170,1.25)}${foot(dark)}`}
+function cta(c){return `${c}
+  <div class="a" style="left:0;top:110px;width:1080px;text-align:center"><div class="h" style="font-size:104px">Get <span class="hl">ether.</span></div>
+  <div class="sub" style="margin-top:14px">Swipe to find your hackathon team.</div></div>
+  <div class="a card" style="left:300px;top:420px;width:480px;padding:34px;text-align:center;transform:rotate(2deg)"><img src="a/qr.png" style="width:410px;height:410px;image-rendering:pixelated">
+  <div style="font-weight:900;font-size:44px;margin-top:10px">Scan to get the APK</div></div>
+  <div class="a" style="left:0;width:1080px;top:1105px;text-align:center"><span class="pill">Android · free</span></div>
+  ${shadow(900,1290,1.1)}${etha('wave',900,1290,1.1)}${foot()}`}
+s.innerHTML=POSTS[P]();
+window.ready=Promise.all([document.fonts.ready,...[...document.images].map(i=>i.decode().catch(()=>{}))]);
+window.POSTS=Object.keys(POSTS);
+</script></body></html>
