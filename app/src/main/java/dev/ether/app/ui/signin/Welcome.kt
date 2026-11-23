@@ -53,6 +53,15 @@ import dev.ether.app.ui.theme.Peach
 import dev.ether.app.ui.theme.SkySoft
 import dev.ether.app.ui.theme.SunSoft
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import dev.ether.app.ui.components.staggerIn
+import dev.ether.app.ui.theme.Coral
+import dev.ether.app.ui.theme.Motion
+import kotlinx.coroutines.launch
+import kotlin.random.Random
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -89,17 +98,17 @@ internal fun Welcome(onGoogle: (() -> Unit)?, onEmail: () -> Unit, busy: Boolean
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                "Welcome to Ether", Modifier.semantics { heading() },
+                "Welcome to Ether", Modifier.staggerIn(6).semantics { heading() },
                 style = MaterialTheme.typography.headlineLarge, color = colors.text, textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                "Swipe to find your hackathon team", style = MaterialTheme.typography.bodyLarge,
+                "Swipe to find your hackathon team", Modifier.staggerIn(7), style = MaterialTheme.typography.bodyLarge,
                 color = colors.muted, textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(24.dp))
             val pill = RoundedCornerShape(50)
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.staggerIn(8), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 onGoogle?.let { GoogleButton(it, enabled = !busy, shape = pill) }
                 LedgeButton(
                     "Continue with email", onEmail, Modifier.fillMaxWidth(),
@@ -114,14 +123,36 @@ internal fun Welcome(onGoogle: (() -> Unit)?, onEmail: () -> Unit, busy: Boolean
     }
 }
 
-/** Rays from the centre, student bubbles popping in and bobbing, Etha and the wordmark in the middle. */
+/**
+ * Rays from the centre; student bubbles pop in, bob, and slowly orbit (far ones the other way, for depth);
+ * every so often one sparks a heart, like a match happening; Etha and the wordmark land last.
+ */
 @Composable
 private fun Burst(modifier: Modifier) {
     val reduced = Arcade.reducedMotion
-    val phase: State<Float> = if (reduced) remember { mutableFloatStateOf(0f) } else rememberInfiniteTransition(label = "burst").animateFloat(
-        0f, (2 * PI).toFloat(), infiniteRepeatable(tween(6_000, easing = LinearEasing)), label = "t",
-    )
-    val t by phase
+    val loop = rememberInfiniteTransition(label = "burst")
+    val still = remember { mutableFloatStateOf(0f) }
+    val phase: State<Float> = if (reduced) still else
+        loop.animateFloat(0f, TAU, infiniteRepeatable(tween(6_000, easing = LinearEasing)), label = "bob")
+    // One full turn a minute: slow enough to read as drift, and a whole turn so the loop never jumps.
+    val orbit: State<Float> = if (reduced) still else
+        loop.animateFloat(0f, TAU, infiniteRepeatable(tween(60_000, easing = LinearEasing)), label = "orbit")
+    var spark by remember { mutableStateOf(Spark(-1, 0)) }
+    LaunchedEffect(reduced) {
+        if (reduced) return@LaunchedEffect
+        delay(1_400)
+        val near = bubbles.indices.filter { !bubbles[it].far }
+        while (true) {
+            spark = Spark(near.random(), spark.seq + 1)
+            delay(Random.nextLong(1_100, 2_000))
+        }
+    }
+    val centre = remember { Animatable(if (reduced) 1f else 0f) }
+    LaunchedEffect(Unit) {
+        if (reduced) return@LaunchedEffect
+        delay(120L + bubbles.size * 70L)
+        centre.animateTo(1f, Motion.pop())
+    }
     val ray = Arcade.colors.track
     BoxWithConstraints(modifier.clipToBounds().clearAndSetSemantics { }, contentAlignment = Alignment.Center) {
         // Fit the burst's ~520dp design height to whatever space is left above the buttons.
@@ -129,44 +160,85 @@ private fun Burst(modifier: Modifier) {
         Canvas(Modifier.fillMaxSize()) {
             val c = center
             val reach = size.maxDimension
+            val turn = orbit.value / 2f
             repeat(RAYS) { i ->
-                val a = (2 * PI * i / RAYS).toFloat() + t / 12f
+                val a = (TAU * i / RAYS) + turn
                 drawLine(
                     ray, c + Offset(cos(a), sin(a)) * 70.dp.toPx(), c + Offset(cos(a), sin(a)) * reach,
                     strokeWidth = (if (i % 2 == 0) 3f else 1.5f).dp.toPx(), cap = StrokeCap.Round,
                 )
             }
         }
-        bubbles.forEachIndexed { i, b -> BubbleView(b, i, t, scale) }
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale }) {
+        bubbles.forEachIndexed { i, b -> BubbleView(b, i, { phase.value }, { orbit.value }, scale, spark) }
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.graphicsLayer {
+                val p = centre.value
+                scaleX = scale * (0.6f + 0.4f * p); scaleY = scaleX
+                alpha = p.coerceIn(0f, 1f)
+            },
+        ) {
             EthaLive(size = 150.dp, first = EthaMove.WAVE, pool = EthaMove.FIDGETS + EthaMove.WAVE)
             Wordmark(Modifier.offset(y = (-8).dp))
         }
     }
 }
 
+/** Bubble [index] sparks a heart; [seq] makes a repeat on the same bubble a new event. */
+private data class Spark(val index: Int, val seq: Int)
+
 @Composable
-private fun BubbleView(b: Bubble, index: Int, t: Float, scale: Float) {
+private fun BubbleView(b: Bubble, index: Int, bob: () -> Float, orbit: () -> Float, scale: Float, spark: Spark) {
     val reduced = Arcade.reducedMotion
     val pop = remember { Animatable(if (reduced) 1f else 0f) }
     LaunchedEffect(Unit) {
         if (reduced) return@LaunchedEffect
         delay(120L + index * 70L)
-        pop.animateTo(1f, dev.ether.app.ui.theme.Motion.pop())
+        pop.animateTo(1f, Motion.pop())
     }
-    val bob: Dp = (if (b.far) 4 else 8).dp
-    Avatar(
-        b.name, null, b.size.dp,
-        Modifier
-            .offset((b.x * scale).dp, (b.y * scale).dp)
-            .graphicsLayer {
-                val s = pop.value * scale
+    val pulse = remember { Animatable(0f) }
+    val heart = remember { Animatable(1f) }
+    LaunchedEffect(spark) {
+        if (spark.index != index) return@LaunchedEffect
+        launch { pulse.snapTo(1f); pulse.animateTo(0f, tween(600)) }
+        heart.snapTo(0f)
+        heart.animateTo(1f, tween(1_100, easing = LinearEasing))
+    }
+    val lift: Dp = (if (b.far) 4 else 8).dp
+    val sizeDp = b.size.dp
+    Box(
+        Modifier.graphicsLayer {
+            val a = if (b.far) -orbit() else orbit()
+            // Rotate the hand-placed spot around the centre.
+            translationX = (b.x * cos(a) - b.y * sin(a)) * scale * density
+            translationY = (b.x * sin(a) + b.y * cos(a)) * scale * density + sin(bob() + index) * lift.toPx()
+        },
+        contentAlignment = Alignment.Center,
+    ) {
+        Avatar(
+            b.name, null, sizeDp,
+            Modifier.graphicsLayer {
+                val s = pop.value * scale * (1f + 0.12f * pulse.value)
                 scaleX = s; scaleY = s
-                translationY = sin(t + index) * bob.toPx()
                 alpha = if (b.far) 0.3f else 1f
             },
-        color = b.color,
-    )
+            color = b.color,
+        )
+        if (heart.value < 1f) {
+            Icon(
+                ArcadeIcons.HeartFilled, null, tint = Coral,
+                modifier = Modifier.size(26.dp).graphicsLayer {
+                    val p = heart.value
+                    translationX = sizeDp.toPx() * 0.35f * scale
+                    translationY = -sizeDp.toPx() * 0.5f * scale - p * 46.dp.toPx()
+                    val s = if (p < 0.2f) p / 0.2f else 1f
+                    scaleX = s; scaleY = s
+                    alpha = 1f - p
+                },
+            )
+        }
+    }
 }
 
 private const val RAYS = 24
+private const val TAU = (2 * PI).toFloat()

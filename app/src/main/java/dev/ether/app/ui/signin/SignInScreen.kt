@@ -33,6 +33,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.unit.IntOffset
+import dev.ether.app.ui.components.staggerIn
+import dev.ether.app.ui.theme.Motion
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.foundation.selection.selectable
@@ -147,29 +154,39 @@ fun SignInContent(
                 when (step) {
                     SignInStep.WELCOME -> Unit
                     SignInStep.CREDENTIALS -> {
-                        EthaLive(Modifier.padding(bottom = 4.dp), size = 88.dp)
+                        EthaLive(Modifier.staggerIn(0).padding(bottom = 4.dp), size = 88.dp)
                         val creating = state.mode == SignInMode.CREATE_ACCOUNT
-                        Heading(
-                            if (creating) "Create your\naccount" else "Welcome\nback",
-                            if (creating) "Use any email. We'll send a code to confirm it's yours." else "Sign in with your email and password.",
-                        )
-                        ModeSwitch(state.mode, onModeChange, enabled = !state.busy)
+                        // The heading swaps with a short rise when the mode flips.
+                        AnimatedContent(
+                            creating, Modifier.staggerIn(1),
+                            transitionSpec = { (fadeIn() + slideInVertically { it / 6 }) togetherWith fadeOut() },
+                            label = "heading",
+                        ) { isCreating ->
+                            Column {
+                                Heading(
+                                    if (isCreating) "Create your\naccount" else "Welcome\nback",
+                                    if (isCreating) "Use any email. We'll send a code to confirm it's yours." else "Sign in with your email and password.",
+                                )
+                            }
+                        }
+                        Box(Modifier.staggerIn(2)) { ModeSwitch(state.mode, onModeChange, enabled = !state.busy) }
                         Spacer(Modifier.height(16.dp))
                         ArcadeTextField(
                             value = state.email,
                             onValueChange = onEmailChange,
                             label = "Email",
+                            modifier = Modifier.staggerIn(3),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                         )
                         Spacer(Modifier.height(12.dp))
-                        PasswordField(state.password, onPasswordChange, creating, onSubmit)
+                        Box(Modifier.staggerIn(4)) { PasswordField(state.password, onPasswordChange, creating, onSubmit) }
                         if (creating) {
                             Spacer(Modifier.height(14.dp))
                         } else {
                             TextLink("Forgot password?", enabled = !state.busy, onForgotPassword, Modifier.align(Alignment.End).padding(vertical = 6.dp))
                         }
                         LedgeButton(
-                            if (creating) "Create account" else "Sign in", onSubmit, Modifier.fillMaxWidth(),
+                            if (creating) "Create account" else "Sign in", onSubmit, Modifier.fillMaxWidth().staggerIn(5),
                             enabled = state.canSubmit || state.busy, busy = state.busy, icon = ArcadeIcons.Bolt,
                         )
                     }
@@ -203,24 +220,29 @@ fun SignInContent(
     }
 }
 
-/** Two-way switch between signing in and creating an account; the selected side sits in a Sun sticker. */
+/** Two-way switch between signing in and creating an account; a Sun sticker slides under the selected side. */
 @Composable
 private fun ModeSwitch(mode: SignInMode, onChange: (SignInMode) -> Unit, enabled: Boolean) {
     val colors = Arcade.colors
     val shape = RoundedCornerShape(16.dp)
-    Row(
-        Modifier.fillMaxWidth().ledge(shape, colors.surface, colors.line, colors.ledge, 3.dp).padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        listOf(SignInMode.SIGN_IN to "Sign in", SignInMode.CREATE_ACCOUNT to "Create account").forEach { (m, label) ->
-            val selected = m == mode
-            Box(
-                Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(12.dp))
-                    .background(if (selected) SunSoft else Color.Transparent)
-                    .selectable(selected, enabled = enabled, role = Role.Tab) { onChange(m) },
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(label, style = MaterialTheme.typography.titleSmall, color = if (selected) Ink else colors.muted)
+    val options = listOf(SignInMode.SIGN_IN to "Sign in", SignInMode.CREATE_ACCOUNT to "Create account")
+    val slide by animateFloatAsState(if (mode == SignInMode.SIGN_IN) 0f else 1f, Motion.settle(), label = "mode")
+    BoxWithConstraints(Modifier.fillMaxWidth().ledge(shape, colors.surface, colors.line, colors.ledge, 3.dp).padding(4.dp)) {
+        val half = (maxWidth - 4.dp) / 2
+        Box(
+            Modifier.offset { IntOffset(((half + 4.dp) * slide).roundToPx(), 0) }
+                .size(half, 44.dp).background(SunSoft, RoundedCornerShape(12.dp)),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            options.forEach { (m, label) ->
+                val selected = m == mode
+                Box(
+                    Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(12.dp))
+                        .selectable(selected, enabled = enabled, role = Role.Tab) { onChange(m) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(label, style = MaterialTheme.typography.titleSmall, color = if (selected) Ink else colors.muted)
+                }
             }
         }
     }
