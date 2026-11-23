@@ -143,6 +143,7 @@ class DeckViewModel(
             name = card.name,
             avatarUrl = card.avatarUrl,
             contacts = Contacts.NONE,
+            face = card.face,
             createdAt = Instant.now(),
         )
     }

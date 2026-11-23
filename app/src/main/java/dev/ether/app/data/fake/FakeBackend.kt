@@ -8,6 +8,7 @@ import dev.ether.app.data.ProfileRepository
 import dev.ether.app.data.SignUpResult
 import dev.ether.app.data.TeamRepository
 import dev.ether.app.data.TrackRecordRepository
+import dev.ether.app.domain.AvatarFace
 import dev.ether.app.domain.AuthState
 import dev.ether.app.domain.Badge
 import dev.ether.app.domain.Competition
@@ -105,7 +106,7 @@ class FakeBackend(
         val base = profile ?: DemoData.me.copy(xp = 0)
         profile = base.copy(
             name = draft.name, major = draft.major, year = draft.year, bio = draft.bio,
-            skills = draft.skills, roles = draft.roles, contacts = draft.contacts,
+            skills = draft.skills, roles = draft.roles, contacts = draft.contacts, face = draft.face,
         )
     }
 
@@ -153,6 +154,7 @@ class FakeBackend(
             otherKind = if (card is DeckCard.Team) ListingKind.TEAM else ListingKind.SOLO,
             name = card.name,
             avatarUrl = card.avatarUrl,
+            face = card.face,
             contacts = contact,
             createdAt = clock(),
         )
@@ -311,12 +313,14 @@ object DemoData {
             listOf("Figma", "User research", "Prototyping"), listOf("Designer"), xp = 310,
             reliability = Reliability(5),
             trackRecord = TrackRecordSummary(BestHackathon(HackathonResult.WINNER, "Campus Design Jam", 2025), 2, 3),
+            face = AvatarFace.CITRA,
         ),
         DeckCard.Team(
             ListingId("l-byte-brigade"), "Byte Brigade", null,
             "Building an offline-first clinic queue app. Backend is done, need someone on mobile.",
             listOf("Mobile", "Designer"), memberCount = 2, xp = 340, reliability = Reliability(3),
             trackRecord = TrackRecordSummary(BestHackathon(HackathonResult.FINALIST, "GEMASTIK", 2025), 3, 4),
+            face = AvatarFace.DIMAS,
         ),
         DeckCard.Solo(
             ListingId("l-budi"), "Budi Santoso", null,
@@ -324,17 +328,20 @@ object DemoData {
             listOf("Python", "Pandas", "Arduino"), listOf("Data", "Hardware"), xp = 120,
             reliability = Reliability(2),
             trackRecord = TrackRecordSummary(null, 0, 1),
+            face = AvatarFace.BUDI,
         ),
         DeckCard.Solo(
             ListingId("l-citra"), "Citra Lestari", null,
             "First hackathon. Fast learner, solid at React.",
             listOf("React", "TypeScript"), listOf("Frontend"), xp = 0,
             reliability = Reliability(0),
+            face = AvatarFace.EKA,
         ),
         DeckCard.Team(
             ListingId("l-pixel"), "Pixel Pushers", null,
             "Gamified recycling tracker. We pitch well, we need a backend.",
             listOf("Backend"), memberCount = 1, xp = 60, reliability = Reliability(0),
+            face = AvatarFace.FAJAR,
         ),
     )
 

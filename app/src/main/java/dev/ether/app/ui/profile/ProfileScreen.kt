@@ -39,6 +39,7 @@ import dev.ether.app.ui.components.EthaLive
 import dev.ether.app.ui.components.EthaMove
 import dev.ether.app.ui.components.ArcadeIcons
 import dev.ether.app.ui.components.Avatar
+import dev.ether.app.ui.components.drawable
 import dev.ether.app.ui.components.BadgeState
 import dev.ether.app.ui.components.BadgeTile
 import dev.ether.app.ui.components.CountUpText
@@ -118,7 +119,7 @@ private fun ProfileContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(Modifier.staggerIn(0), verticalAlignment = Alignment.CenterVertically) {
-            Avatar(p.name, p.avatarUrl, 88.dp)
+            Avatar(p.name, p.avatarUrl, 88.dp, face = p.face?.drawable)
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(

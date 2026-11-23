@@ -124,7 +124,7 @@ class SupabaseProfileRepository(private val client: SupabaseClient) : ProfileRep
     override suspend fun saveMyProfile(draft: ProfileDraft): Unit = backend {
         val uid = client.uid()
         client.from("profiles").update(
-            ProfileUpdateDto(draft.name, draft.major, draft.year, draft.bio, draft.skills, draft.roles),
+            ProfileUpdateDto(draft.name, draft.major, draft.year, draft.bio, draft.skills, draft.roles, draft.face?.toDb()),
         ) { filter { eq("id", uid) } }
         // No upsert: on conflict PostgREST also rewrites profile_id, and only the contact columns are granted for UPDATE.
         val updated = client.from("profile_contacts").update(ProfileContactWriteDto(draft.contacts)) {

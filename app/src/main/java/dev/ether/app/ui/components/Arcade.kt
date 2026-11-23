@@ -1,5 +1,7 @@
 package dev.ether.app.ui.components
 
+import dev.ether.app.domain.AvatarFace
+import dev.ether.app.R
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -261,6 +263,17 @@ fun TagRow(tags: List<String>, color: Color, modifier: Modifier = Modifier, maxL
         tags.forEach { Chip(it, color = color) }
     }
 }
+
+/** The bundled drawing for each face a user can pick. */
+val AvatarFace.drawable: Int
+    get() = when (this) {
+        AvatarFace.NADIA -> R.drawable.face_nadia
+        AvatarFace.BUDI -> R.drawable.face_budi
+        AvatarFace.CITRA -> R.drawable.face_citra
+        AvatarFace.DIMAS -> R.drawable.face_dimas
+        AvatarFace.EKA -> R.drawable.face_eka
+        AvatarFace.FAJAR -> R.drawable.face_fajar
+    }
 
 fun initials(name: String) = name.split(' ').filter { it.isNotBlank() }.take(2).joinToString("") { it.take(1).uppercase() }
 

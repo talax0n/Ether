@@ -19,6 +19,7 @@ data class Profile(
     val contacts: Contacts,
     val avatarUrl: String?,
     val xp: Int,
+    val face: AvatarFace? = null,
 ) {
     /** Mirrors the database's profile-completion rule (check_profile_complete): the app gates on it, the DB awards XP for it. */
     val isComplete: Boolean
@@ -35,7 +36,11 @@ data class ProfileDraft(
     val skills: List<String>,
     val roles: List<String>,
     val contacts: Contacts,
+    val face: AvatarFace? = null,
 )
+
+/** Illustrated faces a user can pick as their picture; it shows instead of a photo or initials. */
+enum class AvatarFace { NADIA, BUDI, CITRA, DIMAS, EKA, FAJAR }
 
 data class Competition(
     val id: CompetitionId,
@@ -138,6 +143,7 @@ sealed interface DeckCard {
     val name: String
     val avatarUrl: String?
     val trackRecord: TrackRecordSummary
+    val face: AvatarFace?
 
     data class Solo(
         override val listingId: ListingId,
@@ -149,6 +155,7 @@ sealed interface DeckCard {
         val xp: Int,
         val reliability: Reliability,
         override val trackRecord: TrackRecordSummary = TrackRecordSummary.NONE,
+        override val face: AvatarFace? = null,
     ) : DeckCard
 
     data class Team(
@@ -161,6 +168,7 @@ sealed interface DeckCard {
         val xp: Int,
         val reliability: Reliability,
         override val trackRecord: TrackRecordSummary = TrackRecordSummary.NONE,
+        override val face: AvatarFace? = null,
     ) : DeckCard
 }
 
@@ -174,6 +182,7 @@ data class Match(
     val avatarUrl: String?,
     val contacts: Contacts,
     val createdAt: Instant,
+    val face: AvatarFace? = null,
 )
 
 enum class TeamResult { FINALIST, WINNER }

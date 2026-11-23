@@ -669,6 +669,27 @@ select throws_ok(
 reset role;
 
 
+-- ---------------------------------------------------------------- avatar faces
+select pg_temp.login('00000000-0000-0000-0000-00000000000a');
+select lives_ok(
+  $$ update profiles set avatar_face = 'citra' where id = '00000000-0000-0000-0000-00000000000a' $$,
+  'a user can pick a face for their picture');
+select throws_ok(
+  $$ update profiles set avatar_face = 'nobody' where id = '00000000-0000-0000-0000-00000000000a' $$,
+  '22P02', null, 'only bundled faces can be picked');
+select is(
+  (select count(*)::int from profiles where id = '00000000-0000-0000-0000-00000000000b' and avatar_face is not null), 0,
+  'picking a face leaves other profiles alone');
+reset role;
+select is(
+  (select avatar_face::text from listing_cards where profile_id = '00000000-0000-0000-0000-00000000000a' limit 1), 'citra',
+  'deck cards carry the picked face');
+select pg_temp.login('00000000-0000-0000-0000-00000000000b');
+select ok(
+  (select bool_or(avatar_face = 'citra') from my_matches('30000000-0000-0000-0000-000000000001')),
+  'matches carry the other side''s face');
+reset role;
+
 -- ---------------------------------------------------------------- guests (anon) browse competitions only
 set local role anon;
 select set_config('request.jwt.claims', json_build_object('role', 'anon')::text, true);

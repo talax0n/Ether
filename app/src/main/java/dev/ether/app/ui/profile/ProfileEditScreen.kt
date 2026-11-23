@@ -1,5 +1,19 @@
 package dev.ether.app.ui.profile
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import dev.ether.app.domain.AvatarFace
+import dev.ether.app.ui.components.Avatar
+import dev.ether.app.ui.components.drawable
+import dev.ether.app.ui.theme.Coral
+import dev.ether.app.ui.theme.Ink
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
@@ -86,6 +100,7 @@ fun ProfileEditScreen(isSetup: Boolean, onDone: () -> Unit, onBack: () -> Unit, 
                 XpBar(filled / 7f, Modifier.weight(1f))
                 if (isSetup) Chip("+50 XP", color = SunSoft, icon = ArcadeIcons.Bolt)
             }
+            FacePicker(form, Modifier.staggerIn(2)) { vm.edit { copy(face = it) } }
             Field("Name", form.name, 2) { vm.edit { copy(name = it) } }
             Field("Major", form.major, 3) { vm.edit { copy(major = it) } }
             Field("Year (1-10)", form.year, 4, KeyboardType.Number) { vm.edit { copy(year = it) } }
@@ -175,6 +190,48 @@ private fun ContactField(form: ProfileForm, kind: ContactKind, index: Int, onCha
                 Modifier.padding(horizontal = 4.dp), style = MaterialTheme.typography.bodySmall, color = colors.muted,
             )
             else -> Text(kind.hint, Modifier.padding(horizontal = 4.dp), style = MaterialTheme.typography.bodySmall, color = colors.muted)
+        }
+    }
+}
+
+/** Pick an illustrated face for your picture, or none to show your photo or initials. */
+@Composable
+private fun FacePicker(form: ProfileForm, modifier: Modifier = Modifier, onPick: (AvatarFace?) -> Unit) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Your picture", style = MaterialTheme.typography.titleMedium, color = Arcade.colors.text)
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            FaceOption(form.face == null, if (form.photoUrl != null) "Use my photo" else "Use my initials", { onPick(null) }) {
+                Avatar(form.name.ifBlank { "?" }, form.photoUrl, 60.dp, ledge = 3.dp, color = SunSoft)
+            }
+            AvatarFace.entries.forEach { face ->
+                FaceOption(form.face == face, "Face ${face.ordinal + 1}", { onPick(face) }) {
+                    Avatar("", null, 60.dp, ledge = 3.dp, color = SkySoft, face = face.drawable)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FaceOption(selected: Boolean, label: String, onClick: () -> Unit, content: @Composable () -> Unit) {
+    Box(
+        Modifier
+            .clip(CircleShape)
+            .selectable(selected, role = Role.RadioButton, onClick = onClick)
+            .semantics { contentDescription = label }
+            .border(3.dp, if (selected) Coral else Color.Transparent, CircleShape)
+            .padding(5.dp),
+        contentAlignment = Alignment.TopEnd,
+    ) {
+        content()
+        if (selected) {
+            Icon(
+                ArcadeIcons.Check, contentDescription = null, tint = Ink,
+                modifier = Modifier.size(20.dp).background(Coral, CircleShape).padding(3.dp),
+            )
         }
     }
 }

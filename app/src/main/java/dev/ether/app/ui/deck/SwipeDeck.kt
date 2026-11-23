@@ -62,6 +62,7 @@ import dev.ether.app.domain.SwipeDirection
 import dev.ether.app.domain.levelFor
 import dev.ether.app.ui.components.ArcadeIcons
 import dev.ether.app.ui.components.Avatar
+import dev.ether.app.ui.components.drawable
 import dev.ether.app.ui.components.CapsLabel
 import dev.ether.app.ui.components.Chip
 import dev.ether.app.ui.components.LevelHex
@@ -305,6 +306,7 @@ private fun CardFace(card: DeckCard, stampProgress: () -> Float, modifier: Modif
             card.name, card.avatarUrl, AvatarSize,
             Modifier.offset(x = 22.dp, y = HeaderHeight - AvatarSize / 2 - 4.dp),
             color = if (team) SkySoft else Peach,
+            face = card.face?.drawable,
         )
         Stamp("LIKE", MintDeep, -14f, Modifier.align(Alignment.TopStart).padding(start = 20.dp, top = 62.dp)) { stampProgress().coerceAtLeast(0f) }
         Stamp("NOPE", CoralDeep, 14f, Modifier.align(Alignment.TopEnd).padding(end = 20.dp, top = 62.dp)) { (-stampProgress()).coerceAtLeast(0f) }

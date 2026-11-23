@@ -49,6 +49,7 @@ import dev.ether.app.domain.ListingKind
 import dev.ether.app.domain.Match
 import dev.ether.app.ui.components.ArcadeIcons
 import dev.ether.app.ui.components.Avatar
+import dev.ether.app.ui.components.drawable
 import dev.ether.app.ui.components.Confetti
 import dev.ether.app.ui.components.LedgeButton
 import dev.ether.app.ui.components.Rays
@@ -223,6 +224,7 @@ private fun Duo(match: Match, duo: () -> Float, heart: () -> Float) {
                 rotationZ = 30f - 26f * p
             },
             color = SkySoft,
+            face = match.face?.drawable,
         )
     }
 }

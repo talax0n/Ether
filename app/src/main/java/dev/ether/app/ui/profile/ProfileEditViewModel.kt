@@ -3,6 +3,7 @@ package dev.ether.app.ui.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.ether.app.data.ProfileRepository
+import dev.ether.app.domain.AvatarFace
 import dev.ether.app.domain.ContactKind
 import dev.ether.app.domain.Contacts
 import dev.ether.app.domain.Profile
@@ -25,6 +26,9 @@ data class ProfileForm(
     val phone: String = "",
     val instagram: String = "",
     val lineId: String = "",
+    val face: AvatarFace? = null,
+    /** The sign-in photo (Google's), shown when no face is picked. Not editable here. */
+    val photoUrl: String? = null,
 ) {
     val skillTags get() = skills.splitTags()
     val roleTags get() = roles.splitTags()
@@ -68,7 +72,7 @@ data class ProfileForm(
         val contacts = contactsOrNull() ?: return null
         val skillTags = skills.splitTags().ifEmpty { return null }
         val roleTags = roles.splitTags().ifEmpty { return null }
-        return ProfileDraft(name.trim(), major.trim(), yearValue, bio.trim(), skillTags, roleTags, contacts)
+        return ProfileDraft(name.trim(), major.trim(), yearValue, bio.trim(), skillTags, roleTags, contacts, face)
     }
 
     companion object {
@@ -78,6 +82,8 @@ data class ProfileForm(
             phone = p.contacts.phone?.let { "+$it" }.orEmpty(),
             instagram = p.contacts.instagram?.let { "@$it" }.orEmpty(),
             lineId = p.contacts.lineId.orEmpty(),
+            face = p.face,
+            photoUrl = p.avatarUrl,
         )
     }
 }

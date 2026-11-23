@@ -16,7 +16,7 @@ What the Android client can read, write, and call. Business rules live in the mi
 
 | Table | Client can | Notes |
 |-------|-----------|-------|
-| `profiles` | select all; update own `name, major, year, bio, skills, roles, avatar_url` | Row is created at sign-up. `xp` is read-only. |
+| `profiles` | select all; update own `name, major, year, bio, skills, roles, avatar_url, avatar_face` | Row is created at sign-up. `xp` is read-only. |
 | `profile_contacts` | select (RLS: see below); insert own `profile_id, phone, instagram, line_id`; update own `phone, instagram, line_id` | Kept apart from `profiles` so RLS can hide it. All three are nullable; see formats below. |
 | `profile_hackathons` | select all; insert own `profile_id, name, year, result, project_name, url`; update own `name, year, result, project_name, url`; delete own | Past hackathons. Max 20 per profile (`hackathon_limit_reached`). See formats below. |
 | `profile_projects` | select all; insert own `profile_id, title, blurb, url, tags`; update own `title, blurb, url, tags`; delete own | Projects. Max 20 per profile (`project_limit_reached`). |
@@ -114,6 +114,7 @@ Output columns (one row per card):
 | `xp` | int | profile xp | sum of members' xp |
 | `reliability_score` | int | profile score | sum of members' scores |
 | `avatar_url` | text | profile avatar | owner's avatar |
+| `avatar_face` | avatar_face | profile's picked face | owner's picked face |
 | `active` | boolean | | |
 | `created_at` | timestamptz | | |
 | `best_result` | hackathon_result | profile's best | best across members |
@@ -126,7 +127,7 @@ Output columns (one row per card):
 
 ### `my_matches(p_competition uuid) → setof record`
 
-The caller's matches in one competition, newest first. Columns: `match_id, matched_at, my_listing_id`, then the other side's card (`listing_id, kind, profile_id, team_id, name, headline, skills, roles, open_roles, member_count, xp, reliability_score, avatar_url`), then `phone, instagram, line_id`. For a team, these are the owner's contacts. Any of them can be null.
+The caller's matches in one competition, newest first. Columns: `match_id, matched_at, my_listing_id`, then the other side's card (`listing_id, kind, profile_id, team_id, name, headline, skills, roles, open_roles, member_count, xp, reliability_score, avatar_url`), then `phone, instagram, line_id`, then `avatar_face`. For a team, these are the owner's contacts. Any of them can be null.
 
 ### `reliability_score(p_profile uuid) → int`
 
@@ -171,7 +172,7 @@ Each award happens once per (profile, reason, reference), so retries never doubl
 
 Guests (the `anon` role) can read `competitions` (every column, details included) and nothing else, so the app can be browsed before signing up.
 
-Sign-up is open to any email (email and password, no confirmation step) and to Google accounts. An `auth.users` insert trigger creates the `profiles` row. The name comes from `user_metadata.name`, then `user_metadata.full_name` (Google), then the email's local part. The avatar comes from `user_metadata.avatar_url` or `user_metadata.picture` (Google).
+Sign-up is open to any email (email and password, no confirmation step) and to Google accounts. An `auth.users` insert trigger creates the `profiles` row. The name comes from `user_metadata.name`, then `user_metadata.full_name` (Google), then the email's local part. The avatar comes from `user_metadata.avatar_url` or `user_metadata.picture` (Google). `avatar_face` (enum: `nadia, budi, citra, dimas, eka, fajar`) is a picked illustrated face; the app shows it instead of the photo or initials.
 
 ## Error messages
 

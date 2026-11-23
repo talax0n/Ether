@@ -23,7 +23,7 @@
 The key idea is the **Listing**. A Listing is "this solo user, or this team, is looking within this competition." Swipes and matches happen between listings. That gives solo and team cards one code path.
 
 ```
-Profile      (id = auth.uid, name, major, year, bio, skills[], roles[], contacts, avatarUrl, xp)
+Profile      (id = auth.uid, name, major, year, bio, skills[], roles[], contacts, avatarUrl, avatarFace?, xp)
 Contacts     (phone?, instagram?, lineId?)               at least one for a complete profile
 Competition  (id, name, description, url, registrationDeadline, eventEnd, minTeamSize, maxTeamSize,
               organizer?, prize?, mode: ONLINE | OFFLINE | HYBRID, city?, tags[])
@@ -104,7 +104,7 @@ The profile shows the level, its title, and progress to the next threshold. Leve
 **In scope:**
 - Browse without an account: the intro, then the competition list and details. Sign-in is asked for only when the user acts (joining, starting a team, swiping) or opens Matches, Teams, or Profile.
 - Sign in with email and password, or a Google account. Creating an account with email signs straight in; there are no email codes.
-- Profile create and edit: skills, roles, major, year, bio, contacts (phone for WhatsApp, Instagram, LINE ID; at least one), avatar.
+- Profile create and edit: skills, roles, major, year, bio, contacts (phone for WhatsApp, Instagram, LINE ID; at least one), picture: one of the bundled illustrated faces, else the sign-in photo, else initials.
 - Track record on the profile: add, edit and delete past hackathons and projects. The deck card shows the best result and the project count.
 - Competition list (seeded by hand in the database), grouped into Open for sign-up, Registration closed and Finished. Cards show the mode, city and prize.
 - Search and filter the list: a search box matching name, organizer, tags and city (case-insensitive, every word must match), and filter chips for status (Open / Closed / Finished), mode (Online / Offline / Hybrid) and the tags present in the data. Chips in one group are alternatives; groups combine. Filtering runs on the client over the loaded list. When nothing matches, the list says so and offers "Clear filters".

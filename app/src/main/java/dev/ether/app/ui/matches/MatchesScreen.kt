@@ -35,6 +35,7 @@ import dev.ether.app.domain.ListingKind
 import dev.ether.app.domain.Match
 import dev.ether.app.ui.components.ArcadeIcons
 import dev.ether.app.ui.components.Avatar
+import dev.ether.app.ui.components.drawable
 import dev.ether.app.ui.components.Chip
 import dev.ether.app.ui.components.LedgeCard
 import dev.ether.app.ui.components.LoadingBox
@@ -139,7 +140,7 @@ private fun MatchRow(match: Match, now: Instant, modifier: Modifier) {
     val fresh = Duration.between(match.createdAt, now) < Duration.ofDays(1)
     LedgeCard(modifier.fillMaxWidth(), ledge = 4.dp) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Avatar(match.name, match.avatarUrl, 52.dp, color = if (team) SkySoft else Peach, ledge = 3.dp)
+            Avatar(match.name, match.avatarUrl, 52.dp, color = if (team) SkySoft else Peach, ledge = 3.dp, face = match.face?.drawable)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(match.name, style = MaterialTheme.typography.titleMedium, color = Arcade.colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)

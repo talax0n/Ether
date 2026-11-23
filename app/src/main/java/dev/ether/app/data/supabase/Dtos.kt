@@ -1,5 +1,6 @@
 package dev.ether.app.data.supabase
 
+import dev.ether.app.domain.AvatarFace
 import dev.ether.app.domain.Badge
 import dev.ether.app.domain.BestHackathon
 import dev.ether.app.domain.HackathonResult
@@ -64,9 +65,10 @@ data class ProfileDto(
     val roles: List<String> = emptyList(),
     @SerialName("avatar_url") val avatarUrl: String? = null,
     val xp: Int = 0,
+    @SerialName("avatar_face") val avatarFace: String? = null,
 ) {
     fun toDomain(contacts: Contacts) = Profile(
-        ProfileId(id), name, major, year, bio.orEmpty(), skills, roles, contacts, avatarUrl, xp,
+        ProfileId(id), name, major, year, bio.orEmpty(), skills, roles, contacts, avatarUrl, xp, avatarFace.toFace(),
     )
 }
 
@@ -78,7 +80,14 @@ data class ProfileUpdateDto(
     val bio: String,
     val skills: List<String>,
     val roles: List<String>,
+    /** Always sent, so null clears a picked face. */
+    @SerialName("avatar_face") val avatarFace: String?,
 )
+
+/** The `avatar_face` enum value; an unknown one (a newer server) falls back to no face. */
+fun String?.toFace(): AvatarFace? = this?.let { v -> AvatarFace.entries.find { it.name.equals(v, ignoreCase = true) } }
+
+fun AvatarFace.toDb(): String = name.lowercase()
 
 /** A `profile_contacts` row, as read back (RLS decides whose rows come back). */
 @Serializable
@@ -200,6 +209,7 @@ data class DeckRowDto(
     @SerialName("best_hackathon_year") val bestHackathonYear: Int? = null,
     @SerialName("hackathon_count") val hackathonCount: Int = 0,
     @SerialName("project_count") val projectCount: Int = 0,
+    @SerialName("avatar_face") val avatarFace: String? = null,
 ) {
     private fun trackRecord(): TrackRecordSummary {
         val best = if (bestResult != null && bestHackathon != null && bestHackathonYear != null) {
@@ -213,11 +223,11 @@ data class DeckRowDto(
     fun toDomain(): DeckCard = when (kind) {
         ListingKindDto.SOLO -> DeckCard.Solo(
             ListingId(listingId), name, avatarUrl, headline.orEmpty(), skills, roles, xp, Reliability(reliabilityScore),
-            trackRecord(),
+            trackRecord(), avatarFace.toFace(),
         )
         ListingKindDto.TEAM -> DeckCard.Team(
             ListingId(listingId), name, avatarUrl, headline.orEmpty(), openRoles, memberCount, xp, Reliability(reliabilityScore),
-            trackRecord(),
+            trackRecord(), avatarFace.toFace(),
         )
     }
 }
@@ -243,10 +253,11 @@ data class MatchRowDto(
     val phone: String? = null,
     val instagram: String? = null,
     @SerialName("line_id") val lineId: String? = null,
+    @SerialName("avatar_face") val avatarFace: String? = null,
 ) {
     fun toDomain(competitionId: CompetitionId) = Match(
         MatchId(matchId), competitionId, ListingId(listingId), kind.toDomain(),
-        name, avatarUrl, Contacts.of(phone, instagram, lineId), parseTimestamp(matchedAt),
+        name, avatarUrl, Contacts.of(phone, instagram, lineId), parseTimestamp(matchedAt), avatarFace.toFace(),
     )
 }
 
