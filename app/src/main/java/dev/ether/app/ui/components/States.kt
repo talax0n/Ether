@@ -127,7 +127,7 @@ fun Splash(modifier: Modifier = Modifier) {
     }
 }
 
-/** The app mark: the launcher heart in a Coral ledge tile. */
+/** The app mark: two swipe cards with a spark, same as the launcher icon. */
 @Composable
 fun EtherMark(modifier: Modifier = Modifier, size: Dp = 56.dp) {
     Image(
@@ -137,7 +137,7 @@ fun EtherMark(modifier: Modifier = Modifier, size: Dp = 56.dp) {
 }
 
 /** Width over height of drawable/ether_mark.png (the launcher foreground cropped to the mark). */
-private const val MarkAspect = 361f / 384f
+private const val MarkAspect = 397f / 384f
 private val SplashIconSize = 160.dp
 
 /** The "ether" logotype: Coral letters with an Ink ledge. */
