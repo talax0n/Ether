@@ -183,3 +183,7 @@ Errors raised from Postgres arrive as the PostgREST `message`. They are stable s
 ## Local dev
 
 `supabase start`, then `supabase db reset`. Demo logins are `demo1@student.example.ac.id` … `demo8@…` with the password `ether-demo` (local seed only). New accounts sign straight in. The seed has five competitions with details filled in: `Campus Hackathon 2026` (offline, Yogyakarta), `Data Challenge 2026` (online, ended), and three sample upcoming ones (`Nusantara AI Build Week`, `Green Cities Hack`, `Open Ledger Online Jam`) linking to `https://example.com/...`. The hosted dev DB gets the same rows from `supabase/snippets/competition_details_dev_data.sql` (idempotent; not a migration, so production never gets sample events). Competition `Campus Hackathon 2026` has 6 solo listings (demo1–6) and team `Byte Club` (demo7 + demo8). `Data Challenge 2026` has ended, and its team `Night Owls` (demo1–3) can endorse each other. Demo1, 2, 3, 5 and 8 have past hackathons and demo1, 3, 6 and 8 have projects, so deck cards show a track-record summary.
+
+## Demo students
+
+Accounts at `people.ether.app` are demo students seeded by `supabase/snippets/demo_people.sql`. They cannot sign in. A trigger makes each active demo listing like every new real listing in the same competition (no team-to-team), so a right swipe on a demo student forms a match. Deleting the demo accounts turns this off.

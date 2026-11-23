@@ -690,6 +690,31 @@ select ok(
   'matches carry the other side''s face');
 reset role;
 
+
+-- ---------------------------------------------------------------- demo students like back
+insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000d0', 'demo01@people.ether.app');
+insert into listings (id, competition_id, kind, profile_id)
+values ('40000000-0000-0000-0000-0000000000d0', '30000000-0000-0000-0000-000000000001', 'solo', '00000000-0000-0000-0000-0000000000d0');
+insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000d1', 'real.person@gmail.com');
+insert into listings (id, competition_id, kind, profile_id)
+values ('40000000-0000-0000-0000-0000000000d1', '30000000-0000-0000-0000-000000000001', 'solo', '00000000-0000-0000-0000-0000000000d1');
+select is(
+  (select direction::text from swipes where from_listing_id = '40000000-0000-0000-0000-0000000000d0'
+     and to_listing_id = '40000000-0000-0000-0000-0000000000d1'), 'right',
+  'a demo student likes a new real listing');
+select is(
+  (select count(*)::int from swipes where to_listing_id = '40000000-0000-0000-0000-0000000000d0'
+     and from_listing_id in (select id from listings where profile_id <> '00000000-0000-0000-0000-0000000000d0')
+     and swiped_by = '00000000-0000-0000-0000-0000000000d1'), 0,
+  'real users never swipe automatically');
+select pg_temp.login('00000000-0000-0000-0000-0000000000d1');
+select is(
+  (select (swipe('40000000-0000-0000-0000-0000000000d1', '40000000-0000-0000-0000-0000000000d0', 'right') ->> 'matched')::boolean), true,
+  'a right swipe on a demo student matches');
+select throws_ok($$ select is_demo_profile('00000000-0000-0000-0000-0000000000d0') $$, '42501', null,
+  'clients cannot call the demo helpers');
+reset role;
+
 -- ---------------------------------------------------------------- guests (anon) browse competitions only
 set local role anon;
 select set_config('request.jwt.claims', json_build_object('role', 'anon')::text, true);
