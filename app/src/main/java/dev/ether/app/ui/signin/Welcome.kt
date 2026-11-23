@@ -43,6 +43,9 @@ import dev.ether.app.ui.components.ArcadeIcons
 import dev.ether.app.ui.components.Avatar
 import dev.ether.app.ui.components.ErrorText
 import dev.ether.app.ui.components.EthaLive
+import dev.ether.app.ui.components.rememberEthaController
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import dev.ether.app.ui.components.EthaMove
 import dev.ether.app.ui.components.LedgeButton
 import dev.ether.app.ui.components.Wordmark
@@ -178,9 +181,54 @@ private fun Burst(modifier: Modifier) {
                 alpha = p.coerceIn(0f, 1f)
             },
         ) {
-            EthaLive(size = 150.dp, first = EthaMove.WAVE, pool = EthaMove.FIDGETS + EthaMove.WAVE)
+            FloatingEtha({ phase.value })
             Wordmark(Modifier.offset(y = (-8).dp))
         }
+    }
+}
+
+/**
+ * Etha floating at the burst's centre: it bobs and sways on [bob], really leaves the ground when it plays its hop,
+ * and a shadow under it shrinks as it rises. Tapping it still gets a giggle.
+ */
+@Composable
+private fun FloatingEtha(bob: () -> Float) {
+    val etha = rememberEthaController()
+    val jump = remember { Animatable(0f) }
+    LaunchedEffect(etha.take) {
+        if (etha.move != EthaMove.HOP) return@LaunchedEffect
+        val hop = EthaMove.HOP
+        // Crouch frame first, then up and down across the airborne frames.
+        delay(hop.frameMs)
+        val air = ((hop.frames - 2) * hop.frameMs).toInt()
+        jump.animateTo(1f, tween(air / 2, easing = FastOutSlowInEasing))
+        jump.animateTo(0f, tween(air / 2, easing = LinearOutSlowInEasing))
+    }
+    val size = 150.dp
+    Box(contentAlignment = Alignment.BottomCenter) {
+        // Ground shadow: stays put while Etha floats, narrows and fades as it goes up.
+        Canvas(Modifier.size(size * 0.62f, 14.dp).offset(y = (-6).dp)) {
+            val lift = (sin(bob()) + 1f) / 2f * 0.25f + jump.value * 0.6f
+            val w = size.toPx() * 0.5f * (1f - lift * 0.5f)
+            drawOval(
+                Color.Black.copy(alpha = 0.12f * (1f - lift * 0.6f)),
+                topLeft = Offset((this.size.width - w) / 2f, 0f),
+                size = androidx.compose.ui.geometry.Size(w, this.size.height),
+            )
+        }
+        EthaLive(
+            Modifier.graphicsLayer {
+                val b = bob()
+                translationY = (sin(b) * 7.dp.toPx()) - 10.dp.toPx() - jump.value * 34.dp.toPx()
+                rotationZ = sin(b * 2f) * 3f
+                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f)
+            },
+            size = size,
+            controller = etha,
+            first = EthaMove.WAVE,
+            pool = EthaMove.FIDGETS + EthaMove.WAVE + EthaMove.HOP + EthaMove.HOP,
+            restMs = 1_800L..3_500L,
+        )
     }
 }
 
