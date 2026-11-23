@@ -126,7 +126,7 @@ Each award happens once per (profile, reason, reference), so retries never doubl
 
 Guests (the `anon` role) can read `competitions` and nothing else, so the app can be browsed before signing up.
 
-Sign-up is open to any email (password, confirmed with a 6-digit code) and to Google accounts. An `auth.users` insert trigger creates the `profiles` row. The name comes from `user_metadata.name`, then `user_metadata.full_name` (Google), then the email's local part. The avatar comes from `user_metadata.avatar_url` or `user_metadata.picture` (Google).
+Sign-up is open to any email (email and password, no confirmation step) and to Google accounts. An `auth.users` insert trigger creates the `profiles` row. The name comes from `user_metadata.name`, then `user_metadata.full_name` (Google), then the email's local part. The avatar comes from `user_metadata.avatar_url` or `user_metadata.picture` (Google).
 
 ## Error messages
 
@@ -136,4 +136,4 @@ Errors raised from Postgres arrive as the PostgREST `message`. They are stable s
 
 ## Local dev
 
-`supabase start`, then `supabase db reset`. Demo logins are `demo1@student.example.ac.id` … `demo8@…` with the password `ether-demo` (local seed only). New accounts read their confirmation code in Mailpit at http://127.0.0.1:54324. Competition `Campus Hackathon 2026` has 6 solo listings (demo1–6) and team `Byte Club` (demo7 + demo8). `Data Challenge 2026` has ended, and its team `Night Owls` (demo1–3) can endorse each other.
+`supabase start`, then `supabase db reset`. Demo logins are `demo1@student.example.ac.id` … `demo8@…` with the password `ether-demo` (local seed only). New accounts sign straight in. Competition `Campus Hackathon 2026` has 6 solo listings (demo1–6) and team `Byte Club` (demo7 + demo8). `Data Challenge 2026` has ended, and its team `Night Owls` (demo1–3) can endorse each other.

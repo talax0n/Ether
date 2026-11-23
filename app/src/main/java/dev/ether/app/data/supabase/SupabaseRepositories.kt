@@ -71,26 +71,10 @@ class SupabaseAuthRepository(private val client: SupabaseClient) : AuthRepositor
             this.email = email
             this.password = password
         }
-        // With "Confirm email" off the session starts right away; with it on, a code is on its way.
+        // With "Confirm email" off the session starts right away; with it on, a confirmation link is on its way.
         if (client.auth.currentSessionOrNull() != null) SignUpResult.SIGNED_IN else SignUpResult.VERIFY_EMAIL
     }
 
-    override suspend fun verifyEmail(email: String, code: String): Unit = backend {
-        client.auth.verifyEmailOtp(type = OtpType.Email.SIGNUP, email = email, token = code)
-    }
-
-    override suspend fun resendVerification(email: String): Unit = backend {
-        client.auth.resendEmail(OtpType.Email.SIGNUP, email)
-    }
-
-    override suspend fun sendPasswordReset(email: String): Unit = backend {
-        client.auth.resetPasswordForEmail(email)
-    }
-
-    override suspend fun resetPassword(email: String, code: String, newPassword: String): Unit = backend {
-        client.auth.verifyEmailOtp(type = OtpType.Email.RECOVERY, email = email, token = code)
-        client.auth.updateUser { password = newPassword }
-    }
 
     override suspend fun signInWithGoogle(idToken: String, rawNonce: String): Unit = backend {
         client.auth.signInWith(IDToken) {

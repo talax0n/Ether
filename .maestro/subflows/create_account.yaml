@@ -1,7 +1,6 @@
 appId: dev.ether.app
 ---
-# Creates an account and confirms the email with the 6-digit code read from Mailpit.
-- runScript: ../scripts/clear_mail.js
+# Creates an account with email and password; it signs straight in.
 # First launch only: the intro pages, then the app opens for browsing without an account.
 - tapOn:
     text: "Skip"
@@ -19,12 +18,3 @@ appId: dev.ether.app
 - tapOn:
     text: "Create account"
     index: 1
-- extendedWaitUntil:
-    visible: "6-digit code"
-    timeout: 15000
-- runScript:
-    file: ../scripts/otp.js
-    env:
-      EMAIL: ${EMAIL}
-- tapOn: "6-digit code"
-- inputText: ${output.otp}

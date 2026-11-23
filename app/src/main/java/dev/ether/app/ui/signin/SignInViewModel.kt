@@ -4,11 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.ether.app.data.AuthRepository
 import dev.ether.app.data.SignUpResult
-import dev.ether.app.domain.EtherError
 import dev.ether.app.domain.AuthState
 import dev.ether.app.ui.userMessage
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,39 +14,28 @@ import kotlinx.coroutines.launch
 
 enum class SignInMode { SIGN_IN, CREATE_ACCOUNT }
 
-/**
- * WELCOME picks Google or email. CREDENTIALS takes email and password. VERIFY takes the code that confirms a new account's email.
- * RESET takes the code from a password-reset mail together with the new password.
- */
-enum class SignInStep { WELCOME, CREDENTIALS, VERIFY, RESET }
+/** WELCOME picks Google or email. CREDENTIALS takes email and password. */
+enum class SignInStep { WELCOME, CREDENTIALS }
 
 data class SignInUiState(
     val mode: SignInMode = SignInMode.SIGN_IN,
     val step: SignInStep = SignInStep.WELCOME,
     val email: String = "",
     val password: String = "",
-    val code: String = "",
     val busy: Boolean = false,
     val error: String? = null,
-    /** Seconds until "Resend code" is allowed again; 0 means it can be tapped. */
-    val resendIn: Int = 0,
+    /** A non-error message, e.g. that a confirmation link was mailed. */
+    val notice: String? = null,
 ) {
     val canSubmit: Boolean
-        get() = !busy && when (step) {
-            SignInStep.WELCOME -> false
-            SignInStep.CREDENTIALS -> email.isValidEmail() && when (mode) {
-                SignInMode.SIGN_IN -> password.isNotEmpty()
-                // A hint only: the auth server enforces its own password policy.
-                SignInMode.CREATE_ACCOUNT -> password.length >= MIN_PASSWORD
-            }
-            SignInStep.VERIFY -> code.length == CODE_LENGTH
-            SignInStep.RESET -> code.length == CODE_LENGTH && password.length >= MIN_PASSWORD
+        get() = !busy && step == SignInStep.CREDENTIALS && email.isValidEmail() && when (mode) {
+            SignInMode.SIGN_IN -> password.isNotEmpty()
+            // A hint only: the auth server enforces its own password policy.
+            SignInMode.CREATE_ACCOUNT -> password.length >= MIN_PASSWORD
         }
 
     companion object {
-        const val CODE_LENGTH = 6
         const val MIN_PASSWORD = 6
-        const val RESEND_COOLDOWN = 30
     }
 }
 
@@ -71,64 +57,38 @@ class SignInViewModel(private val auth: AuthRepository) : ViewModel() {
 
     fun onPasswordChange(value: String) = _state.update { it.copy(password = value, error = null) }
 
-    fun onModeChange(mode: SignInMode) = _state.update { it.copy(mode = mode, error = null) }
+    fun onModeChange(mode: SignInMode) = _state.update { it.copy(mode = mode, error = null, notice = null) }
 
-    fun onCodeChange(value: String) {
-        _state.update { it.copy(code = value.filter(Char::isDigit).take(SignInUiState.CODE_LENGTH), error = null) }
-        // The last digit verifies on its own; nobody should have to hunt for a button after typing a code.
-        // A reset still needs its new password, so that step waits for the button.
-        if (_state.value.step == SignInStep.VERIFY && _state.value.code.length == SignInUiState.CODE_LENGTH) submit()
-    }
+    fun continueWithEmail() = _state.update { it.copy(step = SignInStep.CREDENTIALS, error = null) }
+
+    fun back() = _state.update { it.copy(step = SignInStep.WELCOME, password = "", error = null, notice = null) }
 
     fun submit() {
         val current = _state.value
         if (!current.canSubmit) return
         val email = current.email.trim()
-        _state.update { it.copy(busy = true, error = null) }
+        _state.update { it.copy(busy = true, error = null, notice = null) }
         viewModelScope.launch {
             runCatching {
-                when {
-                    current.step == SignInStep.VERIFY -> auth.verifyEmail(email, current.code)
-                    current.step == SignInStep.RESET -> auth.resetPassword(email, current.code, current.password)
-                    current.mode == SignInMode.SIGN_IN -> auth.signIn(email, current.password)
-                    auth.signUp(email, current.password) == SignUpResult.VERIFY_EMAIL -> return@runCatching toVerify()
-                }
-                // A session now exists; the app root moves on, so only the spinner needs clearing.
-                _state.update { it.copy(busy = false) }
-            }.onFailure { e ->
-                if (e is EtherError.EmailNotConfirmed) {
-                    // An account that never confirmed: send a fresh code and take them straight to it.
-                    runCatching { auth.resendVerification(email) }
-                    toVerify()
+                if (current.mode == SignInMode.SIGN_IN) {
+                    auth.signIn(email, current.password)
+                    null
                 } else {
-                    _state.update { it.copy(busy = false, error = e.userMessage()) }
+                    auth.signUp(email, current.password)
                 }
+            }.onSuccess { result ->
+                // A session now exists and the app root moves on, unless the project still wants the email confirmed.
+                _state.update {
+                    if (result == SignUpResult.VERIFY_EMAIL) {
+                        it.copy(busy = false, mode = SignInMode.SIGN_IN, password = "", notice = "Open the link we sent to $email, then sign in.")
+                    } else {
+                        it.copy(busy = false)
+                    }
+                }
+            }.onFailure { e ->
+                _state.update { it.copy(busy = false, error = e.userMessage()) }
             }
         }
-    }
-
-    /** Sends a reset code to the email already typed in, then asks for the code and a new password. */
-    fun forgotPassword() {
-        val current = _state.value
-        if (current.busy) return
-        if (!current.email.isValidEmail()) {
-            _state.update { it.copy(error = "Enter your email first, then tap Forgot password.") }
-            return
-        }
-        _state.update { it.copy(busy = true, error = null) }
-        viewModelScope.launch {
-            runCatching { auth.sendPasswordReset(current.email.trim()) }
-                .onSuccess {
-                    _state.update { it.copy(step = SignInStep.RESET, mode = SignInMode.SIGN_IN, code = "", password = "", busy = false) }
-                    startCooldown()
-                }
-                .onFailure { e -> _state.update { it.copy(busy = false, error = e.userMessage()) } }
-        }
-    }
-
-    private fun toVerify() {
-        _state.update { it.copy(step = SignInStep.VERIFY, code = "", busy = false) }
-        startCooldown()
     }
 
     fun signInWithGoogle(idToken: String, rawNonce: String) {
@@ -143,39 +103,4 @@ class SignInViewModel(private val auth: AuthRepository) : ViewModel() {
 
     /** Google's own sheet failed before a token existed (no account, network, misconfiguration). */
     fun googleFailed(message: String) = _state.update { it.copy(busy = false, error = message) }
-
-    fun resend() {
-        val current = _state.value
-        if (current.step !in setOf(SignInStep.VERIFY, SignInStep.RESET) || current.busy || current.resendIn > 0) return
-        _state.update { it.copy(busy = true, code = "", error = null) }
-        viewModelScope.launch {
-            runCatching {
-                val email = current.email.trim()
-                if (current.step == SignInStep.RESET) auth.sendPasswordReset(email) else auth.resendVerification(email)
-            }
-                .onSuccess { _state.update { it.copy(busy = false) }; startCooldown() }
-                .onFailure { e -> _state.update { it.copy(busy = false, error = e.userMessage()) } }
-        }
-    }
-
-    fun continueWithEmail() = _state.update { it.copy(step = SignInStep.CREDENTIALS, error = null) }
-
-    /** One step back: a code screen returns to the credentials, the credentials return to the welcome screen. */
-    fun back() {
-        cooldown?.cancel()
-        val previous = if (_state.value.step == SignInStep.CREDENTIALS) SignInStep.WELCOME else SignInStep.CREDENTIALS
-        _state.update { it.copy(step = previous, code = "", password = "", error = null, resendIn = 0) }
-    }
-
-    private var cooldown: Job? = null
-
-    private fun startCooldown() {
-        cooldown?.cancel()
-        cooldown = viewModelScope.launch {
-            for (left in SignInUiState.RESEND_COOLDOWN downTo 0) {
-                _state.update { it.copy(resendIn = left) }
-                if (left > 0) delay(1_000)
-            }
-        }
-    }
 }

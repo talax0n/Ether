@@ -13,7 +13,6 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,16 +27,14 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.slideInVertically
@@ -52,13 +49,11 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import dev.ether.app.ui.theme.Ink
 import dev.ether.app.ui.theme.SunSoft
 import dev.ether.app.ui.components.EthaLive
-import dev.ether.app.ui.components.EthaMove
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.heightIn
@@ -72,11 +67,8 @@ import dev.ether.app.BuildConfig
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -90,9 +82,7 @@ import dev.ether.app.ui.components.LedgeButton
 import dev.ether.app.ui.components.LedgeIconButton
 import dev.ether.app.ui.components.ledge
 import dev.ether.app.ui.theme.Arcade
-import dev.ether.app.ui.theme.Coral
 import dev.ether.app.ui.theme.EtherTheme
-import dev.ether.app.ui.theme.NumberStyle
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -117,8 +107,8 @@ fun SignInScreen(onClose: () -> Unit, vm: SignInViewModel = koinViewModel()) {
         else -> null
     }
     SignInContent(
-        state, vm::onEmailChange, vm::onPasswordChange, vm::onModeChange, vm::onCodeChange, vm::submit, vm::back,
-        vm::resend, vm::forgotPassword, vm::continueWithEmail, onGoogle, onClose,
+        state, vm::onEmailChange, vm::onPasswordChange, vm::onModeChange, vm::submit, vm::back,
+        vm::continueWithEmail, onGoogle, onClose,
     )
 }
 
@@ -128,11 +118,8 @@ fun SignInContent(
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onModeChange: (SignInMode) -> Unit,
-    onCodeChange: (String) -> Unit,
     onSubmit: () -> Unit,
     onBack: () -> Unit,
-    onResend: () -> Unit,
-    onForgotPassword: () -> Unit,
     onContinueWithEmail: () -> Unit,
     /** Null hides the Google button: no client ID is configured for this build. */
     onGoogle: (() -> Unit)?,
@@ -194,7 +181,7 @@ fun SignInContent(
                             Column {
                                 Heading(
                                     if (isCreating) "Create your\naccount" else "Welcome\nback",
-                                    if (isCreating) "Use any email. We'll send a code to confirm it's yours." else "Sign in with your email and password.",
+                                    if (isCreating) "Use any email and pick a password." else "Sign in with your email and password.",
                                 )
                             }
                         }
@@ -209,30 +196,16 @@ fun SignInContent(
                         )
                         Spacer(Modifier.height(12.dp))
                         Box(Modifier.staggerIn(4)) { PasswordField(state.password, onPasswordChange, creating, onSubmit) }
-                        if (creating) {
-                            Spacer(Modifier.height(14.dp))
-                        } else {
-                            TextLink("Forgot password?", enabled = !state.busy, onForgotPassword, Modifier.align(Alignment.End).padding(vertical = 6.dp))
-                        }
+                        Spacer(Modifier.height(14.dp))
                         LedgeButton(
                             if (creating) "Create account" else "Sign in", onSubmit, Modifier.fillMaxWidth().staggerIn(5),
                             enabled = state.canSubmit || state.busy, busy = state.busy, icon = ArcadeIcons.Bolt,
                         )
                     }
-                    SignInStep.VERIFY -> {
-                        Heading("Verify your\nemail", "Enter the code we sent to ${state.email.trim()} to finish creating your account.")
-                        CodeCells(state.code, onCodeChange, enabled = !state.busy)
-                        Spacer(Modifier.height(16.dp))
-                        ResendRow(state.resendIn, enabled = !state.busy, onResend)
-                    }
-                    SignInStep.RESET -> {
-                        Heading("Reset your\npassword", "Enter the code we sent to ${state.email.trim()}, then choose a new password.")
-                        CodeCells(state.code, onCodeChange, enabled = !state.busy)
-                        Spacer(Modifier.height(16.dp))
-                        ResendRow(state.resendIn, enabled = !state.busy, onResend)
-                        Spacer(Modifier.height(20.dp))
-                        PasswordField(state.password, onPasswordChange, creating = true, onSubmit, label = "New password (6+ characters)")
-                    }
+                }
+                state.notice?.let {
+                    Spacer(Modifier.height(14.dp))
+                    Text(it, style = MaterialTheme.typography.bodyLarge, color = colors.text)
                 }
                 state.error?.let {
                     Spacer(Modifier.height(14.dp))
@@ -242,12 +215,6 @@ fun SignInContent(
             }
         }
       }
-        if (state.step == SignInStep.VERIFY || state.step == SignInStep.RESET) {
-            LedgeButton(
-                if (state.step == SignInStep.RESET) "Set new password" else "Verify", onSubmit, Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
-                enabled = state.canSubmit || state.busy, busy = state.busy, icon = ArcadeIcons.Check,
-            )
-        }
     }
 }
 
@@ -327,62 +294,9 @@ private fun Heading(title: String, body: String) {
     Spacer(Modifier.height(28.dp))
 }
 
-/** Six code boxes over one hidden text field, so paste, autofill and the keyboard all behave like a normal input. */
-@Composable
-private fun CodeCells(code: String, onChange: (String) -> Unit, enabled: Boolean) {
-    val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focus.requestFocus() }
-    val colors = Arcade.colors
-    BasicTextField(
-        value = code,
-        onValueChange = onChange,
-        enabled = enabled,
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
-        modifier = Modifier.fillMaxWidth().focusRequester(focus).semantics { contentDescription = "6-digit code" },
-        decorationBox = {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                repeat(SignInUiState.CODE_LENGTH) { i ->
-                    val active = enabled && i == code.length
-                    Box(
-                        Modifier.weight(1f).height(64.dp)
-                            .ledge(RoundedCornerShape(14.dp), colors.surface, if (active) Coral else colors.line, colors.ledge, if (active) 5.dp else 3.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(code.getOrNull(i)?.toString() ?: "", style = NumberStyle.copy(fontSize = 26.sp), color = colors.text)
-                    }
-                }
-            }
-        },
-    )
-}
-
-@Composable
-private fun TextLink(text: String, enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Text(
-        text,
-        modifier.clip(RoundedCornerShape(8.dp)).clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(vertical = 4.dp, horizontal = 2.dp),
-        style = MaterialTheme.typography.titleSmall,
-        color = Arcade.colors.text,
-    )
-}
-
-@Composable
-private fun ResendRow(resendIn: Int, enabled: Boolean, onResend: () -> Unit) {
-    val colors = Arcade.colors
-    if (resendIn > 0) {
-        Text(
-            "Resend code in 0:${resendIn.toString().padStart(2, '0')}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = colors.muted,
-        )
-    } else {
-        TextLink("Resend code", enabled, onResend)
-    }
-}
 
 @Preview
 @Composable
 private fun SignInPreview() {
-    EtherTheme { SignInContent(SignInUiState(email = "ana@example.com"), {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) }
+    EtherTheme { SignInContent(SignInUiState(email = "ana@example.com"), {}, {}, {}, {}, {}, {}, {}, {}) }
 }

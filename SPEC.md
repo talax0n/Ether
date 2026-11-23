@@ -88,7 +88,7 @@ The profile shows the level, its title, and progress to the next threshold. Leve
 
 **In scope:**
 - Browse without an account: the intro, then the competition list and details. Sign-in is asked for only when the user acts (joining, starting a team, swiping) or opens Matches, Teams, or Profile.
-- Sign in with email and password, or a Google account. Creating an account with email asks for a 6-digit code to confirm the address; the code is never used to sign in.
+- Sign in with email and password, or a Google account. Creating an account with email signs straight in; there are no email codes.
 - Profile create and edit: skills, roles, major, year, bio, contact link, avatar.
 - Competition list (seeded by hand in the database).
 - Join a competition as SOLO, or create a team and list it as TEAM.

@@ -59,26 +59,16 @@ class FakeBackend(
     private val teams = DemoData.myTeams.toMutableList()
     private var nextId = 1
 
-    // Any password signs in; creating an account always asks for the demo code, so both paths can be tried.
+    // Any password signs in, and creating an account signs straight in.
     override suspend fun signIn(email: String, password: String) {
         auth.value = AuthState.SignedIn(DemoData.me.id)
     }
 
-    override suspend fun signUp(email: String, password: String): SignUpResult = SignUpResult.VERIFY_EMAIL
-
-    override suspend fun verifyEmail(email: String, code: String) {
-        if (code != DemoData.OTP) throw EtherError.InvalidCode()
+    override suspend fun signUp(email: String, password: String): SignUpResult {
         auth.value = AuthState.SignedIn(DemoData.me.id)
+        return SignUpResult.SIGNED_IN
     }
 
-    override suspend fun resendVerification(email: String) = Unit
-
-    override suspend fun sendPasswordReset(email: String) = Unit
-
-    override suspend fun resetPassword(email: String, code: String, newPassword: String) {
-        if (code != DemoData.OTP) throw EtherError.InvalidCode()
-        auth.value = AuthState.SignedIn(DemoData.me.id)
-    }
 
     override suspend fun signInWithGoogle(idToken: String, rawNonce: String) {
         auth.value = AuthState.SignedIn(DemoData.me.id)
@@ -183,7 +173,6 @@ class FakeBackend(
 }
 
 object DemoData {
-    const val OTP = "123456"
     // Dates are relative to launch so the demo always has one open, one closed and one finished competition.
     val now: Instant = Instant.now().truncatedTo(ChronoUnit.HOURS)
     private fun days(n: Long): Instant = now.plus(n, ChronoUnit.DAYS)

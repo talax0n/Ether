@@ -10,7 +10,6 @@ import dev.ether.app.ui.signin.SignInMode
 import dev.ether.app.ui.signin.SignInStep
 import dev.ether.app.ui.signin.SignInViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -33,8 +32,17 @@ class SignInViewModelTest {
         vm.onPasswordChange(password)
     }
 
+    /** An auth backend that only answers the calls a test needs. */
+    private fun auth(signIn: () -> Unit = {}, signUp: () -> SignUpResult = { SignUpResult.SIGNED_IN }) = object : AuthRepository {
+        override val authState = MutableStateFlow<AuthState>(AuthState.SignedOut)
+        override suspend fun signIn(email: String, password: String) = signIn()
+        override suspend fun signUp(email: String, password: String) = signUp()
+        override suspend fun signInWithGoogle(idToken: String, rawNonce: String) = Unit
+        override suspend fun signOut() = Unit
+    }
+
     @Test
-    fun `signing in with a password starts a session without a code`() = runTest {
+    fun `signing in with a password starts a session`() = runTest {
         credentials(SignInMode.SIGN_IN)
         vm.submit()
 
@@ -45,7 +53,16 @@ class SignInViewModelTest {
     }
 
     @Test
+    fun `creating an account signs straight in`() = runTest {
+        credentials(SignInMode.CREATE_ACCOUNT)
+        vm.submit()
+
+        assertEquals(me, backend.authState.value)
+    }
+
+    @Test
     fun `sign in needs a valid email and a password`() = runTest {
+        vm.continueWithEmail()
         vm.onEmailChange("ana")
         vm.onPasswordChange("x")
         assertFalse(vm.state.value.canSubmit)
@@ -65,90 +82,38 @@ class SignInViewModelTest {
     }
 
     @Test
-    fun `creating an account moves to email verification`() = runTest {
-        credentials(SignInMode.CREATE_ACCOUNT)
-        vm.submit()
-
-        assertEquals(SignInStep.VERIFY, vm.state.value.step)
-        assertNull(vm.state.value.error)
-        assertEquals(AuthState.SignedOut, backend.authState.value)
-    }
-
-    @Test
-    fun `code input keeps only six digits`() = runTest {
-        vm.onCodeChange("12a34-5678")
-
-        assertEquals("123456", vm.state.value.code)
-    }
-
-    @Test
-    fun `wrong code shows an error and stays signed out`() = runTest {
-        credentials(SignInMode.CREATE_ACCOUNT)
-        vm.submit()
-        vm.onCodeChange("000000")
-
-        assertEquals("That code is wrong or has expired.", vm.state.value.error)
-        assertEquals(AuthState.SignedOut, backend.authState.value)
-    }
-
-    @Test
-    fun `typing the last digit of the right code verifies and signs in`() = runTest {
-        credentials(SignInMode.CREATE_ACCOUNT)
-        vm.submit()
-        vm.onCodeChange("123456")
-
-        assertEquals(me, backend.authState.value)
-    }
-
-    @Test
-    fun `signing in to an unconfirmed account resends the code and asks for it`() = runTest {
-        var resent = 0
-        val unconfirmed = object : AuthRepository {
-            override val authState = MutableStateFlow<AuthState>(AuthState.SignedOut)
-            override suspend fun signIn(email: String, password: String) = throw EtherError.EmailNotConfirmed()
-            override suspend fun signUp(email: String, password: String) = SignUpResult.VERIFY_EMAIL
-            override suspend fun verifyEmail(email: String, code: String) = Unit
-            override suspend fun resendVerification(email: String) { resent++ }
-            override suspend fun sendPasswordReset(email: String) = Unit
-            override suspend fun resetPassword(email: String, code: String, newPassword: String) = Unit
-            override suspend fun signInWithGoogle(idToken: String, rawNonce: String) = Unit
-            override suspend fun signOut() = Unit
-        }
-        val vm = SignInViewModel(unconfirmed)
+    fun `if the project still confirms emails, sign-up says to open the link and switches to sign in`() = runTest {
+        val vm = SignInViewModel(auth(signUp = { SignUpResult.VERIFY_EMAIL }))
         vm.continueWithEmail()
+        vm.onModeChange(SignInMode.CREATE_ACCOUNT)
         vm.onEmailChange("ana@student.ac.id")
         vm.onPasswordChange("hunter22")
         vm.submit()
 
-        assertEquals(SignInStep.VERIFY, vm.state.value.step)
-        assertEquals(1, resent)
+        assertEquals(SignInMode.SIGN_IN, vm.state.value.mode)
+        assertEquals("Open the link we sent to ana@student.ac.id, then sign in.", vm.state.value.notice)
+        assertNull(vm.state.value.error)
     }
 
     @Test
-    fun `back from verification returns to the credentials`() = runTest {
-        credentials(SignInMode.CREATE_ACCOUNT)
+    fun `a wrong password shows the error and stays signed out`() = runTest {
+        val vm = SignInViewModel(auth(signIn = { throw EtherError.WrongCredentials() }))
+        vm.continueWithEmail()
+        vm.onEmailChange("ana@student.ac.id")
+        vm.onPasswordChange("nope")
         vm.submit()
-        vm.back()
 
+        assertEquals(EtherError.WrongCredentials().message, vm.state.value.error)
         assertEquals(SignInStep.CREDENTIALS, vm.state.value.step)
-        assertEquals("ana@student.ac.id", vm.state.value.email)
     }
 
     @Test
-    fun `resend waits out the cooldown, then clears the code and restarts it`() = runTest(main.dispatcher) {
-        credentials(SignInMode.CREATE_ACCOUNT)
-        vm.submit()
-        assertEquals(30, vm.state.value.resendIn)
-
-        vm.onCodeChange("12")
-        vm.resend()
-        assertEquals("12", vm.state.value.code)
-
-        advanceTimeBy(30_001)
-        assertEquals(0, vm.state.value.resendIn)
-        vm.resend()
-        assertEquals("", vm.state.value.code)
-        assertEquals(30, vm.state.value.resendIn)
+    fun `the welcome screen leads to email, and back returns to it`() = runTest {
+        assertEquals(SignInStep.WELCOME, vm.state.value.step)
+        vm.continueWithEmail()
+        assertEquals(SignInStep.CREDENTIALS, vm.state.value.step)
+        vm.back()
+        assertEquals(SignInStep.WELCOME, vm.state.value.step)
     }
 
     @Test
@@ -164,58 +129,5 @@ class SignInViewModelTest {
 
         assertEquals(SignInStep.WELCOME, vm.state.value.step)
         assertEquals("No Google account on this phone. Add one in Settings, or use your email.", vm.state.value.error)
-    }
-
-    @Test
-    fun `the welcome screen leads to email, and back returns to it`() = runTest {
-        assertEquals(SignInStep.WELCOME, vm.state.value.step)
-        vm.continueWithEmail()
-        assertEquals(SignInStep.CREDENTIALS, vm.state.value.step)
-        vm.back()
-        assertEquals(SignInStep.WELCOME, vm.state.value.step)
-    }
-
-    @Test
-    fun `forgot password needs the email first`() = runTest {
-        vm.continueWithEmail()
-        vm.forgotPassword()
-
-        assertEquals(SignInStep.CREDENTIALS, vm.state.value.step)
-        assertEquals("Enter your email first, then tap Forgot password.", vm.state.value.error)
-    }
-
-    @Test
-    fun `forgot password sends a code and asks for it with a new password`() = runTest {
-        credentials(SignInMode.SIGN_IN, password = "forgotten")
-        vm.forgotPassword()
-
-        assertEquals(SignInStep.RESET, vm.state.value.step)
-        assertEquals("", vm.state.value.password)
-        assertEquals(30, vm.state.value.resendIn)
-    }
-
-    @Test
-    fun `a reset needs the new password as well as the code`() = runTest {
-        credentials(SignInMode.SIGN_IN)
-        vm.forgotPassword()
-        vm.onCodeChange("123456")
-        assertEquals(AuthState.SignedOut, backend.authState.value)
-        assertFalse(vm.state.value.canSubmit)
-
-        vm.onPasswordChange("brand-new-pass")
-        vm.submit()
-        assertEquals(me, backend.authState.value)
-    }
-
-    @Test
-    fun `a wrong reset code keeps the user signed out`() = runTest {
-        credentials(SignInMode.SIGN_IN)
-        vm.forgotPassword()
-        vm.onCodeChange("000000")
-        vm.onPasswordChange("brand-new-pass")
-        vm.submit()
-
-        assertEquals("That code is wrong or has expired.", vm.state.value.error)
-        assertEquals(AuthState.SignedOut, backend.authState.value)
     }
 }
