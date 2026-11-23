@@ -8,9 +8,15 @@ import dev.ether.app.domain.ListingKind
 import dev.ether.app.domain.MatchId
 import dev.ether.app.domain.ProfileId
 import dev.ether.app.domain.Reliability
+import dev.ether.app.domain.BestHackathon
+import dev.ether.app.domain.HackathonResult
+import dev.ether.app.domain.TrackRecordSummary
+import dev.ether.app.domain.PastHackathon
+import dev.ether.app.domain.PastHackathonId
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
 
@@ -47,6 +53,37 @@ class ContractTest {
                 "Campus marketplace for used textbooks.", listOf("Mobile", "Designer"), 2, 300, Reliability(0),
             ),
             card,
+        )
+    }
+
+    @Test
+    fun `deck row with a track record summary`() {
+        val row = """[{"listing_id":"b0000000-0000-0000-0000-000000000001","competition_id":"c0000000-0000-0000-0000-000000000001","kind":"solo","profile_id":"d0000000-0000-0000-0000-000000000001","team_id":null,"owner_id":"d0000000-0000-0000-0000-000000000001","name":"Ayu Lestari","headline":"Backend dev who likes Postgres a bit too much.","skills":["Kotlin","PostgreSQL","Go"],"roles":["Backend"],"open_roles":[],"member_count":1,"xp":300,"reliability_score":0,"avatar_url":null,"active":true,"created_at":"2026-11-23T06:53:59.099767+00:00","best_result":"winner","best_hackathon":"GEMASTIK","best_hackathon_year":2025,"hackathon_count":2,"project_count":2}]"""
+
+        val card = json.decodeFromString<List<DeckRowDto>>(row).single().toDomain()
+
+        assertEquals(TrackRecordSummary(BestHackathon(HackathonResult.WINNER, "GEMASTIK", 2025), 2, 2), card.trackRecord)
+    }
+
+    @Test
+    fun `deck row without a track record`() {
+        val row = """[{"listing_id":"b0000000-0000-0000-0000-000000000004","kind":"solo","name":"Dimas Pratama","best_result":null,"best_hackathon":null,"best_hackathon_year":null,"hackathon_count":0,"project_count":0}]"""
+
+        val card = json.decodeFromString<List<DeckRowDto>>(row).single().toDomain()
+
+        assertEquals(TrackRecordSummary.NONE, card.trackRecord)
+        assertTrue(card.trackRecord.isEmpty)
+    }
+
+    @Test
+    fun `profile_hackathons row`() {
+        val row = """[{"id":"7c1e7a52-6d0f-4d8e-9d1c-0f3f5b0a2e11","profile_id":"d0000000-0000-0000-0000-000000000003","name":"UI/UX Sprint","year":2024,"result":"honorable_mention","project_name":"Kampus Map","url":"https://dribbble.com/example","created_at":"2026-11-23T06:53:59.099767+00:00"}]"""
+
+        val h = json.decodeFromString<List<HackathonRowDto>>(row).single().toDomain()
+
+        assertEquals(
+            PastHackathon(PastHackathonId("7c1e7a52-6d0f-4d8e-9d1c-0f3f5b0a2e11"), "UI/UX Sprint", 2024, HackathonResult.HONORABLE_MENTION, "Kampus Map", "https://dribbble.com/example"),
+            h,
         )
     }
 

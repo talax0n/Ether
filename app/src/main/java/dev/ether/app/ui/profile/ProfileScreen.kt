@@ -82,13 +82,35 @@ fun ProfileScreen(onEdit: () -> Unit, vm: ProfileViewModel = koinViewModel()) {
         when (val s = state) {
             ProfileUiState.Loading -> LoadingBox()
             is ProfileUiState.Failed -> MessageBox(s.message, action = "Retry", tone = Tone.ERROR, onAction = vm::load)
-            is ProfileUiState.Loaded -> ProfileContent(s.summary, s.leveledUp, onEdit, vm::signOut)
+            is ProfileUiState.Loaded -> {
+                ProfileContent(s.summary, s.leveledUp, onEdit, vm::signOut) { modifier ->
+                    TrackRecordSection(
+                        s.trackRecord, vm::addHackathon, vm::editHackathon, vm::addProject, vm::editProject, modifier,
+                    )
+                }
+                s.editor?.let { editor ->
+                    TrackRecordEditorDialog(
+                        editor, s.currentYear, s.canSave,
+                        onHackathonChange = vm::editHackathonForm,
+                        onProjectChange = vm::editProjectForm,
+                        onSave = vm::save,
+                        onDelete = vm::delete,
+                        onDismiss = vm::closeEditor,
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun ProfileContent(summary: ProfileSummary, leveledUp: Boolean, onEdit: () -> Unit, onSignOut: () -> Unit) {
+private fun ProfileContent(
+    summary: ProfileSummary,
+    leveledUp: Boolean,
+    onEdit: () -> Unit,
+    onSignOut: () -> Unit,
+    trackRecord: @Composable (Modifier) -> Unit,
+) {
     val p = summary.profile
     val colors = Arcade.colors
     Column(
@@ -111,7 +133,8 @@ private fun ProfileContent(summary: ProfileSummary, leveledUp: Boolean, onEdit: 
         }
         XpCard(p.xp, leveledUp, Modifier.staggerIn(1))
         CardPreview(p, Modifier.staggerIn(2))
-        BadgeGrid(summary, Modifier.staggerIn(3))
+        trackRecord(Modifier.staggerIn(3))
+        BadgeGrid(summary, Modifier.staggerIn(4))
         LedgeButton(
             "Sign out", onSignOut, Modifier.fillMaxWidth().padding(top = 4.dp),
             color = Color.Transparent, contentColor = colors.text, icon = ArcadeIcons.Logout,

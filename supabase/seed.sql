@@ -76,3 +76,26 @@ insert into public.listings (id, competition_id, kind, profile_id, created_at)
 select ('b0000000-0000-0000-0000-00000000000' || n)::uuid, 'c0000000-0000-0000-0000-000000000001', 'solo',
        ('d0000000-0000-0000-0000-00000000000' || n)::uuid, now() - (n || ' minutes')::interval
 from generate_series(1, 6) n;
+
+-- Track record: a few past hackathons and projects, so deck cards show a summary.
+insert into public.profile_hackathons (profile_id, name, year, result, project_name, url)
+select ('d0000000-0000-0000-0000-00000000000' || n)::uuid, name, year, result::public.hackathon_result, project_name, url
+from (values
+  (1, 'GEMASTIK',               2025, 'winner',            'BusKu',        'https://github.com/example/busku'),
+  (1, 'Campus Hackathon',       2024, 'participant',       null,           null),
+  (2, 'Hackathon Jakarta',      2025, 'finalist',          'Warung Kas',   null),
+  (3, 'UI/UX Sprint',           2024, 'honorable_mention', 'Kampus Map',   'https://dribbble.com/example'),
+  (5, 'Data Science Weekend',   2025, 'finalist',          null,           null),
+  (8, 'GEMASTIK',               2024, 'participant',       'Sewa Buku',    null),
+  (8, 'Web Dev Cup',            2025, 'winner',            'Kos Finder',   'https://kosfinder.example.com')
+) d(n, name, year, result, project_name, url);
+
+insert into public.profile_projects (profile_id, title, blurb, url, tags)
+select ('d0000000-0000-0000-0000-00000000000' || n)::uuid, title, blurb, url, tags::text[]
+from (values
+  (1, 'BusKu',        'Predicts campus bus arrivals from GPS pings.',          'https://github.com/example/busku', '{Kotlin,PostgreSQL}'),
+  (1, 'pg-lint',      'A tiny linter for Supabase migrations.',                null,                               '{Go,PostgreSQL}'),
+  (3, 'Kampus Map',   'Indoor map for the faculty building, with room search.', 'https://dribbble.com/example',     '{Figma,Motion}'),
+  (6, 'Absensi',      'Compose attendance app with QR check-in.',              null,                               '{Kotlin,Compose,Firebase}'),
+  (8, 'Kos Finder',   'Search boarding houses near campus by price and walk time.', 'https://kosfinder.example.com', '{React,Supabase}')
+) d(n, title, blurb, url, tags);

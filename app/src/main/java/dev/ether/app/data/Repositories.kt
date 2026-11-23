@@ -16,6 +16,11 @@ import dev.ether.app.domain.ProfileDraft
 import dev.ether.app.domain.ProfileSummary
 import dev.ether.app.domain.SwipeDirection
 import dev.ether.app.domain.SwipeResult
+import dev.ether.app.domain.PastHackathonDraft
+import dev.ether.app.domain.PastHackathonId
+import dev.ether.app.domain.ProjectDraft
+import dev.ether.app.domain.ProjectId
+import dev.ether.app.domain.TrackRecord
 import kotlinx.coroutines.flow.Flow
 
 // Implementations throw dev.ether.app.domain.EtherError for every failure, so callers can show its message.
@@ -69,4 +74,15 @@ interface TeamRepository {
     suspend fun endorse(competitionId: CompetitionId, teammate: ProfileId)
     suspend fun reportResult(teamId: TeamId, result: TeamResult)
     suspend fun confirmResult(teamId: TeamId)
+}
+
+/** The signed-in user's past hackathons and projects. Others see them summarized on deck cards. */
+interface TrackRecordRepository {
+    suspend fun myTrackRecord(): TrackRecord
+    suspend fun addHackathon(draft: PastHackathonDraft)
+    suspend fun updateHackathon(id: PastHackathonId, draft: PastHackathonDraft)
+    suspend fun deleteHackathon(id: PastHackathonId)
+    suspend fun addProject(draft: ProjectDraft)
+    suspend fun updateProject(id: ProjectId, draft: ProjectDraft)
+    suspend fun deleteProject(id: ProjectId)
 }

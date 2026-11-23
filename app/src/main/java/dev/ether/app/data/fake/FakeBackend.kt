@@ -7,6 +7,7 @@ import dev.ether.app.data.MatchRepository
 import dev.ether.app.data.ProfileRepository
 import dev.ether.app.data.SignUpResult
 import dev.ether.app.data.TeamRepository
+import dev.ether.app.data.TrackRecordRepository
 import dev.ether.app.domain.AuthState
 import dev.ether.app.domain.Badge
 import dev.ether.app.domain.Competition
@@ -31,6 +32,17 @@ import dev.ether.app.domain.SwipeResult
 import dev.ether.app.domain.TeamId
 import dev.ether.app.domain.TeamResult
 import dev.ether.app.domain.Teammate
+import dev.ether.app.domain.BestHackathon
+import dev.ether.app.domain.HackathonResult
+import dev.ether.app.domain.PastHackathon
+import dev.ether.app.domain.PastHackathonDraft
+import dev.ether.app.domain.PastHackathonId
+import dev.ether.app.domain.Project
+import dev.ether.app.domain.ProjectDraft
+import dev.ether.app.domain.ProjectId
+import dev.ether.app.domain.TrackRecord
+import dev.ether.app.domain.TrackRecordRules
+import dev.ether.app.domain.TrackRecordSummary
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.time.Instant
@@ -47,7 +59,9 @@ class FakeBackend(
     /** Simulates every competition being past its registration deadline. */
     private val registrationClosed: Boolean = false,
     private val clock: () -> Instant = { DemoData.now },
-) : AuthRepository, ProfileRepository, CompetitionRepository, DeckRepository, MatchRepository, TeamRepository {
+    trackRecord: TrackRecord = DemoData.myTrackRecord,
+) : AuthRepository, ProfileRepository, CompetitionRepository, DeckRepository, MatchRepository, TeamRepository,
+    TrackRecordRepository {
 
     private val auth = MutableStateFlow<AuthState>(if (signedIn) AuthState.SignedIn(DemoData.me.id) else AuthState.SignedOut)
     override val authState: StateFlow<AuthState> = auth
@@ -59,6 +73,8 @@ class FakeBackend(
     private val matches = mutableListOf<Match>()
     private val teams = DemoData.myTeams.toMutableList()
     private var nextId = 1
+    private val hackathons = trackRecord.hackathons.toMutableList()
+    private val projects = trackRecord.projects.toMutableList()
 
     // Any password signs in, and creating an account signs straight in.
     override suspend fun signIn(email: String, password: String) {
@@ -168,6 +184,38 @@ class FakeBackend(
         updateTeam(teamId) { it.copy(result = reported.copy(confirmed = true)) }
     }
 
+    override suspend fun myTrackRecord(): TrackRecord =
+        TrackRecord(hackathons.sortedByDescending { it.year }, projects.toList())
+
+    override suspend fun addHackathon(draft: PastHackathonDraft) {
+        if (hackathons.size >= TrackRecordRules.MAX_ENTRIES) throw EtherError.HackathonLimitReached()
+        hackathons.add(0, draft.toHackathon(PastHackathonId("h-fake-${nextId++}")))
+    }
+
+    override suspend fun updateHackathon(id: PastHackathonId, draft: PastHackathonDraft) {
+        hackathons.replaceAll { if (it.id == id) draft.toHackathon(id) else it }
+    }
+
+    override suspend fun deleteHackathon(id: PastHackathonId) {
+        hackathons.removeAll { it.id == id }
+    }
+
+    override suspend fun addProject(draft: ProjectDraft) {
+        if (projects.size >= TrackRecordRules.MAX_ENTRIES) throw EtherError.ProjectLimitReached()
+        projects.add(0, draft.toProject(ProjectId("pr-fake-${nextId++}")))
+    }
+
+    override suspend fun updateProject(id: ProjectId, draft: ProjectDraft) {
+        projects.replaceAll { if (it.id == id) draft.toProject(id) else it }
+    }
+
+    override suspend fun deleteProject(id: ProjectId) {
+        projects.removeAll { it.id == id }
+    }
+
+    private fun PastHackathonDraft.toHackathon(id: PastHackathonId) = PastHackathon(id, name, year, result, projectName, url)
+    private fun ProjectDraft.toProject(id: ProjectId) = Project(id, title, blurb, url, tags)
+
     private fun updateTeam(id: TeamId, transform: (MyTeam) -> MyTeam) {
         teams.replaceAll { if (it.id == id) transform(it) else it }
     }
@@ -237,17 +285,20 @@ object DemoData {
             "UI/UX designer. Figma all day, won a campus design jam last spring.",
             listOf("Figma", "User research", "Prototyping"), listOf("Designer"), xp = 310,
             reliability = Reliability(5),
+            trackRecord = TrackRecordSummary(BestHackathon(HackathonResult.WINNER, "Campus Design Jam", 2025), 2, 3),
         ),
         DeckCard.Team(
             ListingId("l-byte-brigade"), "Byte Brigade", null,
             "Building an offline-first clinic queue app. Backend is done, need someone on mobile.",
             listOf("Mobile", "Designer"), memberCount = 2, xp = 340, reliability = Reliability(3),
+            trackRecord = TrackRecordSummary(BestHackathon(HackathonResult.FINALIST, "GEMASTIK", 2025), 3, 4),
         ),
         DeckCard.Solo(
             ListingId("l-budi"), "Budi Santoso", null,
             "Embedded and data person. Can wire a sensor and plot what it says.",
             listOf("Python", "Pandas", "Arduino"), listOf("Data", "Hardware"), xp = 120,
             reliability = Reliability(2),
+            trackRecord = TrackRecordSummary(null, 0, 1),
         ),
         DeckCard.Solo(
             ListingId("l-citra"), "Citra Lestari", null,
@@ -266,6 +317,23 @@ object DemoData {
     val likesYouBack = mapOf(
         ListingId("l-ana") to Contacts(phone = "6281234567890", instagram = "ana.designs"),
         ListingId("l-byte-brigade") to Contacts(instagram = "bytebrigade", lineId = "bytebrigade"),
+    )
+
+    /** The demo user's own track record, editable on the Profile screen. */
+    val myTrackRecord = TrackRecord(
+        hackathons = listOf(
+            PastHackathon(
+                PastHackathonId("h-gemastik-25"), "GEMASTIK", 2025, HackathonResult.FINALIST,
+                projectName = "Antri", url = "https://github.com/example/antri",
+            ),
+            PastHackathon(PastHackathonId("h-campus-24"), "Campus Hackathon", 2024, HackathonResult.PARTICIPANT, null, null),
+        ),
+        projects = listOf(
+            Project(
+                ProjectId("pr-antri"), "Antri", "Offline-first clinic queue app for puskesmas.",
+                "https://github.com/example/antri", listOf("Kotlin", "Compose", "Room"),
+            ),
+        ),
     )
 
     val badges = listOf(

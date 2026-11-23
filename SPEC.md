@@ -37,6 +37,8 @@ Match        (id, competitionId, listingA, listingB, createdAt)
                unique(least(a,b), greatest(a,b))
 Endorsement  (fromProfileId, toProfileId, competitionId, positive)
                unique(fromProfileId, toProfileId, competitionId)
+PastHackathon (id, profileId, name, year, result: PARTICIPANT | HONORABLE_MENTION | FINALIST | WINNER, projectName?, url?)
+Project      (id, profileId, title, blurb, url?, tags[])
 Badge        (code, name, description)                  static table
 ProfileBadge (profileId, badgeCode, awardedAt)          unique(profileId, badgeCode)
 ```
@@ -55,7 +57,14 @@ ProfileBadge (profileId, badgeCode, awardedAt)          unique(profileId, badgeC
 
 **Contacts.** Each is optional, but a complete profile needs at least one. Stored normalized: `phone` is 8–16 digits with the country code (an Indonesian `08…` is entered as is and stored as `628…`), `instagram` is 1–30 letters, digits, dots or underscores without the `@`, `lineId` is 4–20 letters, digits, dots, underscores or hyphens. Each opens its app: `https://wa.me/<phone>`, `https://instagram.com/<handle>`, `https://line.me/ti/p/~<id>`. Telegram is not supported.
 
-**Kotlin side.** Mirror the enums as sealed types (`ListingKind`, `SwipeDirection`, `ContactKind`). Parse Supabase rows into domain types at the repository boundary. UI code never sees raw JSON or nullable `profileId`/`teamId` pairs.
+**Track record.** A profile lists past hackathons and projects, so potential teammates see what someone has built. Self-reported and unverified, unlike a confirmed team result (§4); it earns no XP.
+- Past hackathon: name (1–80 chars), year (2000 to next year), result, optional project name (1–80), optional link.
+- Project: title (1–80), a one-line blurb (1–140), optional link, up to 6 tech tags (1–30 chars each).
+- Links are `https://` only. At most 20 hackathons and 20 projects per profile, enforced by a trigger.
+- Every signed-in user can read them; only the owner writes. Guests cannot read them.
+- The deck card shows a summary: the best result (best result first, then the most recent) with that hackathon's name and year, plus the hackathon and project counts. A team card summarizes all current members.
+
+**Kotlin side.** Mirror the enums as sealed types (`ListingKind`, `SwipeDirection`, `ContactKind`, `HackathonResult`). Parse Supabase rows into domain types at the repository boundary. UI code never sees raw JSON or nullable `profileId`/`teamId` pairs.
 
 ## 4. Gamification
 
@@ -93,6 +102,7 @@ The profile shows the level, its title, and progress to the next threshold. Leve
 - Browse without an account: the intro, then the competition list and details. Sign-in is asked for only when the user acts (joining, starting a team, swiping) or opens Matches, Teams, or Profile.
 - Sign in with email and password, or a Google account. Creating an account with email signs straight in; there are no email codes.
 - Profile create and edit: skills, roles, major, year, bio, contacts (phone for WhatsApp, Instagram, LINE ID; at least one), avatar.
+- Track record on the profile: add, edit and delete past hackathons and projects. The deck card shows the best result and the project count.
 - Competition list (seeded by hand in the database).
 - Join a competition as SOLO, or create a team and list it as TEAM.
 - Swipe deck per competition with drag, tilt, fling, and like/nope stamp, plus buttons for accessibility.

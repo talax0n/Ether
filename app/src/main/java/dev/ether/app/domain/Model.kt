@@ -107,6 +107,9 @@ sealed class EtherError(message: String) : Exception(message) {
     class ResultAlreadyConfirmed : EtherError("Your team's result is already confirmed.")
     class NoResultReported : EtherError("No result has been reported yet.")
     class CannotConfirmOwnResult : EtherError("A teammate has to confirm the result you reported.")
+    class HackathonLimitReached : EtherError("You can list up to 20 past hackathons. Remove one to add another.")
+    class ProjectLimitReached : EtherError("You can list up to 20 projects. Remove one to add another.")
+    class InvalidTrackRecord : EtherError("Something in that entry isn't accepted. Check the year and the link.")
     class WrongCredentials : EtherError("That email and password don't match. New here? Create an account.")
     class AccountExists : EtherError("There's already an account with that email. Sign in instead.")
     class WeakPassword : EtherError("Pick a stronger password: at least 6 characters.")
@@ -125,6 +128,7 @@ sealed interface DeckCard {
     val listingId: ListingId
     val name: String
     val avatarUrl: String?
+    val trackRecord: TrackRecordSummary
 
     data class Solo(
         override val listingId: ListingId,
@@ -135,6 +139,7 @@ sealed interface DeckCard {
         val roles: List<String>,
         val xp: Int,
         val reliability: Reliability,
+        override val trackRecord: TrackRecordSummary = TrackRecordSummary.NONE,
     ) : DeckCard
 
     data class Team(
@@ -146,6 +151,7 @@ sealed interface DeckCard {
         val memberCount: Int,
         val xp: Int,
         val reliability: Reliability,
+        override val trackRecord: TrackRecordSummary = TrackRecordSummary.NONE,
     ) : DeckCard
 }
 

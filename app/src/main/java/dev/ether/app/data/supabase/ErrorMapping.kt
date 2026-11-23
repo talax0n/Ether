@@ -26,6 +26,10 @@ internal fun etherErrorFor(text: String): EtherError? = when {
     "result_already_confirmed" in text -> EtherError.ResultAlreadyConfirmed()
     "no_result_reported" in text -> EtherError.NoResultReported()
     "cannot_confirm_own_result" in text -> EtherError.CannotConfirmOwnResult()
+    "hackathon_limit_reached" in text -> EtherError.HackathonLimitReached()
+    "project_limit_reached" in text -> EtherError.ProjectLimitReached()
+    "hackathon_year_out_of_range" in text ||
+        ("check constraint" in text && ("profile_hackathons" in text || "profile_projects" in text)) -> EtherError.InvalidTrackRecord()
     "invalid_credentials" in text -> EtherError.WrongCredentials()
     "user_already_exists" in text || "email_exists" in text -> EtherError.AccountExists()
     "weak_password" in text -> EtherError.WeakPassword()

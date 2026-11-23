@@ -67,6 +67,7 @@ import dev.ether.app.ui.components.Chip
 import dev.ether.app.ui.components.LevelHex
 import dev.ether.app.ui.components.LineWidth
 import dev.ether.app.ui.components.TagRow
+import dev.ether.app.ui.components.TrackRecordLine
 import dev.ether.app.ui.components.ledge
 import dev.ether.app.ui.components.pressableLedge
 import dev.ether.app.ui.theme.Arcade
@@ -329,7 +330,12 @@ private fun Stats(xp: Int, reliability: String, extra: String) {
 private fun SoloBody(card: DeckCard.Solo) {
     Name(card.name)
     Stats(card.xp, card.reliability.label, levelFor(card.xp).title)
-    Text(card.headline, style = MaterialTheme.typography.bodyLarge, color = Arcade.colors.text, maxLines = 3, overflow = TextOverflow.Ellipsis)
+    TrackRecordLine(card.trackRecord)
+    // One line less for the headline when the track record takes a row, so the roles still fit.
+    Text(
+        card.headline, style = MaterialTheme.typography.bodyLarge, color = Arcade.colors.text,
+        maxLines = if (card.trackRecord.isEmpty) 3 else 2, overflow = TextOverflow.Ellipsis,
+    )
     CapsLabel("Skills")
     TagRow(card.skills, SkySoft, maxLines = 1)
     CapsLabel("Roles")
@@ -340,7 +346,11 @@ private fun SoloBody(card: DeckCard.Solo) {
 private fun TeamBody(card: DeckCard.Team) {
     Name(card.name)
     Stats(card.xp, card.reliability.label, if (card.memberCount == 1) "1 member" else "${card.memberCount} members")
-    Text(card.pitch, style = MaterialTheme.typography.bodyLarge, color = Arcade.colors.text, maxLines = 4, overflow = TextOverflow.Ellipsis)
+    TrackRecordLine(card.trackRecord)
+    Text(
+        card.pitch, style = MaterialTheme.typography.bodyLarge, color = Arcade.colors.text,
+        maxLines = if (card.trackRecord.isEmpty) 4 else 3, overflow = TextOverflow.Ellipsis,
+    )
     CapsLabel("Looking for")
     TagRow(card.openRoles, CoralSoft, maxLines = 2)
 }

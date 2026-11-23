@@ -230,7 +230,7 @@ fun Chip(text: String, modifier: Modifier = Modifier, color: Color = Paper, icon
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         icon?.let { Icon(it, contentDescription = null, tint = contentColor, modifier = Modifier.size(15.dp)) }
-        Text(text, color = contentColor, style = if (numeric) NumberStyle.copy(fontSize = 12.5.sp) else MaterialTheme.typography.labelMedium, maxLines = 1)
+        Text(text, color = contentColor, style = if (numeric) NumberStyle.copy(fontSize = 12.5.sp) else MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

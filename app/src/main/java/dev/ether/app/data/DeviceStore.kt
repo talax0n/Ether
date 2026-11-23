@@ -5,8 +5,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+/** The last level Profile showed on this device, so a level-up is celebrated once. */
+interface LevelMemory {
+    /** 0 until Profile has shown a level on this device. */
+    var lastSeenLevel: Int
+}
+
 /** Device-local UI memory, not account data: whether the intro was seen, and the last level shown on Profile. */
-class DeviceStore(context: Context) {
+class DeviceStore(context: Context) : LevelMemory {
     private val prefs = context.getSharedPreferences("ether", Context.MODE_PRIVATE)
     private val _seen = MutableStateFlow(prefs.getBoolean(ONBOARDING_SEEN, false))
     val onboardingSeen: StateFlow<Boolean> = _seen.asStateFlow()
@@ -16,8 +22,7 @@ class DeviceStore(context: Context) {
         _seen.value = true
     }
 
-    /** 0 until Profile has shown a level on this device. */
-    var lastSeenLevel: Int
+    override var lastSeenLevel: Int
         get() = prefs.getInt(LAST_SEEN_LEVEL, 0)
         set(value) = prefs.edit().putInt(LAST_SEEN_LEVEL, value).apply()
 

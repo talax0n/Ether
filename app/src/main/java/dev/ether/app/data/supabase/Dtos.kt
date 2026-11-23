@@ -1,6 +1,15 @@
 package dev.ether.app.data.supabase
 
 import dev.ether.app.domain.Badge
+import dev.ether.app.domain.BestHackathon
+import dev.ether.app.domain.HackathonResult
+import dev.ether.app.domain.PastHackathon
+import dev.ether.app.domain.PastHackathonDraft
+import dev.ether.app.domain.PastHackathonId
+import dev.ether.app.domain.Project
+import dev.ether.app.domain.ProjectDraft
+import dev.ether.app.domain.ProjectId
+import dev.ether.app.domain.TrackRecordSummary
 import dev.ether.app.domain.Competition
 import dev.ether.app.domain.CompetitionId
 import dev.ether.app.domain.Contacts
@@ -166,13 +175,29 @@ data class DeckRowDto(
     val xp: Int = 0,
     @SerialName("reliability_score") val reliabilityScore: Int = 0,
     @SerialName("avatar_url") val avatarUrl: String? = null,
+    @SerialName("best_result") val bestResult: HackathonResultDto? = null,
+    @SerialName("best_hackathon") val bestHackathon: String? = null,
+    @SerialName("best_hackathon_year") val bestHackathonYear: Int? = null,
+    @SerialName("hackathon_count") val hackathonCount: Int = 0,
+    @SerialName("project_count") val projectCount: Int = 0,
 ) {
+    private fun trackRecord(): TrackRecordSummary {
+        val best = if (bestResult != null && bestHackathon != null && bestHackathonYear != null) {
+            BestHackathon(bestResult.toDomain(), bestHackathon, bestHackathonYear)
+        } else {
+            null
+        }
+        return TrackRecordSummary(best, hackathonCount, projectCount)
+    }
+
     fun toDomain(): DeckCard = when (kind) {
         ListingKindDto.SOLO -> DeckCard.Solo(
             ListingId(listingId), name, avatarUrl, headline.orEmpty(), skills, roles, xp, Reliability(reliabilityScore),
+            trackRecord(),
         )
         ListingKindDto.TEAM -> DeckCard.Team(
             ListingId(listingId), name, avatarUrl, headline.orEmpty(), openRoles, memberCount, xp, Reliability(reliabilityScore),
+            trackRecord(),
         )
     }
 }
@@ -274,5 +299,94 @@ data class TeamResultRowDto(
     @SerialName("reported_by") val reportedBy: String,
     @SerialName("confirmed_by") val confirmedBy: String? = null,
 )
+
+/** Postgres `hackathon_result` enum. */
+@Serializable
+enum class HackathonResultDto {
+    @SerialName("participant") PARTICIPANT,
+    @SerialName("honorable_mention") HONORABLE_MENTION,
+    @SerialName("finalist") FINALIST,
+    @SerialName("winner") WINNER;
+
+    fun toDomain() = when (this) {
+        PARTICIPANT -> HackathonResult.PARTICIPANT
+        HONORABLE_MENTION -> HackathonResult.HONORABLE_MENTION
+        FINALIST -> HackathonResult.FINALIST
+        WINNER -> HackathonResult.WINNER
+    }
+
+    companion object {
+        fun of(result: HackathonResult) = when (result) {
+            HackathonResult.PARTICIPANT -> PARTICIPANT
+            HackathonResult.HONORABLE_MENTION -> HONORABLE_MENTION
+            HackathonResult.FINALIST -> FINALIST
+            HackathonResult.WINNER -> WINNER
+        }
+    }
+}
+
+@Serializable
+data class HackathonRowDto(
+    val id: String,
+    val name: String,
+    val year: Int,
+    val result: HackathonResultDto,
+    @SerialName("project_name") val projectName: String? = null,
+    val url: String? = null,
+) {
+    fun toDomain() = PastHackathon(PastHackathonId(id), name, year, result.toDomain(), projectName, url)
+}
+
+/** Writable `profile_hackathons` columns. Nulls are encoded so clearing a field clears it in the database. */
+@Serializable
+data class HackathonWriteDto(
+    val name: String,
+    val year: Int,
+    val result: HackathonResultDto,
+    @SerialName("project_name") val projectName: String?,
+    val url: String?,
+) {
+    constructor(d: PastHackathonDraft) : this(d.name, d.year, HackathonResultDto.of(d.result), d.projectName, d.url)
+}
+
+@Serializable
+data class HackathonInsertDto(
+    @SerialName("profile_id") val profileId: String,
+    val name: String,
+    val year: Int,
+    val result: HackathonResultDto,
+    @SerialName("project_name") val projectName: String?,
+    val url: String?,
+) {
+    constructor(profileId: String, d: PastHackathonDraft) :
+        this(profileId, d.name, d.year, HackathonResultDto.of(d.result), d.projectName, d.url)
+}
+
+@Serializable
+data class ProjectRowDto(
+    val id: String,
+    val title: String,
+    val blurb: String,
+    val url: String? = null,
+    val tags: List<String> = emptyList(),
+) {
+    fun toDomain() = Project(ProjectId(id), title, blurb, url, tags)
+}
+
+@Serializable
+data class ProjectWriteDto(val title: String, val blurb: String, val url: String?, val tags: List<String>) {
+    constructor(d: ProjectDraft) : this(d.title, d.blurb, d.url, d.tags)
+}
+
+@Serializable
+data class ProjectInsertDto(
+    @SerialName("profile_id") val profileId: String,
+    val title: String,
+    val blurb: String,
+    val url: String?,
+    val tags: List<String>,
+) {
+    constructor(profileId: String, d: ProjectDraft) : this(profileId, d.title, d.blurb, d.url, d.tags)
+}
 
 internal fun parseTimestamp(value: String): Instant = OffsetDateTime.parse(value).toInstant()

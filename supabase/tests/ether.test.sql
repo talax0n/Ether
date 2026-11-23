@@ -442,6 +442,163 @@ select is((select line_id from profile_contacts where profile_id = '00000000-000
   'user-c', 'teammates can read each other''s contact without a match');
 reset role;
 
+-- ---------------------------------------------------------------- track record (past hackathons, projects)
+-- A owns the rows. D is another signed-in user. Counts are scoped to fixture profiles.
+
+select pg_temp.login('00000000-0000-0000-0000-00000000000a');
+select lives_ok(
+  $$ insert into profile_hackathons (profile_id, name, year, result, project_name, url) values
+     ('00000000-0000-0000-0000-00000000000a', 'GEMASTIK', 2025, 'finalist', 'BusKu', 'https://github.com/example/busku') $$,
+  'owner adds a past hackathon');
+select lives_ok(
+  $$ insert into profile_projects (profile_id, title, blurb, url, tags) values
+     ('00000000-0000-0000-0000-00000000000a', 'BusKu', 'Predicts campus bus arrivals.', null, '{Kotlin,PostgreSQL}') $$,
+  'owner adds a project');
+select throws_ok(
+  $$ insert into profile_projects (id, profile_id, title, blurb) values
+     ('40000000-0000-0000-0000-0000000000ff', '00000000-0000-0000-0000-00000000000a', 'Mine', 'x') $$,
+  '42501', null, 'id is not writable by clients');
+reset role;
+-- Pin the ids the rest of this section refers to.
+update profile_hackathons set id = '40000000-0000-0000-0000-00000000000a' where profile_id = '00000000-0000-0000-0000-00000000000a';
+update profile_projects set id = '40000000-0000-0000-0000-0000000000aa' where profile_id = '00000000-0000-0000-0000-00000000000a';
+select pg_temp.login('00000000-0000-0000-0000-00000000000a');
+select lives_ok(
+  $$ update profile_hackathons set result = 'winner', project_name = null where id = '40000000-0000-0000-0000-00000000000a' $$,
+  'owner edits a past hackathon');
+select results_eq(
+  $$ select result::text, project_name from profile_hackathons where id = '40000000-0000-0000-0000-00000000000a' $$,
+  $$ values ('winner'::text, null::text) $$,
+  'the edit is saved');
+select lives_ok(
+  $$ update profile_projects set blurb = 'Bus ETAs from GPS pings.', tags = '{Kotlin}' where id = '40000000-0000-0000-0000-0000000000aa' $$,
+  'owner edits a project');
+select is((select blurb from profile_projects where id = '40000000-0000-0000-0000-0000000000aa'),
+  'Bus ETAs from GPS pings.', 'the project edit is saved');
+select throws_ok(
+  $$ insert into profile_projects (profile_id, title, blurb, created_at) values
+     ('00000000-0000-0000-0000-00000000000a', 'Backdated', 'x', now() - interval '1 year') $$,
+  '42501', null, 'created_at is not writable by clients');
+reset role;
+
+select pg_temp.login('00000000-0000-0000-0000-00000000000d');
+select is((select count(*)::int from profile_hackathons where profile_id = '00000000-0000-0000-0000-00000000000a'), 1,
+  'other signed-in users can read someone''s hackathons');
+select is((select count(*)::int from profile_projects where profile_id = '00000000-0000-0000-0000-00000000000a'), 1,
+  'other signed-in users can read someone''s projects');
+select throws_ok(
+  $$ insert into profile_hackathons (profile_id, name, year) values ('00000000-0000-0000-0000-00000000000a', 'Fake', 2025) $$,
+  '42501', null, 'cannot add a hackathon to someone else''s profile');
+select throws_ok(
+  $$ insert into profile_projects (profile_id, title, blurb) values ('00000000-0000-0000-0000-00000000000a', 'Fake', 'x') $$,
+  '42501', null, 'cannot add a project to someone else''s profile');
+update profile_hackathons set name = 'Hacked' where id = '40000000-0000-0000-0000-00000000000a';
+delete from profile_hackathons where id = '40000000-0000-0000-0000-00000000000a';
+update profile_projects set title = 'Hacked' where id = '40000000-0000-0000-0000-0000000000aa';
+delete from profile_projects where id = '40000000-0000-0000-0000-0000000000aa';
+select throws_ok(
+  $$ update profile_hackathons set profile_id = '00000000-0000-0000-0000-00000000000d' where id = '40000000-0000-0000-0000-00000000000a' $$,
+  '42501', null, 'profile_id cannot be reassigned');
+reset role;
+select results_eq(
+  $$ select h.name, p.title from profile_hackathons h, profile_projects p
+     where h.id = '40000000-0000-0000-0000-00000000000a' and p.id = '40000000-0000-0000-0000-0000000000aa' $$,
+  $$ values ('GEMASTIK'::text, 'BusKu'::text) $$,
+  'another user''s update and delete touch nothing');
+
+-- Formats and bounds (as the owner, so RLS passes and only the checks can fail).
+select pg_temp.login('00000000-0000-0000-0000-00000000000a');
+select throws_ok($$ insert into profile_hackathons (profile_id, name, year) values ('00000000-0000-0000-0000-00000000000a', 'Old', 1999) $$,
+  '23514', null, 'year before 2000 rejected');
+select throws_ok(
+  $$ insert into profile_hackathons (profile_id, name, year) values
+     ('00000000-0000-0000-0000-00000000000a', 'Future', extract(year from now())::int + 2) $$,
+  '23514', 'hackathon_year_out_of_range', 'year after next year rejected');
+select throws_ok(
+  $$ update profile_hackathons set year = extract(year from now())::int + 2 where id = '40000000-0000-0000-0000-00000000000a' $$,
+  '23514', 'hackathon_year_out_of_range', 'year bound also holds on edit');
+select lives_ok(
+  $$ insert into profile_hackathons (profile_id, name, year) values
+     ('00000000-0000-0000-0000-00000000000a', 'Next Year', extract(year from now())::int + 1) $$,
+  'next year is allowed (registered but not held yet)');
+select is((select result::text from profile_hackathons where profile_id = '00000000-0000-0000-0000-00000000000a' and name = 'Next Year'), 'participant',
+  'result defaults to participant');
+select throws_ok($$ insert into profile_hackathons (profile_id, name, year) values ('00000000-0000-0000-0000-00000000000a', '   ', 2025) $$,
+  '23514', null, 'blank hackathon name rejected');
+select throws_ok($$ insert into profile_hackathons (profile_id, name, year) values ('00000000-0000-0000-0000-00000000000a', repeat('x', 81), 2025) $$,
+  '23514', null, 'hackathon name allows at most 80 characters');
+select throws_ok($$ insert into profile_hackathons (profile_id, name, year, project_name) values ('00000000-0000-0000-0000-00000000000a', 'X', 2025, '') $$,
+  '23514', null, 'empty project_name rejected (use null)');
+select throws_ok($$ insert into profile_hackathons (profile_id, name, year, result) values ('00000000-0000-0000-0000-00000000000a', 'X', 2025, 'champion') $$,
+  '22P02', null, 'result must be a hackathon_result');
+select throws_ok($$ insert into profile_hackathons (profile_id, name, year, url) values ('00000000-0000-0000-0000-00000000000a', 'X', 2025, 'http://example.com') $$,
+  '23514', null, 'http links rejected');
+select throws_ok($$ insert into profile_hackathons (profile_id, name, year, url) values ('00000000-0000-0000-0000-00000000000a', 'X', 2025, 'https://') $$,
+  '23514', null, 'a link needs a host');
+select throws_ok($$ insert into profile_projects (profile_id, title, blurb, url) values ('00000000-0000-0000-0000-00000000000a', 'X', 'x', 'javascript:alert(1)') $$,
+  '23514', null, 'project links must be https');
+select throws_ok($$ insert into profile_projects (profile_id, title, blurb, url) values ('00000000-0000-0000-0000-00000000000a', 'X', 'x', 'https://exa mple.com') $$,
+  '23514', null, 'links cannot contain spaces');
+select throws_ok($$ insert into profile_projects (profile_id, title, blurb) values ('00000000-0000-0000-0000-00000000000a', 'X', repeat('x', 141)) $$,
+  '23514', null, 'blurb allows at most 140 characters');
+select lives_ok($$ insert into profile_projects (profile_id, title, blurb) values ('00000000-0000-0000-0000-00000000000a', 'X', repeat('x', 140)) $$,
+  'blurb of exactly 140 characters accepted');
+select throws_ok($$ insert into profile_projects (profile_id, title, blurb) values ('00000000-0000-0000-0000-00000000000a', 'X', ' ') $$,
+  '23514', null, 'blank blurb rejected');
+select throws_ok($$ insert into profile_projects (profile_id, title, blurb, tags) values ('00000000-0000-0000-0000-00000000000a', 'X', 'x', '{a,b,c,d,e,f,g}') $$,
+  '23514', null, 'at most 6 tags');
+select throws_ok($$ insert into profile_projects (profile_id, title, blurb, tags) values ('00000000-0000-0000-0000-00000000000a', 'X', 'x', '{Kotlin,""}') $$,
+  '23514', null, 'empty tags rejected');
+select throws_ok($$ insert into profile_projects (profile_id, title, blurb, tags) values ('00000000-0000-0000-0000-00000000000a', 'X', 'x', array[repeat('t', 31)]) $$,
+  '23514', null, 'tags allow at most 30 characters');
+reset role;
+
+-- Deck summary. G's deck holds the A & B team; its card sums both members' track records.
+insert into profile_hackathons (profile_id, name, year, result) values
+  ('00000000-0000-0000-0000-00000000000b', 'Data Cup', 2026, 'finalist'),
+  ('00000000-0000-0000-0000-00000000000b', 'Old Cup', 2023, 'winner');
+insert into profile_projects (profile_id, title, blurb) values ('00000000-0000-0000-0000-00000000000b', 'Proj B', 'x');
+select pg_temp.login('00000000-0000-0000-0000-00000000001a');
+select results_eq(
+  $$ select best_result::text, best_hackathon, best_hackathon_year, hackathon_count, project_count
+     from deck('10000000-0000-0000-0000-00000000001a') where name = 'user0a & user0b' $$,
+  $$ values ('winner'::text, 'GEMASTIK'::text, 2025, 4, 3) $$,
+  'team card: best result across members (latest winner first), with hackathon and project counts');
+reset role;
+select results_eq(
+  $$ select best_result, best_hackathon, hackathon_count, project_count from listing_cards
+     where listing_id = '10000000-0000-0000-0000-00000000001a' $$,
+  $$ values (null::hackathon_result, null::text, 0, 0) $$,
+  'solo card without a track record has an empty summary');
+insert into profile_projects (profile_id, title, blurb) values ('00000000-0000-0000-0000-00000000001a', 'G1', 'x');
+select is((select project_count from listing_cards where listing_id = '10000000-0000-0000-0000-00000000001a'), 1,
+  'solo card counts the profile''s projects');
+
+-- Cap: 20 of each per profile. A already has 2 hackathons and 2 projects.
+select pg_temp.login('00000000-0000-0000-0000-00000000000a');
+select lives_ok(
+  $$ insert into profile_hackathons (profile_id, name, year)
+     select '00000000-0000-0000-0000-00000000000a', 'H' || n, 2024 from generate_series(1, 18) n $$,
+  'up to 20 hackathons per profile');
+select throws_ok(
+  $$ insert into profile_hackathons (profile_id, name, year) values ('00000000-0000-0000-0000-00000000000a', 'H21', 2024) $$,
+  'P0001', 'hackathon_limit_reached', 'the 21st hackathon is rejected');
+select lives_ok(
+  $$ insert into profile_projects (profile_id, title, blurb)
+     select '00000000-0000-0000-0000-00000000000a', 'P' || n, 'x' from generate_series(1, 18) n $$,
+  'up to 20 projects per profile');
+select throws_ok(
+  $$ insert into profile_projects (profile_id, title, blurb) values ('00000000-0000-0000-0000-00000000000a', 'P21', 'x') $$,
+  'P0001', 'project_limit_reached', 'the 21st project is rejected');
+select lives_ok($$ delete from profile_hackathons where id = '40000000-0000-0000-0000-00000000000a' $$, 'owner deletes a hackathon');
+select lives_ok($$ delete from profile_projects where id = '40000000-0000-0000-0000-0000000000aa' $$, 'owner deletes a project');
+select is((select count(*)::int from profile_hackathons where id = '40000000-0000-0000-0000-00000000000a'), 0, 'the hackathon is gone');
+select is((select count(*)::int from profile_projects where id = '40000000-0000-0000-0000-0000000000aa'), 0, 'the project is gone');
+select lives_ok(
+  $$ insert into profile_hackathons (profile_id, name, year) values ('00000000-0000-0000-0000-00000000000a', 'Back under', 2024) $$,
+  'deleting frees a slot under the cap');
+reset role;
+
 -- ---------------------------------------------------------------- guests (anon) browse competitions only
 set local role anon;
 select set_config('request.jwt.claims', json_build_object('role', 'anon')::text, true);
@@ -449,6 +606,11 @@ select ok((select count(*) from competitions) > 0, 'guests can read competitions
 select throws_ok($$ select count(*) from profiles $$, '42501', null, 'guests cannot read profiles');
 select throws_ok($$ select count(*) from listings $$, '42501', null, 'guests cannot read listings');
 select throws_ok($$ select count(*) from profile_contacts $$, '42501', null, 'guests cannot read contacts');
+select throws_ok($$ select count(*) from profile_hackathons $$, '42501', null, 'guests cannot read past hackathons');
+select throws_ok($$ select count(*) from profile_projects $$, '42501', null, 'guests cannot read projects');
+select throws_ok(
+  $$ insert into profile_projects (profile_id, title, blurb) values ('00000000-0000-0000-0000-00000000000a', 'X', 'x') $$,
+  '42501', null, 'guests cannot add projects');
 reset role;
 
 select * from finish();

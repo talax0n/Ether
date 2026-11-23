@@ -9,6 +9,7 @@ What the Android client can read, write, and call. Business rules live in the mi
 | `listing_kind` | `solo`, `team` |
 | `swipe_direction` | `left`, `right` |
 | `team_result` | `finalist`, `winner` |
+| `hackathon_result` | `participant`, `honorable_mention`, `finalist`, `winner` (declared in rank order) |
 
 ## Tables
 
@@ -16,6 +17,8 @@ What the Android client can read, write, and call. Business rules live in the mi
 |-------|-----------|-------|
 | `profiles` | select all; update own `name, major, year, bio, skills, roles, avatar_url` | Row is created at sign-up. `xp` is read-only. |
 | `profile_contacts` | select (RLS: see below); insert own `profile_id, phone, instagram, line_id`; update own `phone, instagram, line_id` | Kept apart from `profiles` so RLS can hide it. All three are nullable; see formats below. |
+| `profile_hackathons` | select all; insert own `profile_id, name, year, result, project_name, url`; update own `name, year, result, project_name, url`; delete own | Past hackathons. Max 20 per profile (`hackathon_limit_reached`). See formats below. |
+| `profile_projects` | select all; insert own `profile_id, title, blurb, url, tags`; update own `title, blurb, url, tags`; delete own | Projects. Max 20 per profile (`project_limit_reached`). |
 | `competitions` | select | Seeded by hand. |
 | `teams` | select; insert with `owner_id = auth.uid()`; owner updates `name, pitch, open_roles` | Inserting a team adds the owner to `team_members` automatically. Fails with `registration_closed` after the competition's `registration_deadline`, and `already_in_team` if the owner is already in a team in that competition. |
 | `team_members` | select | Written only by triggers (team creation, matches). Has a `competition_id` column (copied from the team); `(profile_id, competition_id)` is unique. |
@@ -35,6 +38,19 @@ What the Android client can read, write, and call. Business rules live in the mi
 | `line_id` | `^[A-Za-z0-9._-]{4,20}$` (the app lowercases) | `https://line.me/ti/p/~<line_id>` |
 
 A violation fails with SQLSTATE `23514`. Clear a field by writing `null`, not `''`.
+
+**Track record formats.** Check constraints; a violation fails with SQLSTATE `23514`. Store trimmed values and write `null`, not `''`, for empty optional fields.
+
+| Column | Format |
+|--------|--------|
+| `name`, `project_name`, `title` | 1–80 characters, no surrounding whitespace |
+| `year` | 2000 to next year (`hackathon_year_out_of_range` above it, raised by a trigger because the bound moves) |
+| `result` | `hackathon_result`, default `participant` |
+| `blurb` | 1–140 characters, no surrounding whitespace |
+| `url` | `https://` with a dotted host, no whitespace, at most 500 characters |
+| `tags` | at most 6, each 1–30 characters, no surrounding whitespace |
+
+`id` and `created_at` are not writable. Lists are read with `profile_id = <uid>`; the app orders hackathons by `year desc, created_at desc` and projects by `created_at desc`.
 
 **Contact visibility.** A `profile_contacts` row is visible to its owner, to their teammates (any team they share), and to anyone on the other side of a match with them. A team listing's side means every current member of that team.
 
@@ -57,7 +73,7 @@ Call with `postgrest.rpc(name, params)`. Parameter names are exact.
 
 Creates a team owned by the caller, adds the caller as its first member, and lists it as an active `team` listing, in one transaction. Returns the team id. The caller's solo listing in that competition, if any, goes inactive. `p_name` is trimmed; a blank `p_pitch` is stored as null.
 
-Raises `not_authenticated`, `competition_not_found`, `registration_closed` (after `registration_deadline`), `team_name_required` (blank name), or `already_in_team` (caller already in a team in that competition). Prefer this over inserting into `teams` and `listings` yourself.
+Raises `hackathon_limit_reached`, `project_limit_reached`, `hackathon_year_out_of_range`, `not_authenticated`, `competition_not_found`, `registration_closed` (after `registration_deadline`), `team_name_required` (blank name), or `already_in_team` (caller already in a team in that competition). Prefer this over inserting into `teams` and `listings` yourself.
 
 ### `remaining_swipes() → int`
 
@@ -88,6 +104,13 @@ Output columns (one row per card):
 | `avatar_url` | text | profile avatar | owner's avatar |
 | `active` | boolean | | |
 | `created_at` | timestamptz | | |
+| `best_result` | hackathon_result | profile's best | best across members |
+| `best_hackathon` | text | that hackathon's name | |
+| `best_hackathon_year` | int | that hackathon's year | |
+| `hackathon_count` | int | profile's count | members' total |
+| `project_count` | int | profile's count | members' total |
+
+"Best" is the highest `result`, then the latest `year`, then the newest row. The three `best_*` columns are null when there are no hackathons.
 
 ### `my_matches(p_competition uuid) → setof record`
 
@@ -146,4 +169,4 @@ Errors raised from Postgres arrive as the PostgREST `message`. They are stable s
 
 ## Local dev
 
-`supabase start`, then `supabase db reset`. Demo logins are `demo1@student.example.ac.id` … `demo8@…` with the password `ether-demo` (local seed only). New accounts sign straight in. Competition `Campus Hackathon 2026` has 6 solo listings (demo1–6) and team `Byte Club` (demo7 + demo8). `Data Challenge 2026` has ended, and its team `Night Owls` (demo1–3) can endorse each other.
+`supabase start`, then `supabase db reset`. Demo logins are `demo1@student.example.ac.id` … `demo8@…` with the password `ether-demo` (local seed only). New accounts sign straight in. Competition `Campus Hackathon 2026` has 6 solo listings (demo1–6) and team `Byte Club` (demo7 + demo8). `Data Challenge 2026` has ended, and its team `Night Owls` (demo1–3) can endorse each other. Demo1, 2, 3, 5 and 8 have past hackathons and demo1, 3, 6 and 8 have projects, so deck cards show a track-record summary.

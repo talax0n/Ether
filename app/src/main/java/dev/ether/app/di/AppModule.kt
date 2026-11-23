@@ -8,6 +8,8 @@ import dev.ether.app.data.MatchRepository
 import dev.ether.app.data.DeviceStore
 import dev.ether.app.data.ProfileRepository
 import dev.ether.app.data.TeamRepository
+import dev.ether.app.data.TrackRecordRepository
+import dev.ether.app.data.LevelMemory
 import dev.ether.app.data.fake.FakeBackend
 import dev.ether.app.data.supabase.SupabaseAuthRepository
 import dev.ether.app.data.supabase.SupabaseCompetitionRepository
@@ -15,6 +17,7 @@ import dev.ether.app.data.supabase.SupabaseDeckRepository
 import dev.ether.app.data.supabase.SupabaseMatchRepository
 import dev.ether.app.data.supabase.SupabaseProfileRepository
 import dev.ether.app.data.supabase.SupabaseTeamRepository
+import dev.ether.app.data.supabase.SupabaseTrackRecordRepository
 import dev.ether.app.domain.CompetitionId
 import dev.ether.app.domain.ListingId
 import dev.ether.app.ui.AppViewModel
@@ -32,13 +35,14 @@ import io.github.jan.supabase.postgrest.Postgrest
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
+import org.koin.dsl.bind
 import org.koin.dsl.binds
 import org.koin.dsl.module
 
 private val fakeData = module {
     single { FakeBackend() } binds arrayOf(
         AuthRepository::class, ProfileRepository::class, CompetitionRepository::class,
-        DeckRepository::class, MatchRepository::class, TeamRepository::class,
+        DeckRepository::class, MatchRepository::class, TeamRepository::class, TrackRecordRepository::class,
     )
 }
 
@@ -55,14 +59,15 @@ private val supabaseData = module {
     single<DeckRepository> { SupabaseDeckRepository(get()) }
     single<MatchRepository> { SupabaseMatchRepository(get()) }
     single<TeamRepository> { SupabaseTeamRepository(get()) }
+    single<TrackRecordRepository> { SupabaseTrackRecordRepository(get()) }
 }
 
 private val viewModels = module {
-    single { DeviceStore(androidContext()) }
+    single { DeviceStore(androidContext()) } bind LevelMemory::class
     viewModelOf(::AppViewModel)
     viewModelOf(::SignInViewModel)
     viewModelOf(::ProfileEditViewModel)
-    viewModelOf(::ProfileViewModel)
+    viewModel { ProfileViewModel(get(), get(), get(), get()) }
     viewModelOf(::CompetitionListViewModel)
     viewModel { (id: String) -> CompetitionDetailViewModel(CompetitionId(id), get(), get()) }
     viewModel { (competitionId: String, listingId: String) ->

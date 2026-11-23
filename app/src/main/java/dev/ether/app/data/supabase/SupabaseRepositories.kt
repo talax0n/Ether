@@ -7,6 +7,7 @@ import dev.ether.app.data.MatchRepository
 import dev.ether.app.data.ProfileRepository
 import dev.ether.app.data.SignUpResult
 import dev.ether.app.data.TeamRepository
+import dev.ether.app.data.TrackRecordRepository
 import dev.ether.app.domain.AuthState
 import dev.ether.app.domain.Competition
 import dev.ether.app.domain.CompetitionId
@@ -27,6 +28,11 @@ import dev.ether.app.domain.SwipeResult
 import dev.ether.app.domain.TeamId
 import dev.ether.app.domain.TeamResult
 import dev.ether.app.domain.Teammate
+import dev.ether.app.domain.PastHackathonDraft
+import dev.ether.app.domain.PastHackathonId
+import dev.ether.app.domain.ProjectDraft
+import dev.ether.app.domain.ProjectId
+import dev.ether.app.domain.TrackRecord
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.auth
@@ -263,5 +269,56 @@ class SupabaseTeamRepository(private val client: SupabaseClient) : TeamRepositor
 
     override suspend fun confirmResult(teamId: TeamId): Unit = backend {
         client.postgrest.rpc("confirm_result", buildJsonObject { put("p_team", teamId.value) })
+    }
+}
+
+class SupabaseTrackRecordRepository(private val client: SupabaseClient) : TrackRecordRepository {
+    override suspend fun myTrackRecord(): TrackRecord = backend {
+        val uid = client.uid()
+        coroutineScope {
+            val hackathons = async {
+                client.from("profile_hackathons").select {
+                    filter { eq("profile_id", uid) }
+                    order("year", Order.DESCENDING)
+                    order("created_at", Order.DESCENDING)
+                }.decodeList<HackathonRowDto>().map { it.toDomain() }
+            }
+            val projects = async {
+                client.from("profile_projects").select {
+                    filter { eq("profile_id", uid) }
+                    order("created_at", Order.DESCENDING)
+                }.decodeList<ProjectRowDto>().map { it.toDomain() }
+            }
+            TrackRecord(hackathons.await(), projects.await())
+        }
+    }
+
+    override suspend fun addHackathon(draft: PastHackathonDraft): Unit = backend {
+        client.from("profile_hackathons").insert(HackathonInsertDto(client.uid(), draft))
+    }
+
+    // RLS limits update and delete to the caller's own rows; the profile_id filter only makes that explicit.
+    override suspend fun updateHackathon(id: PastHackathonId, draft: PastHackathonDraft): Unit = backend {
+        client.from("profile_hackathons").update(HackathonWriteDto(draft)) {
+            filter { eq("id", id.value); eq("profile_id", client.uid()) }
+        }
+    }
+
+    override suspend fun deleteHackathon(id: PastHackathonId): Unit = backend {
+        client.from("profile_hackathons").delete { filter { eq("id", id.value); eq("profile_id", client.uid()) } }
+    }
+
+    override suspend fun addProject(draft: ProjectDraft): Unit = backend {
+        client.from("profile_projects").insert(ProjectInsertDto(client.uid(), draft))
+    }
+
+    override suspend fun updateProject(id: ProjectId, draft: ProjectDraft): Unit = backend {
+        client.from("profile_projects").update(ProjectWriteDto(draft)) {
+            filter { eq("id", id.value); eq("profile_id", client.uid()) }
+        }
+    }
+
+    override suspend fun deleteProject(id: ProjectId): Unit = backend {
+        client.from("profile_projects").delete { filter { eq("id", id.value); eq("profile_id", client.uid()) } }
     }
 }
