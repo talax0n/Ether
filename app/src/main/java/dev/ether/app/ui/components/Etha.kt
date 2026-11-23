@@ -1,6 +1,18 @@
 package dev.ether.app.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlin.math.PI
+import kotlin.math.sin
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.MutatorMutex
@@ -61,6 +73,9 @@ enum class EthaMove(val manifestKey: String, val row: Int, val frames: Int, val 
     companion object {
         /** Small things Etha does on its own between bigger moves, so idle never reads as a still. */
         val FIDGETS = listOf(LOOK, SCRATCH, TAP)
+
+        /** What an awake Etha does unprompted: fidgets, plus the odd wave and hop. */
+        val AMBIENT = FIDGETS + WAVE + HOP
     }
 }
 
@@ -146,9 +161,10 @@ suspend fun EthaController.performOrYield(next: EthaMove): Boolean = try {
 fun rememberEthaController(base: EthaMove = EthaMove.IDLE) = remember(base) { EthaController(base) }
 
 /**
- * An Etha that is never still: it opens with [first], then every [restMs] plays something from [pool]
- * (fidgets by default). Tapping it plays [EthaMove.REACT]. [ready] holds everything back until, for
- * example, its container has animated in. Under reduced motion it only reacts to taps and [first].
+ * An Etha that is never still. It opens with [first], then every [restMs] plays something from [pool], and between
+ * moves its whole body gently bobs and sways ([float]); a hop really leaves the ground. Tapping it plays
+ * [EthaMove.REACT]. [ready] holds everything back until, for example, its container has animated in.
+ * Under reduced motion it only reacts to taps and [first].
  */
 @Composable
 fun EthaLive(
@@ -156,8 +172,9 @@ fun EthaLive(
     size: Dp = 120.dp,
     controller: EthaController = rememberEthaController(),
     first: EthaMove? = null,
-    pool: List<EthaMove> = EthaMove.FIDGETS,
-    restMs: LongRange = 2_500L..5_000L,
+    pool: List<EthaMove> = EthaMove.AMBIENT,
+    restMs: LongRange = 1_500L..3_000L,
+    float: Boolean = true,
     ready: suspend () -> Unit = {},
 ) {
     val reduced = Arcade.reducedMotion
@@ -171,14 +188,41 @@ fun EthaLive(
             controller.performOrYield(pool.random())
         }
     }
+    val moving = float && !reduced
+    val asleep = controller.base == EthaMove.SLEEP
+    val phase = if (moving) {
+        rememberInfiniteTransition(label = "etha-float").animateFloat(
+            0f, TAU, infiniteRepeatable(tween(if (asleep) 5_000 else 3_400, easing = LinearEasing)), label = "bob",
+        )
+    } else null
+    val jump = remember { Animatable(0f) }
+    LaunchedEffect(controller.take) {
+        if (!moving || controller.move != EthaMove.HOP) return@LaunchedEffect
+        val hop = EthaMove.HOP
+        // The crouch frame stays grounded; the body rises and falls across the airborne frames.
+        delay(hop.frameMs)
+        val air = ((hop.frames - 2) * hop.frameMs).toInt()
+        jump.animateTo(1f, tween(air / 2, easing = FastOutSlowInEasing))
+        jump.animateTo(0f, tween(air / 2, easing = LinearOutSlowInEasing))
+    }
     key(controller.take) {
         Etha(
             controller.move,
-            modifier.clickable(remember { MutableInteractionSource() }, indication = null, onClickLabel = "Poke Etha") {
-                controller.play(scope, EthaMove.REACT)
-            },
+            modifier
+                .graphicsLayer {
+                    val p = phase?.value ?: return@graphicsLayer
+                    val unit = size.toPx()
+                    transformOrigin = TransformOrigin(0.5f, 1f)
+                    translationY = sin(p) * unit * 0.025f - jump.value * unit * 0.22f
+                    if (!asleep) rotationZ = sin(p * 2f) * 2.5f
+                }
+                .clickable(remember { MutableInteractionSource() }, indication = null, onClickLabel = "Poke Etha") {
+                    controller.play(scope, EthaMove.REACT)
+                },
             size,
             onFinished = controller::finished,
         )
     }
 }
+
+private const val TAU = (2 * PI).toFloat()

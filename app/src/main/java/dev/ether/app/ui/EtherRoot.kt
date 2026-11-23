@@ -89,6 +89,7 @@ import dev.ether.app.ui.signin.SignInScreen
 import dev.ether.app.ui.onboarding.OnboardingScreen
 import dev.ether.app.data.DeviceStore
 import kotlinx.coroutines.delay
+import kotlin.random.Random
 import org.koin.compose.koinInject
 import dev.ether.app.ui.teams.TeamsScreen
 import kotlinx.serialization.Serializable
@@ -286,6 +287,7 @@ private val TAB_GAP = 4.dp
 private val TAB_ETHA = 64.dp
 
 /** How much of Etha shows above the bar: just the head while peeping, nearly all of it while out. */
+private val PEEK_MOVES = listOf(EthaMove.LOOK, EthaMove.WAVE, EthaMove.HOP, EthaMove.SCRATCH, EthaMove.TAP)
 private const val PEEP = 0.5f
 private const val OUT = 0.9f
 private const val RUN_MS_PER_TAB = 260
@@ -316,6 +318,14 @@ private fun TabBarEtha(current: Tab, centerOf: (Float) -> Dp) {
         }
         etha.performOrYield(current.etha)
         rise.animateTo(PEEP, tween(300))
+        // Left alone, Etha climbs out every few seconds on its own, does something, and sinks back.
+        while (true) {
+            delay(Random.nextLong(4_000, 8_000))
+            rise.animateTo(OUT, tween(220))
+            etha.performOrYield(PEEK_MOVES.random())
+            delay(250)
+            rise.animateTo(PEEP, tween(320))
+        }
     }
     EthaLive(
         Modifier.offset {
@@ -323,5 +333,7 @@ private fun TabBarEtha(current: Tab, centerOf: (Float) -> Dp) {
         },
         size = TAB_ETHA,
         controller = etha,
+        // Moves are driven by the peek loop above, so they happen while Etha is out where they can be seen.
+        pool = emptyList(),
     )
 }

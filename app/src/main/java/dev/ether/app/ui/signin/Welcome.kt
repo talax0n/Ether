@@ -253,8 +253,10 @@ private fun FloatingEtha(bob: () -> Float, modifier: Modifier) {
             size = size,
             controller = etha,
             first = EthaMove.WAVE,
-            pool = EthaMove.FIDGETS + EthaMove.WAVE + EthaMove.HOP + EthaMove.HOP,
+            pool = EthaMove.AMBIENT + EthaMove.HOP,
             restMs = 1_800L..3_500L,
+            // This screen floats Etha itself, with a ground shadow that follows the bob.
+            float = false,
         )
     }
 }
