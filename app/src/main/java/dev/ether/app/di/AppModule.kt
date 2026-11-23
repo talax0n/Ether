@@ -71,7 +71,7 @@ private val viewModels = module {
     viewModel { CompetitionListViewModel(get()) }
     viewModel { (id: String) -> CompetitionDetailViewModel(CompetitionId(id), get(), get()) }
     viewModel { (competitionId: String, listingId: String) ->
-        DeckViewModel(CompetitionId(competitionId), ListingId(listingId), get(), get())
+        DeckViewModel(CompetitionId(competitionId), ListingId(listingId), get(), get(), get())
     }
     // No parameter: matches across every competition (the Matches tab).
     viewModel { params -> MatchesViewModel(params.getOrNull<String>()?.let(::CompetitionId), get(), get()) }

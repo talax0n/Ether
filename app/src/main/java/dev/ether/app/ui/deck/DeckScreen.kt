@@ -1,6 +1,17 @@
 package dev.ether.app.ui.deck
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import dev.ether.app.ui.components.LedgeButton
+import dev.ether.app.ui.theme.Coral
+import dev.ether.app.ui.theme.Mint
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Row
@@ -16,7 +27,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import dev.ether.app.ui.shareText
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ether.app.ui.components.ArcadeIcons
 import dev.ether.app.ui.components.ArcadeSnackbarHost
@@ -47,6 +60,7 @@ fun DeckScreen(
     val snackbar = remember { SnackbarHostState() }
     val etha = rememberEthaController()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     LaunchedEffect(state.error, state.phase) {
         if (state.phase != DeckPhase.FAILED) state.error?.let { snackbar.showSnackbar(it) }
     }
@@ -73,8 +87,13 @@ fun DeckScreen(
             when (state.phase) {
                 DeckPhase.LOADING -> LoadingBox(inner)
                 DeckPhase.FAILED -> MessageBox(state.error ?: "Couldn't load the deck", inner, "Retry", Tone.ERROR, onAction = vm::load)
-                DeckPhase.OUT_OF_CARDS -> MessageBox(
-                    "No one left to swipe, check back later.", inner, "Refresh", Tone.EMPTY, ArcadeIcons.Users, onAction = vm::load,
+                DeckPhase.OUT_OF_CARDS -> OutOfCards(
+                    competitionName = state.competitionName,
+                    hasMatches = state.hasMatches,
+                    onInvite = { shareText(context, inviteMessage(state.competitionName), "Invite friends") },
+                    onRefresh = vm::load,
+                    onOpenMatches = onOpenMatches,
+                    modifier = inner,
                 )
                 DeckPhase.LISTING_CLOSED -> MessageBox(
                     "Your listing stopped taking swipes, usually because a match put you on a team.",
@@ -102,3 +121,41 @@ fun DeckScreen(
     }
 }
 
+
+/**
+ * The deck ran dry. Nobody is left to swipe on until more people join, so the way forward is bringing them in:
+ * share an invite, check again, or go back to the matches already made.
+ */
+@Composable
+private fun OutOfCards(
+    competitionName: String?,
+    hasMatches: Boolean,
+    onInvite: () -> Unit,
+    onRefresh: () -> Unit,
+    onOpenMatches: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 32.dp, vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        // Asleep between pokes, like every other empty state.
+        EthaLive(size = 150.dp, controller = rememberEthaController(EthaMove.SLEEP), pool = emptyList())
+        Text(
+            "You've seen everyone",
+            Modifier.semantics { heading() },
+            style = MaterialTheme.typography.headlineSmall, color = Arcade.colors.text, textAlign = TextAlign.Center,
+        )
+        Text(
+            "Nobody new has joined ${competitionName ?: "this competition"} yet. " +
+                "Invite friends who are looking for a team, then check back.",
+            style = MaterialTheme.typography.titleMedium, color = Arcade.colors.muted, textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(4.dp))
+        val wide = Modifier.widthIn(max = 320.dp).fillMaxWidth()
+        LedgeButton("Invite friends", onInvite, wide, color = Coral, icon = ArcadeIcons.Users)
+        LedgeButton("Refresh", onRefresh, wide, color = Arcade.colors.surface, contentColor = Arcade.colors.text)
+        if (hasMatches) LedgeButton("See your matches", onOpenMatches, wide, color = Mint, icon = ArcadeIcons.HeartFilled)
+    }
+}

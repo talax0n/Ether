@@ -166,7 +166,7 @@ Business rules live in Postgres (constraints, triggers, RLS) because they must h
 
 - 🟡 **Open sign-up.** Anyone with an email or a Google account can join, so the deck is no longer limited to one campus. Trust comes from per-competition decks, mutual consent, and endorsements. Revisit if decks fill with people who never show up.
 - 🟡 **Google sign-in setup.** Needs a Google Cloud OAuth web client ID (shared with Supabase) and an Android client registered with the app's signing SHA-1. Without them the Google button stays hidden.
-- 🟡 **Cold start.** An empty deck kills the app. Mitigation: launch tied to one specific upcoming competition, seeded with friends and a campus org.
+- 🟡 **Cold start.** An empty deck kills the app. Mitigation: launch tied to one specific upcoming competition, seeded with friends and a campus org. When the deck runs dry it says nobody new has joined yet and offers "Invite friends" (a share-sheet link to the GitHub releases page until there is a store listing), Refresh, and the user's matches.
 - 🟡 **Contact abuse.** Contacts are only visible to matched listings and teammates. Enforce that with RLS, not in the client.
 - 🟡 **Swipe gesture feel.** The hand-rolled card needs tuning (threshold, rotation, spring). Prototype it early on a real device.
 - 🟢 **Matching logic.** It is a single trigger guarded by unique constraints. Low risk, cover it with SQL tests.

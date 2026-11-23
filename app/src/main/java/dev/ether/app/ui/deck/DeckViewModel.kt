@@ -2,6 +2,7 @@ package dev.ether.app.ui.deck
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.ether.app.data.CompetitionRepository
 import dev.ether.app.data.DeckRepository
 import dev.ether.app.data.MatchRepository
 import dev.ether.app.domain.CompetitionId
@@ -35,18 +36,43 @@ data class DeckUiState(
     /** A swipe is on its way to the database; further swipes are ignored until it settles. */
     val swiping: Boolean = false,
     val error: String? = null,
+    /** For the invite message on the empty deck. Null until loaded, or if it couldn't be. */
+    val competitionName: String? = null,
+    /** The user already has a match here, so the empty deck can point to it. */
+    val hasMatches: Boolean = false,
 )
+
+/** GitHub releases page: the download link until there is a Play Store listing. */
+const val DOWNLOAD_URL = "https://github.com/talax0n/Ether/releases/latest"
+
+/** What "Invite friends" shares from an empty deck. */
+fun inviteMessage(competitionName: String?): String {
+    val goal = competitionName?.let { "find a team for $it" } ?: "find a hackathon team"
+    return "Join me on Ether to $goal.\nGet the app: $DOWNLOAD_URL"
+}
 
 class DeckViewModel(
     private val competitionId: CompetitionId,
     private val from: ListingId,
     private val deck: DeckRepository,
     private val matches: MatchRepository,
+    private val competitions: CompetitionRepository,
 ) : ViewModel() {
     private val _state = MutableStateFlow(DeckUiState())
     val state: StateFlow<DeckUiState> = _state.asStateFlow()
 
-    init { load() }
+    init {
+        load()
+        loadContext()
+    }
+
+    /** Extras for the empty deck. Neither is worth failing the deck over, so errors leave the defaults. */
+    private fun loadContext() = viewModelScope.launch {
+        val name = async { runCatching { competitions.competition(competitionId).name }.getOrNull() }
+        val any = async { runCatching { matches.matches(competitionId).isNotEmpty() }.getOrDefault(false) }
+        val (n, m) = name.await() to any.await()
+        _state.update { it.copy(competitionName = n ?: it.competitionName, hasMatches = it.hasMatches || m) }
+    }
 
     fun load() {
         _state.update { it.copy(phase = DeckPhase.LOADING, error = null) }
@@ -74,7 +100,7 @@ class DeckViewModel(
             try {
                 val result = deck.swipe(from, card.listingId, direction)
                 val match = if (result.matched) findMatch(card, result) else null
-                _state.update { it.copy(remaining = result.remaining, match = match ?: it.match) }
+                _state.update { it.copy(remaining = result.remaining, match = match ?: it.match, hasMatches = it.hasMatches || match != null) }
                 // A match can close the caller's own listing (a solo just joined a team, or a team filled up),
                 // so re-read the deck from the DB instead of trusting the local cards.
                 if (match != null || _state.value.cards.isEmpty()) refresh(result.remaining) else settle()

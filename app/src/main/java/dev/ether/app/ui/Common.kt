@@ -21,6 +21,16 @@ fun openContact(context: Context, url: String) {
     }
 }
 
+/** Opens the Android share sheet with plain [text]. */
+fun shareText(context: Context, text: String, title: String? = null) {
+    val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+    try {
+        context.startActivity(Intent.createChooser(send, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(context, "No app can share this", Toast.LENGTH_LONG).show()
+    }
+}
+
 private val dateFormat = DateTimeFormatter.ofPattern("d MMM yyyy")
 fun Instant.shortDate(): String = atZone(ZoneId.systemDefault()).format(dateFormat)
 
