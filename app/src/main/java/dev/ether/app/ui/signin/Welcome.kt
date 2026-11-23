@@ -42,6 +42,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.ether.app.ui.components.ArcadeIcons
 import dev.ether.app.ui.components.Avatar
+import dev.ether.app.ui.components.Chip
+import dev.ether.app.ui.theme.Paper
 import dev.ether.app.ui.components.ErrorText
 import dev.ether.app.ui.components.EthaLive
 import dev.ether.app.ui.components.rememberEthaController
@@ -70,22 +72,25 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
-/** One student bubble in the welcome burst, placed relative to the centre. Far bubbles sit back, faded. */
-private class Bubble(val name: String, val color: Color, val x: Int, val y: Int, val size: Int, val far: Boolean = false)
+/**
+ * One thing floating in the welcome burst, placed relative to the centre. Near ones are students with the
+ * role they bring; far ones are the skills a team is built from, faded back for depth.
+ */
+private class Bubble(val name: String, val label: String, val color: Color, val x: Int, val y: Int, val size: Int = 0, val far: Boolean = false)
 
 // ponytail: hand-placed, not laid out; tuned for phone widths, the burst is decoration and may clip at the edges.
 private val bubbles = listOf(
-    Bubble("Joko Widodo", GrapeSoft, -190, -250, 130, far = true),
-    Bubble("Kirana Ayu", SkySoft, 200, 230, 130, far = true),
-    Bubble("Gita Sari", MintSoft, -70, -150, 52, far = true),
-    Bubble("Hadi Putra", Peach, 120, -190, 58, far = true),
-    Bubble("Intan Lestari", SunSoft, -175, 150, 56, far = true),
-    Bubble("Nadia Rahma", MintSoft, 10, -215, 78),
-    Bubble("Budi Santoso", SunSoft, -150, -95, 66),
-    Bubble("Citra Dewi", SkySoft, 160, -60, 72),
-    Bubble("Dimas Pratama", Peach, -165, 55, 62),
-    Bubble("Eka Putri", GrapeSoft, 140, 105, 60),
-    Bubble("Fajar Nugroho", SunSoft, -5, 195, 84),
+    Bubble("", "Kotlin", SkySoft, -150, -250, far = true),
+    Bubble("", "Figma", Peach, 150, -235, far = true),
+    Bubble("", "Python", MintSoft, -185, 170, far = true),
+    Bubble("", "Pitching", SunSoft, 165, 225, far = true),
+    Bubble("", "React", GrapeSoft, 205, 20, far = true),
+    Bubble("Nadia Rahma", "Android", MintSoft, 10, -205, 64),
+    Bubble("Budi Santoso", "Designer", SunSoft, -150, -95, 58),
+    Bubble("Citra Dewi", "Frontend", SkySoft, 155, -85, 62),
+    Bubble("Dimas Pratama", "Hardware", Peach, -160, 70, 56),
+    Bubble("Eka Putri", "Data / ML", GrapeSoft, 135, 110, 56),
+    Bubble("Fajar Nugroho", "Backend", SunSoft, -5, 200, 66),
 )
 
 /**
@@ -259,30 +264,37 @@ private fun BubbleView(b: Bubble, index: Int, bob: () -> Float, orbit: () -> Flo
     Box(
         Modifier.graphicsLayer {
             val a = if (b.far) -orbit() else orbit()
-            // Rotate the hand-placed spot around the centre.
-            translationX = (b.x * cos(a) - b.y * sin(a)) * scale * density
+            // Rotate the hand-placed spot around the centre on an upright ellipse: the screen is taller than wide,
+            // so students and their role tags stay on screen as they come round the sides.
+            translationX = (b.x * cos(a) - b.y * sin(a)) * scale * density * (if (b.far) 1f else 0.75f)
             translationY = (b.x * sin(a) + b.y * cos(a)) * scale * density + sin(bob() + index) * lift.toPx()
         },
         contentAlignment = Alignment.Center,
     ) {
-        Avatar(
-            b.name, null, sizeDp,
-            Modifier.graphicsLayer {
-                val s = pop.value * scale * (1f + 0.12f * pulse.value)
-                scaleX = s; scaleY = s
-                alpha = if (b.far) 0.3f else 1f
-                // Fade by multiplying each draw instead of compositing an offscreen buffer every frame.
-                compositingStrategy = CompositingStrategy.ModulateAlpha
-            },
-            color = b.color,
-        )
+        val look = Modifier.graphicsLayer {
+            val s = pop.value * scale * (1f + 0.12f * pulse.value)
+            scaleX = s; scaleY = s
+            alpha = if (b.far) 0.35f else 1f
+            // Fade by multiplying each draw instead of compositing an offscreen buffer every frame.
+            compositingStrategy = CompositingStrategy.ModulateAlpha
+        }
+        if (b.far) {
+            Chip(b.label, look, color = b.color)
+        } else {
+            // A student and the role they bring; the tag tucks under the avatar like a name badge.
+            Column(look, horizontalAlignment = Alignment.CenterHorizontally) {
+                Avatar(b.name, null, sizeDp, color = b.color)
+                Chip(b.label, Modifier.offset(y = (-10).dp), color = Paper)
+            }
+        }
         if (heart.value < 1f) {
             Icon(
                 ArcadeIcons.HeartFilled, null, tint = Coral,
                 modifier = Modifier.size(26.dp).graphicsLayer {
                     val p = heart.value
                     translationX = sizeDp.toPx() * 0.35f * scale
-                    translationY = -sizeDp.toPx() * 0.5f * scale - p * 46.dp.toPx()
+                    // From the avatar's top-right, above the role tag.
+                    translationY = -(sizeDp.toPx() * 0.5f + 10.dp.toPx()) * scale - p * 46.dp.toPx()
                     val s = if (p < 0.2f) p / 0.2f else 1f
                     scaleX = s; scaleY = s
                     alpha = 1f - p
