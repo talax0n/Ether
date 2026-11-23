@@ -108,6 +108,8 @@ class SignInViewModelTest {
             override suspend fun signUp(email: String, password: String) = SignUpResult.VERIFY_EMAIL
             override suspend fun verifyEmail(email: String, code: String) = Unit
             override suspend fun resendVerification(email: String) { resent++ }
+            override suspend fun sendPasswordReset(email: String) = Unit
+            override suspend fun resetPassword(email: String, code: String, newPassword: String) = Unit
             override suspend fun signInWithGoogle(idToken: String, rawNonce: String) = Unit
             override suspend fun signOut() = Unit
         }
@@ -160,5 +162,48 @@ class SignInViewModelTest {
 
         assertEquals(SignInStep.CREDENTIALS, vm.state.value.step)
         assertEquals("No Google account on this phone. Add one in Settings, or use your email.", vm.state.value.error)
+    }
+
+    @Test
+    fun `forgot password needs the email first`() = runTest {
+        vm.forgotPassword()
+
+        assertEquals(SignInStep.CREDENTIALS, vm.state.value.step)
+        assertEquals("Enter your email first, then tap Forgot password.", vm.state.value.error)
+    }
+
+    @Test
+    fun `forgot password sends a code and asks for it with a new password`() = runTest {
+        credentials(SignInMode.SIGN_IN, password = "forgotten")
+        vm.forgotPassword()
+
+        assertEquals(SignInStep.RESET, vm.state.value.step)
+        assertEquals("", vm.state.value.password)
+        assertEquals(30, vm.state.value.resendIn)
+    }
+
+    @Test
+    fun `a reset needs the new password as well as the code`() = runTest {
+        credentials(SignInMode.SIGN_IN)
+        vm.forgotPassword()
+        vm.onCodeChange("123456")
+        assertEquals(AuthState.SignedOut, backend.authState.value)
+        assertFalse(vm.state.value.canSubmit)
+
+        vm.onPasswordChange("brand-new-pass")
+        vm.submit()
+        assertEquals(me, backend.authState.value)
+    }
+
+    @Test
+    fun `a wrong reset code keeps the user signed out`() = runTest {
+        credentials(SignInMode.SIGN_IN)
+        vm.forgotPassword()
+        vm.onCodeChange("000000")
+        vm.onPasswordChange("brand-new-pass")
+        vm.submit()
+
+        assertEquals("That code is wrong or has expired.", vm.state.value.error)
+        assertEquals(AuthState.SignedOut, backend.authState.value)
     }
 }

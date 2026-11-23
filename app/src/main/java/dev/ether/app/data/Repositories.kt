@@ -31,6 +31,10 @@ interface AuthRepository {
     /** Confirms a new account's email with the 6-digit code from its confirmation mail, which starts the session. */
     suspend fun verifyEmail(email: String, code: String)
     suspend fun resendVerification(email: String)
+    /** Mails a 6-digit reset code. Unknown emails succeed silently, so the screen can't be used to probe for accounts. */
+    suspend fun sendPasswordReset(email: String)
+    /** Proves the reset [code], which starts a session, then sets [newPassword] on that account. */
+    suspend fun resetPassword(email: String, code: String, newPassword: String)
     /** Exchanges a Google ID token (from Credential Manager) for a session. [rawNonce] is the unhashed nonce sent to Google. */
     suspend fun signInWithGoogle(idToken: String, rawNonce: String)
     suspend fun signOut()

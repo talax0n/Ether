@@ -17,8 +17,11 @@ import kotlinx.coroutines.launch
 
 enum class SignInMode { SIGN_IN, CREATE_ACCOUNT }
 
-/** CREDENTIALS takes email and password; VERIFY takes the code that confirms a new account's email. */
-enum class SignInStep { CREDENTIALS, VERIFY }
+/**
+ * CREDENTIALS takes email and password. VERIFY takes the code that confirms a new account's email.
+ * RESET takes the code from a password-reset mail together with the new password.
+ */
+enum class SignInStep { CREDENTIALS, VERIFY, RESET }
 
 data class SignInUiState(
     val mode: SignInMode = SignInMode.SIGN_IN,
@@ -39,6 +42,7 @@ data class SignInUiState(
                 SignInMode.CREATE_ACCOUNT -> password.length >= MIN_PASSWORD
             }
             SignInStep.VERIFY -> code.length == CODE_LENGTH
+            SignInStep.RESET -> code.length == CODE_LENGTH && password.length >= MIN_PASSWORD
         }
 
     companion object {
@@ -71,7 +75,8 @@ class SignInViewModel(private val auth: AuthRepository) : ViewModel() {
     fun onCodeChange(value: String) {
         _state.update { it.copy(code = value.filter(Char::isDigit).take(SignInUiState.CODE_LENGTH), error = null) }
         // The last digit verifies on its own; nobody should have to hunt for a button after typing a code.
-        if (_state.value.code.length == SignInUiState.CODE_LENGTH) submit()
+        // A reset still needs its new password, so that step waits for the button.
+        if (_state.value.step == SignInStep.VERIFY && _state.value.code.length == SignInUiState.CODE_LENGTH) submit()
     }
 
     fun submit() {
@@ -83,6 +88,7 @@ class SignInViewModel(private val auth: AuthRepository) : ViewModel() {
             runCatching {
                 when {
                     current.step == SignInStep.VERIFY -> auth.verifyEmail(email, current.code)
+                    current.step == SignInStep.RESET -> auth.resetPassword(email, current.code, current.password)
                     current.mode == SignInMode.SIGN_IN -> auth.signIn(email, current.password)
                     auth.signUp(email, current.password) == SignUpResult.VERIFY_EMAIL -> return@runCatching toVerify()
                 }
@@ -97,6 +103,25 @@ class SignInViewModel(private val auth: AuthRepository) : ViewModel() {
                     _state.update { it.copy(busy = false, error = e.userMessage()) }
                 }
             }
+        }
+    }
+
+    /** Sends a reset code to the email already typed in, then asks for the code and a new password. */
+    fun forgotPassword() {
+        val current = _state.value
+        if (current.busy) return
+        if (!current.email.isValidEmail()) {
+            _state.update { it.copy(error = "Enter your email first, then tap Forgot password.") }
+            return
+        }
+        _state.update { it.copy(busy = true, error = null) }
+        viewModelScope.launch {
+            runCatching { auth.sendPasswordReset(current.email.trim()) }
+                .onSuccess {
+                    _state.update { it.copy(step = SignInStep.RESET, mode = SignInMode.SIGN_IN, code = "", password = "", busy = false) }
+                    startCooldown()
+                }
+                .onFailure { e -> _state.update { it.copy(busy = false, error = e.userMessage()) } }
         }
     }
 
@@ -120,10 +145,13 @@ class SignInViewModel(private val auth: AuthRepository) : ViewModel() {
 
     fun resend() {
         val current = _state.value
-        if (current.step != SignInStep.VERIFY || current.busy || current.resendIn > 0) return
+        if (current.step == SignInStep.CREDENTIALS || current.busy || current.resendIn > 0) return
         _state.update { it.copy(busy = true, code = "", error = null) }
         viewModelScope.launch {
-            runCatching { auth.resendVerification(current.email.trim()) }
+            runCatching {
+                val email = current.email.trim()
+                if (current.step == SignInStep.RESET) auth.sendPasswordReset(email) else auth.resendVerification(email)
+            }
                 .onSuccess { _state.update { it.copy(busy = false) }; startCooldown() }
                 .onFailure { e -> _state.update { it.copy(busy = false, error = e.userMessage()) } }
         }
@@ -131,7 +159,7 @@ class SignInViewModel(private val auth: AuthRepository) : ViewModel() {
 
     fun back() {
         cooldown?.cancel()
-        _state.update { it.copy(step = SignInStep.CREDENTIALS, code = "", error = null, resendIn = 0) }
+        _state.update { it.copy(step = SignInStep.CREDENTIALS, code = "", password = "", error = null, resendIn = 0) }
     }
 
     private var cooldown: Job? = null

@@ -83,6 +83,15 @@ class SupabaseAuthRepository(private val client: SupabaseClient) : AuthRepositor
         client.auth.resendEmail(OtpType.Email.SIGNUP, email)
     }
 
+    override suspend fun sendPasswordReset(email: String): Unit = backend {
+        client.auth.resetPasswordForEmail(email)
+    }
+
+    override suspend fun resetPassword(email: String, code: String, newPassword: String): Unit = backend {
+        client.auth.verifyEmailOtp(type = OtpType.Email.RECOVERY, email = email, token = code)
+        client.auth.updateUser { password = newPassword }
+    }
+
     override suspend fun signInWithGoogle(idToken: String, rawNonce: String): Unit = backend {
         client.auth.signInWith(IDToken) {
             this.idToken = idToken

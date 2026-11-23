@@ -73,6 +73,13 @@ class FakeBackend(
 
     override suspend fun resendVerification(email: String) = Unit
 
+    override suspend fun sendPasswordReset(email: String) = Unit
+
+    override suspend fun resetPassword(email: String, code: String, newPassword: String) {
+        if (code != DemoData.OTP) throw EtherError.InvalidCode()
+        auth.value = AuthState.SignedIn(DemoData.me.id)
+    }
+
     override suspend fun signInWithGoogle(idToken: String, rawNonce: String) {
         auth.value = AuthState.SignedIn(DemoData.me.id)
     }

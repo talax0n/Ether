@@ -251,8 +251,13 @@ subject = "Your Ether sign-in code"
 content_path = "./supabase/templates/otp.html"
 
 [auth.email.template.confirmation]
-subject = "Your Ether sign-in code"
+subject = "Your Ether confirmation code"
 content_path = "./supabase/templates/otp.html"
+
+# Forgot password: the app asks for this code together with the new password.
+[auth.email.template.recovery]
+subject = "Your Ether password reset code"
+content_path = "./supabase/templates/reset.html"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

@@ -102,7 +102,7 @@ fun SignInScreen(vm: SignInViewModel = koinViewModel()) {
         BuildConfig.USE_FAKE_BACKEND -> { -> vm.signInWithGoogle("demo-id-token", "demo-nonce") }
         else -> null
     }
-    SignInContent(state, vm::onEmailChange, vm::onPasswordChange, vm::onModeChange, vm::onCodeChange, vm::submit, vm::back, vm::resend, onGoogle)
+    SignInContent(state, vm::onEmailChange, vm::onPasswordChange, vm::onModeChange, vm::onCodeChange, vm::submit, vm::back, vm::resend, vm::forgotPassword, onGoogle)
 }
 
 @Composable
@@ -115,13 +115,14 @@ fun SignInContent(
     onSubmit: () -> Unit,
     onBack: () -> Unit,
     onResend: () -> Unit,
+    onForgotPassword: () -> Unit,
     /** Null hides the Google button: no client ID is configured for this build. */
     onGoogle: (() -> Unit)?,
 ) {
     val colors = Arcade.colors
     Column(Modifier.fillMaxSize().background(colors.background).safeDrawingPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (state.step == SignInStep.VERIFY) {
+            if (state.step != SignInStep.CREDENTIALS) {
                 LedgeIconButton(ArcadeIcons.Back, "Back", onBack, size = 42.dp)
             } else {
                 EtherMark(size = 40.dp)
@@ -131,7 +132,7 @@ fun SignInContent(
             state.step,
             Modifier.weight(1f),
             transitionSpec = {
-                val dir = if (targetState == SignInStep.VERIFY) 1 else -1
+                val dir = if (targetState != SignInStep.CREDENTIALS) 1 else -1
                 (slideInHorizontally { dir * it / 4 } + fadeIn()) togetherWith (slideOutHorizontally { -dir * it / 4 } + fadeOut())
             },
             label = "step",
@@ -156,7 +157,11 @@ fun SignInContent(
                         )
                         Spacer(Modifier.height(12.dp))
                         PasswordField(state.password, onPasswordChange, creating, onSubmit)
-                        Spacer(Modifier.height(14.dp))
+                        if (creating) {
+                            Spacer(Modifier.height(14.dp))
+                        } else {
+                            TextLink("Forgot password?", enabled = !state.busy, onForgotPassword, Modifier.align(Alignment.End).padding(vertical = 6.dp))
+                        }
                         LedgeButton(
                             if (creating) "Create account" else "Sign in", onSubmit, Modifier.fillMaxWidth(),
                             enabled = state.canSubmit || state.busy, busy = state.busy, icon = ArcadeIcons.Bolt,
@@ -176,6 +181,14 @@ fun SignInContent(
                         Spacer(Modifier.height(16.dp))
                         ResendRow(state.resendIn, enabled = !state.busy, onResend)
                     }
+                    SignInStep.RESET -> {
+                        Heading("Reset your\npassword", "Enter the code we sent to ${state.email.trim()}, then choose a new password.")
+                        CodeCells(state.code, onCodeChange, enabled = !state.busy)
+                        Spacer(Modifier.height(16.dp))
+                        ResendRow(state.resendIn, enabled = !state.busy, onResend)
+                        Spacer(Modifier.height(20.dp))
+                        PasswordField(state.password, onPasswordChange, creating = true, onSubmit, label = "New password (6+ characters)")
+                    }
                 }
                 state.error?.let {
                     Spacer(Modifier.height(14.dp))
@@ -183,9 +196,9 @@ fun SignInContent(
                 }
             }
         }
-        if (state.step == SignInStep.VERIFY) {
+        if (state.step != SignInStep.CREDENTIALS) {
             LedgeButton(
-                "Verify", onSubmit, Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
+                if (state.step == SignInStep.RESET) "Set new password" else "Verify", onSubmit, Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
                 enabled = state.canSubmit || state.busy, busy = state.busy, icon = ArcadeIcons.Check,
             )
         }
@@ -216,12 +229,18 @@ private fun ModeSwitch(mode: SignInMode, onChange: (SignInMode) -> Unit, enabled
 }
 
 @Composable
-private fun PasswordField(value: String, onChange: (String) -> Unit, creating: Boolean, onDone: () -> Unit) {
+private fun PasswordField(
+    value: String,
+    onChange: (String) -> Unit,
+    creating: Boolean,
+    onDone: () -> Unit,
+    label: String = if (creating) "Password (6+ characters)" else "Password",
+) {
     var shown by remember { mutableStateOf(false) }
     ArcadeTextField(
         value = value,
         onValueChange = onChange,
-        label = if (creating) "Password (6+ characters)" else "Password",
+        label = label,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Go),
         keyboardActions = KeyboardActions(onGo = { onDone() }),
         visualTransformation = if (shown) VisualTransformation.None else PasswordVisualTransformation(),
@@ -288,6 +307,16 @@ private fun CodeCells(code: String, onChange: (String) -> Unit, enabled: Boolean
 }
 
 @Composable
+private fun TextLink(text: String, enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Text(
+        text,
+        modifier.clip(RoundedCornerShape(8.dp)).clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(vertical = 4.dp, horizontal = 2.dp),
+        style = MaterialTheme.typography.titleSmall,
+        color = Arcade.colors.text,
+    )
+}
+
+@Composable
 private fun ResendRow(resendIn: Int, enabled: Boolean, onResend: () -> Unit) {
     val colors = Arcade.colors
     if (resendIn > 0) {
@@ -297,17 +326,12 @@ private fun ResendRow(resendIn: Int, enabled: Boolean, onResend: () -> Unit) {
             color = colors.muted,
         )
     } else {
-        Text(
-            "Resend code",
-            Modifier.clip(RoundedCornerShape(8.dp)).clickable(enabled = enabled, role = Role.Button, onClick = onResend).padding(vertical = 4.dp),
-            style = MaterialTheme.typography.titleSmall,
-            color = colors.text,
-        )
+        TextLink("Resend code", enabled, onResend)
     }
 }
 
 @Preview
 @Composable
 private fun SignInPreview() {
-    EtherTheme { SignInContent(SignInUiState(email = "ana@example.com"), {}, {}, {}, {}, {}, {}, {}, {}) }
+    EtherTheme { SignInContent(SignInUiState(email = "ana@example.com"), {}, {}, {}, {}, {}, {}, {}, {}, {}) }
 }
