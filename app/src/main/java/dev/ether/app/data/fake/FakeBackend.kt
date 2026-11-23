@@ -5,6 +5,7 @@ import dev.ether.app.data.CompetitionRepository
 import dev.ether.app.data.DeckRepository
 import dev.ether.app.data.MatchRepository
 import dev.ether.app.data.ProfileRepository
+import dev.ether.app.data.SignUpResult
 import dev.ether.app.data.TeamRepository
 import dev.ether.app.domain.AuthState
 import dev.ether.app.domain.Badge
@@ -58,14 +59,19 @@ class FakeBackend(
     private val teams = DemoData.myTeams.toMutableList()
     private var nextId = 1
 
-    override suspend fun sendOtp(email: String) {
-        require(email.contains('@')) { "Enter a valid email" }
+    // Any password signs in; creating an account always asks for the demo code, so both paths can be tried.
+    override suspend fun signIn(email: String, password: String) {
+        auth.value = AuthState.SignedIn(DemoData.me.id)
     }
 
-    override suspend fun verifyOtp(email: String, code: String) {
+    override suspend fun signUp(email: String, password: String): SignUpResult = SignUpResult.VERIFY_EMAIL
+
+    override suspend fun verifyEmail(email: String, code: String) {
         if (code != DemoData.OTP) throw EtherError.InvalidCode()
         auth.value = AuthState.SignedIn(DemoData.me.id)
     }
+
+    override suspend fun resendVerification(email: String) = Unit
 
     override suspend fun signInWithGoogle(idToken: String, rawNonce: String) {
         auth.value = AuthState.SignedIn(DemoData.me.id)

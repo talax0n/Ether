@@ -27,6 +27,11 @@ internal fun etherErrorFor(text: String): EtherError? = when {
     "no_result_reported" in text -> EtherError.NoResultReported()
     "cannot_confirm_own_result" in text -> EtherError.CannotConfirmOwnResult()
     "otp_expired" in text || "Token has expired or is invalid" in text -> EtherError.InvalidCode()
+    "invalid_credentials" in text -> EtherError.WrongCredentials()
+    "user_already_exists" in text || "email_exists" in text -> EtherError.AccountExists()
+    "weak_password" in text -> EtherError.WeakPassword()
+    "email_not_confirmed" in text -> EtherError.EmailNotConfirmed()
+    "over_email_send_rate_limit" in text -> EtherError.TooManyEmails()
     else -> null
 }
 

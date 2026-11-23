@@ -33,6 +33,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import dev.ether.app.ui.theme.Ink
+import dev.ether.app.ui.theme.SunSoft
 import dev.ether.app.ui.components.EthaLive
 import dev.ether.app.ui.components.EthaMove
 import androidx.compose.ui.Alignment
@@ -93,16 +102,18 @@ fun SignInScreen(vm: SignInViewModel = koinViewModel()) {
         BuildConfig.USE_FAKE_BACKEND -> { -> vm.signInWithGoogle("demo-id-token", "demo-nonce") }
         else -> null
     }
-    SignInContent(state, vm::onEmailChange, vm::onCodeChange, vm::submit, vm::changeEmail, vm::resend, onGoogle)
+    SignInContent(state, vm::onEmailChange, vm::onPasswordChange, vm::onModeChange, vm::onCodeChange, vm::submit, vm::back, vm::resend, onGoogle)
 }
 
 @Composable
 fun SignInContent(
     state: SignInUiState,
     onEmailChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onModeChange: (SignInMode) -> Unit,
     onCodeChange: (String) -> Unit,
     onSubmit: () -> Unit,
-    onChangeEmail: () -> Unit,
+    onBack: () -> Unit,
     onResend: () -> Unit,
     /** Null hides the Google button: no client ID is configured for this build. */
     onGoogle: (() -> Unit)?,
@@ -110,8 +121,8 @@ fun SignInContent(
     val colors = Arcade.colors
     Column(Modifier.fillMaxSize().background(colors.background).safeDrawingPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (state.step == SignInStep.CODE) {
-                LedgeIconButton(ArcadeIcons.Back, "Use a different email", onChangeEmail, size = 42.dp)
+            if (state.step == SignInStep.VERIFY) {
+                LedgeIconButton(ArcadeIcons.Back, "Back", onBack, size = 42.dp)
             } else {
                 EtherMark(size = 40.dp)
             }
@@ -120,28 +131,34 @@ fun SignInContent(
             state.step,
             Modifier.weight(1f),
             transitionSpec = {
-                val dir = if (targetState == SignInStep.CODE) 1 else -1
+                val dir = if (targetState == SignInStep.VERIFY) 1 else -1
                 (slideInHorizontally { dir * it / 4 } + fadeIn()) togetherWith (slideOutHorizontally { -dir * it / 4 } + fadeOut())
             },
             label = "step",
         ) { step ->
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp)) {
                 when (step) {
-                    SignInStep.EMAIL -> {
+                    SignInStep.CREDENTIALS -> {
                         // Etha waves hello, then fidgets and waves again now and then while the user types.
                         EthaLive(Modifier.padding(bottom = 8.dp), size = 112.dp, first = EthaMove.WAVE, pool = EthaMove.FIDGETS + EthaMove.WAVE)
-                        Heading("Sign in or\ncreate an account", "Enter your email and we'll send a 6-digit code. New here? The code creates your account.")
+                        val creating = state.mode == SignInMode.CREATE_ACCOUNT
+                        Heading(
+                            if (creating) "Create your\naccount" else "Welcome\nback",
+                            if (creating) "Use any email. We'll send a code to confirm it's yours." else "Sign in with your email and password.",
+                        )
+                        ModeSwitch(state.mode, onModeChange, enabled = !state.busy)
+                        Spacer(Modifier.height(16.dp))
                         ArcadeTextField(
                             value = state.email,
                             onValueChange = onEmailChange,
                             label = "Email",
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Send),
-                            keyboardActions = KeyboardActions(onSend = { onSubmit() }),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                         )
+                        Spacer(Modifier.height(12.dp))
+                        PasswordField(state.password, onPasswordChange, creating, onSubmit)
                         Spacer(Modifier.height(14.dp))
-                        // Right under the field it fills, so it reads as the email route, not a final step after Google.
                         LedgeButton(
-                            "Continue with email", onSubmit, Modifier.fillMaxWidth(),
+                            if (creating) "Create account" else "Sign in", onSubmit, Modifier.fillMaxWidth(),
                             enabled = state.canSubmit || state.busy, busy = state.busy, icon = ArcadeIcons.Bolt,
                         )
                         onGoogle?.let { google ->
@@ -153,8 +170,8 @@ fun SignInContent(
                             GoogleButton(google, enabled = !state.busy)
                         }
                     }
-                    SignInStep.CODE -> {
-                        Heading("Check your\ninbox", "Enter the code we sent to ${state.email.trim()}.")
+                    SignInStep.VERIFY -> {
+                        Heading("Verify your\nemail", "Enter the code we sent to ${state.email.trim()} to finish creating your account.")
                         CodeCells(state.code, onCodeChange, enabled = !state.busy)
                         Spacer(Modifier.height(16.dp))
                         ResendRow(state.resendIn, enabled = !state.busy, onResend)
@@ -166,13 +183,54 @@ fun SignInContent(
                 }
             }
         }
-        if (state.step == SignInStep.CODE) {
+        if (state.step == SignInStep.VERIFY) {
             LedgeButton(
                 "Verify", onSubmit, Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
                 enabled = state.canSubmit || state.busy, busy = state.busy, icon = ArcadeIcons.Check,
             )
         }
     }
+}
+
+/** Two-way switch between signing in and creating an account; the selected side sits in a Sun sticker. */
+@Composable
+private fun ModeSwitch(mode: SignInMode, onChange: (SignInMode) -> Unit, enabled: Boolean) {
+    val colors = Arcade.colors
+    val shape = RoundedCornerShape(16.dp)
+    Row(
+        Modifier.fillMaxWidth().ledge(shape, colors.surface, colors.line, colors.ledge, 3.dp).padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        listOf(SignInMode.SIGN_IN to "Sign in", SignInMode.CREATE_ACCOUNT to "Create account").forEach { (m, label) ->
+            val selected = m == mode
+            Box(
+                Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(12.dp))
+                    .background(if (selected) SunSoft else Color.Transparent)
+                    .selectable(selected, enabled = enabled, role = Role.Tab) { onChange(m) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(label, style = MaterialTheme.typography.titleSmall, color = if (selected) Ink else colors.muted)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PasswordField(value: String, onChange: (String) -> Unit, creating: Boolean, onDone: () -> Unit) {
+    var shown by remember { mutableStateOf(false) }
+    ArcadeTextField(
+        value = value,
+        onValueChange = onChange,
+        label = if (creating) "Password (6+ characters)" else "Password",
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Go),
+        keyboardActions = KeyboardActions(onGo = { onDone() }),
+        visualTransformation = if (shown) VisualTransformation.None else PasswordVisualTransformation(),
+        trailingIcon = {
+            IconButton({ shown = !shown }) {
+                Icon(if (shown) ArcadeIcons.EyeOff else ArcadeIcons.Eye, if (shown) "Hide password" else "Show password", tint = Arcade.colors.muted)
+            }
+        },
+    )
 }
 
 /** Google's sign-in guidelines ask for the multicolor G, so this can't use LedgeButton's single-tint icon. */
@@ -251,5 +309,5 @@ private fun ResendRow(resendIn: Int, enabled: Boolean, onResend: () -> Unit) {
 @Preview
 @Composable
 private fun SignInPreview() {
-    EtherTheme { SignInContent(SignInUiState(email = "ana@example.com"), {}, {}, {}, {}, {}, {}) }
+    EtherTheme { SignInContent(SignInUiState(email = "ana@example.com"), {}, {}, {}, {}, {}, {}, {}, {}) }
 }

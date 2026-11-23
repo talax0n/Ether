@@ -5,6 +5,7 @@ import dev.ether.app.data.CompetitionRepository
 import dev.ether.app.data.DeckRepository
 import dev.ether.app.data.MatchRepository
 import dev.ether.app.data.ProfileRepository
+import dev.ether.app.data.SignUpResult
 import dev.ether.app.data.TeamRepository
 import dev.ether.app.domain.AuthState
 import dev.ether.app.domain.Competition
@@ -30,7 +31,7 @@ import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.IDToken
-import io.github.jan.supabase.auth.providers.builtin.OTP
+import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
@@ -58,15 +59,28 @@ class SupabaseAuthRepository(private val client: SupabaseClient) : AuthRepositor
         }
     }
 
-    override suspend fun sendOtp(email: String): Unit = backend {
-        client.auth.signInWith(OTP) {
+    override suspend fun signIn(email: String, password: String): Unit = backend {
+        client.auth.signInWith(Email) {
             this.email = email
-            createUser = true
+            this.password = password
         }
     }
 
-    override suspend fun verifyOtp(email: String, code: String): Unit = backend {
-        client.auth.verifyEmailOtp(type = OtpType.Email.EMAIL, email = email, token = code)
+    override suspend fun signUp(email: String, password: String): SignUpResult = backend {
+        client.auth.signUpWith(Email) {
+            this.email = email
+            this.password = password
+        }
+        // With "Confirm email" off the session starts right away; with it on, a code is on its way.
+        if (client.auth.currentSessionOrNull() != null) SignUpResult.SIGNED_IN else SignUpResult.VERIFY_EMAIL
+    }
+
+    override suspend fun verifyEmail(email: String, code: String): Unit = backend {
+        client.auth.verifyEmailOtp(type = OtpType.Email.SIGNUP, email = email, token = code)
+    }
+
+    override suspend fun resendVerification(email: String): Unit = backend {
+        client.auth.resendEmail(OtpType.Email.SIGNUP, email)
     }
 
     override suspend fun signInWithGoogle(idToken: String, rawNonce: String): Unit = backend {

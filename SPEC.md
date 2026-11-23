@@ -87,7 +87,7 @@ The profile shows the level, its title, and progress to the next threshold. Leve
 ## 5. MVP features (YAGNI-tight)
 
 **In scope:**
-- Sign-in with any email (one-time code) or a Google account. The first sign-in creates the account.
+- Sign in with email and password, or a Google account. Creating an account with email asks for a 6-digit code to confirm the address; the code is never used to sign in.
 - Profile create and edit: skills, roles, major, year, bio, contact link, avatar.
 - Competition list (seeded by hand in the database).
 - Join a competition as SOLO, or create a team and list it as TEAM.

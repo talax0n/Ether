@@ -1,5 +1,5 @@
--- Local demo data. Log in as demoN@student.example.ac.id (N = 1..8) with email OTP;
--- the code arrives in Mailpit at http://127.0.0.1:54324.
+-- Local demo data. Sign in as demoN@student.example.ac.id (N = 1..8) with the password ether-demo.
+-- Local only: never seed a known password into a shared project.
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -10,7 +10,7 @@ insert into auth.users (
 select '00000000-0000-0000-0000-000000000000',
        ('d0000000-0000-0000-0000-00000000000' || n)::uuid,
        'authenticated', 'authenticated',
-       'demo' || n || '@student.example.ac.id', '', now(),
+       'demo' || n || '@student.example.ac.id', extensions.crypt('ether-demo', extensions.gen_salt('bf')), now(),
        '{"provider":"email","providers":["email"]}', jsonb_build_object('name', 'Demo ' || n),
        now(), now(), '', '', '', '', '', '', '', ''
 from generate_series(1, 8) n;

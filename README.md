@@ -41,7 +41,7 @@ Ether gives each competition its own deck, so everyone you see shares your deadl
 
 ## Features
 
-- **Open sign-in.** Any email with a one-time code, or a Google account.
+- **Open sign-in.** Email and password (a 6-digit code confirms new accounts), or a Google account.
 - **A deck for each competition.** You can enter one as a solo student, or create a team with open roles.
 - **Tinder-style swiping.** Drag with tilt and LIKE/NOPE stamps, plus buttons for accessibility.
 - **Mutual matches form teams automatically.** The match reveals the WhatsApp or Telegram link.
@@ -88,7 +88,7 @@ flowchart TB
 
     subgraph supa["Supabase"]
         direction TB
-        AUTH["Auth<br/>email OTP"]
+        AUTH["Auth<br/>email + password"]
         API["PostgREST<br/>tables + RPCs"]
         PG[("Postgres<br/>constraints · triggers · RLS<br/>matching · swipe cap · XP · badges")]
         AUTH --> PG
@@ -170,7 +170,7 @@ Levels: Rookie 0 · Hacker 100 · Maker 250 · Builder 400 · Captain 600 · Arc
 | Language / UI | Kotlin 2.4, Jetpack Compose (BOM 2026.09), Material 3 with a custom Arcade theme |
 | Navigation / DI / images | Navigation Compose, Koin 4, Coil 3 |
 | Backend client | supabase-kt 3.8 (Auth, Postgrest) on Ktor OkHttp |
-| Backend | Supabase: Postgres 17, Auth (email OTP), PostgREST, RLS, `SECURITY DEFINER` RPCs |
+| Backend | Supabase: Postgres 17, Auth (email + password, OTP email confirmation), PostgREST, RLS, `SECURITY DEFINER` RPCs |
 | Build | AGP 9.4, Gradle 9.8, compileSdk 37, targetSdk 36, minSdk 26 |
 | Fonts | Nunito (words) and JetBrains Mono (numbers), bundled offline |
 | Tests | JUnit, pgTAP (79 database tests), Maestro (5 end-to-end flows against the real backend) |
@@ -194,7 +194,7 @@ supabase/
 ├── tests/         pgTAP suite
 └── seed.sql       Demo competitions, accounts and teams
 
-.maestro/          End-to-end flows (OTP read from Mailpit)
+.maestro/          End-to-end flows (confirmation code read from Mailpit)
 scripts/           demo.sh, e2e.sh, e2e-setup.sh
 docs/              decisions log, design research and mockups, demo screenshots
 ```
@@ -219,7 +219,7 @@ scripts/demo.sh
 
 This starts local Supabase and resets it to the seed data, then writes `local.properties` if it is missing. Next it boots the `ether` emulator, creating it if needed, and installs and opens the app. It is safe to re-run. Use `HEADLESS=1` to run without a window.
 
-Sign in with `demo1@student.example.ac.id` … `demo8@student.example.ac.id`, or any other email. The 6-digit code arrives in Mailpit at **http://127.0.0.1:54324**.
+Sign in with `demo1@student.example.ac.id` … `demo8@student.example.ac.id` and the password `ether-demo` (local seed only), or create an account with any email. Its 6-digit confirmation code arrives in Mailpit at **http://127.0.0.1:54324**.
 
 | Try this | Account |
 |---|---|

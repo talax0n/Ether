@@ -1,18 +1,15 @@
 appId: dev.ether.app
 ---
-- runScript: ../scripts/clear_mail.js
+# Signs in an existing account (the seeded demo users use the password ether-demo).
 - tapOn:
     text: "Skip"
     optional: true
 - tapOn: "Email"
 - inputText: ${EMAIL}
-- tapOn: "Continue with email"
-- extendedWaitUntil:
-    visible: "6-digit code"
-    timeout: 15000
-- runScript:
-    file: ../scripts/otp.js
-    env:
-      EMAIL: ${EMAIL}
-- tapOn: "6-digit code"
-- inputText: ${output.otp}
+- tapOn: "Password"
+- inputText: ${PASSWORD || 'ether-demo'}
+- hideKeyboard
+# The first "Sign in" is the mode tab; the second is the button.
+- tapOn:
+    text: "Sign in"
+    index: 1

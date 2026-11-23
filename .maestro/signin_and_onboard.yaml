@@ -1,11 +1,11 @@
 appId: dev.ether.app
-name: Sign in with a new address and set up a profile
+name: Create an account, confirm the email, and set up a profile
 ---
 - launchApp:
     clearState: true
 - runScript: scripts/new_email.js
 - runFlow:
-    file: subflows/sign_in.yaml
+    file: subflows/create_account.yaml
     env:
       EMAIL: ${output.email}
 - extendedWaitUntil:

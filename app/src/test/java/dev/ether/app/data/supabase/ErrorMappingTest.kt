@@ -19,6 +19,15 @@ class ErrorMappingTest {
     }
 
     @Test
+    fun `auth error codes map to their domain errors`() {
+        assertTrue(etherErrorFor("invalid_credentials\nInvalid login credentials") is EtherError.WrongCredentials)
+        assertTrue(etherErrorFor("user_already_exists") is EtherError.AccountExists)
+        assertTrue(etherErrorFor("weak_password") is EtherError.WeakPassword)
+        assertTrue(etherErrorFor("email_not_confirmed") is EtherError.EmailNotConfirmed)
+        assertTrue(etherErrorFor("over_email_send_rate_limit") is EtherError.TooManyEmails)
+    }
+
+    @Test
     fun `registration_closed reads as a human sentence`() {
         assertEquals("Registration for this competition has closed.", etherErrorFor("registration_closed")?.message)
     }

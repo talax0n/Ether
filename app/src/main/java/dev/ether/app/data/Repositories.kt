@@ -20,10 +20,17 @@ import kotlinx.coroutines.flow.Flow
 
 // Implementations throw dev.ether.app.domain.EtherError for every failure, so callers can show its message.
 
+/** Where creating an account leaves the user: signed in, or waiting on the code mailed to them. */
+enum class SignUpResult { SIGNED_IN, VERIFY_EMAIL }
+
 interface AuthRepository {
     val authState: Flow<AuthState>
-    suspend fun sendOtp(email: String)
-    suspend fun verifyOtp(email: String, code: String)
+    suspend fun signIn(email: String, password: String)
+    /** Creates the account. Whether a session starts at once depends on the project's "Confirm email" setting. */
+    suspend fun signUp(email: String, password: String): SignUpResult
+    /** Confirms a new account's email with the 6-digit code from its confirmation mail, which starts the session. */
+    suspend fun verifyEmail(email: String, code: String)
+    suspend fun resendVerification(email: String)
     /** Exchanges a Google ID token (from Credential Manager) for a session. [rawNonce] is the unhashed nonce sent to Google. */
     suspend fun signInWithGoogle(idToken: String, rawNonce: String)
     suspend fun signOut()

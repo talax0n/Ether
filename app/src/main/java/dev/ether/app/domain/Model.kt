@@ -108,6 +108,11 @@ sealed class EtherError(message: String) : Exception(message) {
     class NoResultReported : EtherError("No result has been reported yet.")
     class CannotConfirmOwnResult : EtherError("A teammate has to confirm the result you reported.")
     class InvalidCode : EtherError("That code is wrong or has expired.")
+    class WrongCredentials : EtherError("That email and password don't match. New here? Create an account.")
+    class AccountExists : EtherError("There's already an account with that email. Sign in instead.")
+    class WeakPassword : EtherError("Pick a stronger password: at least 6 characters.")
+    class EmailNotConfirmed : EtherError("Confirm your email first. We sent you a code.")
+    class TooManyEmails : EtherError("Too many emails sent. Wait a few minutes and try again.")
     class Offline : EtherError("Can't reach Ether. Check your connection and try again.")
     class Unknown : EtherError("Something went wrong. Please try again.")
 }
