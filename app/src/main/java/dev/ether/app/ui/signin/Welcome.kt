@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -105,11 +106,11 @@ private val bubbles = listOf(
  */
 @Composable
 internal fun Welcome(
-    onGoogle: (() -> Unit)?,
-    onEmail: () -> Unit,
-    onClose: () -> Unit,
-    busy: Boolean,
-    error: String?,
+    /** The ways forward, stacked under the headline: sign-in buttons, or "Get started" on first run. */
+    actions: @Composable ColumnScope.() -> Unit,
+    /** Null hides the close button, as on first run where there is nothing behind the screen yet. */
+    onClose: (() -> Unit)?,
+    error: String? = null,
     /** Applied to Etha, so a shared-element transition can fly it to the next screen. */
     ethaModifier: Modifier = Modifier,
     /** 0 while shown, 1 when gone: bubbles fly outward and fade as it rises. */
@@ -120,7 +121,7 @@ internal fun Welcome(
         Box(Modifier.weight(1f).fillMaxWidth()) {
             Burst(Modifier.fillMaxSize(), ethaModifier, scatter)
             // Signing in is never forced: close goes back to browsing.
-            LedgeIconButton(ArcadeIcons.Close, "Keep browsing", onClose, Modifier.padding(start = 20.dp, top = 9.dp), size = 42.dp)
+            onClose?.let { LedgeIconButton(ArcadeIcons.Close, "Keep browsing", it, Modifier.padding(start = 20.dp, top = 9.dp), size = 42.dp) }
         }
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 20.dp),
@@ -136,14 +137,10 @@ internal fun Welcome(
                 color = colors.muted, textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(24.dp))
-            val pill = RoundedCornerShape(50)
-            Column(Modifier.staggerIn(8), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                onGoogle?.let { GoogleButton(it, enabled = !busy, shape = pill) }
-                LedgeButton(
-                    "Continue with email", onEmail, Modifier.fillMaxWidth(),
-                    enabled = !busy, icon = ArcadeIcons.Bolt, height = 61.dp, shape = pill,
-                )
-            }
+            Column(
+                Modifier.staggerIn(8), verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally, content = actions,
+            )
             error?.let {
                 Spacer(Modifier.height(12.dp))
                 ErrorText(it)
@@ -331,3 +328,6 @@ private fun BubbleView(b: Bubble, index: Int, bob: () -> Float, orbit: () -> Flo
 
 private const val RAYS = 24
 private const val TAU = (2 * PI).toFloat()
+
+/** Pill shape shared by the welcome screen's buttons. */
+internal val WelcomePill = RoundedCornerShape(50)

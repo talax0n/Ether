@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.slideInVertically
@@ -86,8 +87,10 @@ import dev.ether.app.ui.theme.EtherTheme
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun SignInScreen(onClose: () -> Unit, vm: SignInViewModel = koinViewModel()) {
+fun SignInScreen(onClose: () -> Unit, startAtEmail: Boolean = false, vm: SignInViewModel = koinViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
+    // The ViewModel outlives this overlay, so set the starting step each time it opens.
+    LaunchedEffect(Unit) { if (startAtEmail) vm.continueWithEmail() else vm.back() }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val clientId = BuildConfig.GOOGLE_WEB_CLIENT_ID
@@ -107,7 +110,9 @@ fun SignInScreen(onClose: () -> Unit, vm: SignInViewModel = koinViewModel()) {
         else -> null
     }
     SignInContent(
-        state, vm::onEmailChange, vm::onPasswordChange, vm::onModeChange, vm::submit, vm::back,
+        state, vm::onEmailChange, vm::onPasswordChange, vm::onModeChange, vm::submit,
+        // Opened straight at email (e.g. "I already have an account"), back from there closes instead.
+        { if (startAtEmail && state.step == SignInStep.CREDENTIALS) onClose() else vm.back() },
         vm::continueWithEmail, onGoogle, onClose,
     )
 }
@@ -159,7 +164,16 @@ fun SignInContent(
             if (step == SignInStep.WELCOME) {
                 // 0 while shown, 1 once gone: drives the bubbles' scatter out and back in.
                 val scatter by transition.animateFloat({ tween(420) }, label = "scatter") { if (it == EnterExitState.Visible) 0f else 1f }
-                Welcome(onGoogle, onContinueWithEmail, onClose, busy = state.busy, error = state.error, ethaModifier = ethaShared, scatter = { scatter })
+                Welcome(
+                    actions = {
+                        onGoogle?.let { GoogleButton(it, enabled = !state.busy, shape = WelcomePill) }
+                        LedgeButton(
+                            "Continue with email", onContinueWithEmail, Modifier.fillMaxWidth(),
+                            enabled = !state.busy, icon = ArcadeIcons.Bolt, height = 61.dp, shape = WelcomePill,
+                        )
+                    },
+                    onClose = onClose, error = state.error, ethaModifier = ethaShared, scatter = { scatter },
+                )
                 return@AnimatedContent
             }
             Column(Modifier.fillMaxSize()) {

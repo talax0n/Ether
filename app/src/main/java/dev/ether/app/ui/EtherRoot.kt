@@ -1,6 +1,12 @@
 package dev.ether.app.ui
 
 import androidx.compose.animation.Crossfade
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.safeDrawingPadding
+import dev.ether.app.ui.components.LedgeButton
+import dev.ether.app.ui.signin.Welcome
+import dev.ether.app.ui.signin.WelcomePill
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -135,7 +141,8 @@ private fun RootScreen(s: AppUiState, seenOnboarding: Boolean, vm: AppViewModel,
     when (s) {
         AppUiState.Loading -> Splash()
         // No account needed to look around: the intro plays once, then guests browse and sign in when they act.
-        AppUiState.SignedOut -> if (seenOnboarding) GuestApp() else OnboardingScreen(onDone = onOnboarded)
+        // First run: welcome, then the intro, then the app. After that, straight in as a guest.
+        AppUiState.SignedOut -> if (seenOnboarding) GuestApp() else FirstRun(onDone = onOnboarded)
         // Keyed by user: this screen lives outside the NavHost, so its ViewModel would otherwise outlive a sign-out.
         is AppUiState.NeedsProfile -> ProfileEditScreen(
             isSetup = true, onDone = vm::recheck, onBack = {},
@@ -152,6 +159,53 @@ private fun NavHostController.navigateToTab(tab: Tab) = navigate(tab.route) {
     popUpTo(graph.findStartDestination().id) { saveState = true }
     launchSingleTop = true
     restoreState = true
+}
+
+private enum class FirstRunStage { WELCOME, INTRO }
+
+/**
+ * Splash hands over to this on a fresh install: "Welcome to Ether", then the intro pages, then the app as a guest.
+ * Someone who already has an account can jump to sign-in from the welcome screen.
+ */
+@Composable
+private fun FirstRun(onDone: () -> Unit) {
+    var stage by rememberSaveable { mutableStateOf(FirstRunStage.WELCOME) }
+    var signingIn by rememberSaveable { mutableStateOf(false) }
+    val colors = Arcade.colors
+    Box(Modifier.fillMaxSize()) {
+        Crossfade(stage, animationSpec = tween(Motion.SCREEN_MS), label = "first-run") { s ->
+            when (s) {
+                FirstRunStage.WELCOME -> Box(Modifier.fillMaxSize().background(colors.background).safeDrawingPadding()) {
+                    Welcome(
+                        actions = {
+                            LedgeButton(
+                                "Get started", { stage = FirstRunStage.INTRO }, Modifier.fillMaxWidth(),
+                                icon = ArcadeIcons.Bolt, height = 61.dp, shape = WelcomePill,
+                            )
+                            Text(
+                                "I already have an account",
+                                Modifier.clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) { signingIn = true }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                style = MaterialTheme.typography.titleSmall, color = colors.text,
+                            )
+                        },
+                        onClose = null,
+                    )
+                }
+                FirstRunStage.INTRO -> {
+                    BackHandler { stage = FirstRunStage.WELCOME }
+                    OnboardingScreen(onDone = onDone)
+                }
+            }
+        }
+        AnimatedVisibility(
+            signingIn,
+            enter = slideInVertically(tween(Motion.SCREEN_MS)) { it } + fadeIn(),
+            exit = slideOutVertically(tween(Motion.SCREEN_MS)) { it } + fadeOut(),
+        ) {
+            SignInScreen(onClose = { signingIn = false }, startAtEmail = true)
+        }
+    }
 }
 
 /** The app as a guest sees it, with sign-in sliding up over it whenever an action needs an account. */
