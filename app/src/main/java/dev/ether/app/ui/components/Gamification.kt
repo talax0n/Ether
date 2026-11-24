@@ -42,6 +42,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -137,22 +140,26 @@ fun XpBar(progress: Float, modifier: Modifier = Modifier) {
         anim.animateTo(progress, Motion.pop())
     }
     val line = Arcade.colors.line
-    val track = Arcade.colors.track
+    val trackColor = Arcade.colors.track
     Canvas(modifier.fillMaxWidth().height(26.dp)) {
         val stroke = 3.dp.toPx()
         val r = CornerRadius(size.height / 2)
-        drawRoundRect(track, cornerRadius = r)
-        val fillW = (size.width * anim.value.coerceIn(0f, 1.04f)).coerceIn(0f, size.width)
-        if (fillW > 0f) {
-            val w = fillW.coerceAtLeast(size.height)
-            drawRoundRect(Sun, size = Size(w, size.height), cornerRadius = r)
-            drawRoundRect(SunDeep, Offset(0f, size.height - 6.dp.toPx()), Size(w, 6.dp.toPx() - stroke / 2), r)
-            drawRoundRect(Color.White.copy(alpha = 0.65f), Offset(10.dp.toPx(), 5.dp.toPx()), Size((w - 20.dp.toPx()).coerceAtLeast(0f), 5.dp.toPx()), CornerRadius(3.dp.toPx()))
-            drawRoundRect(line, size = Size(w, size.height), cornerRadius = r, style = Stroke(stroke))
-        }
-        for (i in 1..4) {
-            val x = size.width * i / 5
-            drawLine(line.copy(alpha = 0.25f), Offset(x, stroke), Offset(x, size.height - stroke), 2.dp.toPx())
+        // The fill lives inside the track's outline; clipping keeps its overshoot and pill ends from spilling out.
+        val track = Path().apply { addRoundRect(RoundRect(Rect(Offset.Zero, size), r)) }
+        clipPath(track) {
+            drawRect(trackColor)
+            val fillW = size.width * anim.value.coerceIn(0f, 1f)
+            if (fillW > 0f) {
+                val w = fillW.coerceAtLeast(size.height)
+                drawRoundRect(Sun, size = Size(w, size.height), cornerRadius = r)
+                drawRoundRect(SunDeep, Offset(0f, size.height - 6.dp.toPx()), Size(w, 6.dp.toPx()), r)
+                drawRoundRect(Color.White.copy(alpha = 0.65f), Offset(10.dp.toPx(), 5.dp.toPx()), Size((w - 20.dp.toPx()).coerceAtLeast(0f), 5.dp.toPx()), CornerRadius(3.dp.toPx()))
+                drawRoundRect(line, size = Size(w, size.height), cornerRadius = r, style = Stroke(stroke))
+            }
+            for (i in 1..4) {
+                val x = size.width * i / 5
+                drawLine(line.copy(alpha = 0.25f), Offset(x, 0f), Offset(x, size.height), 2.dp.toPx())
+            }
         }
         drawRoundRect(line, cornerRadius = r, style = Stroke(stroke), topLeft = Offset(stroke / 2, stroke / 2), size = Size(size.width - stroke, size.height - stroke))
     }
