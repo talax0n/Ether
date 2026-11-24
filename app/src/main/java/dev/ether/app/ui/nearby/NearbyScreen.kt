@@ -91,7 +91,11 @@ fun nearbyPermissions(sdk: Int = Build.VERSION.SDK_INT): List<String> = buildLis
     }
     // Wi-Fi discovery: its own permission from 13, location before that.
     if (sdk >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.NEARBY_WIFI_DEVICES)
-    else add(Manifest.permission.ACCESS_FINE_LOCATION)
+    else {
+        // Android 12 ignores a fine-location request that doesn't also ask for coarse.
+        add(Manifest.permission.ACCESS_COARSE_LOCATION)
+        add(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
 }
 
 private fun Context.hasNearbyPermissions() =
