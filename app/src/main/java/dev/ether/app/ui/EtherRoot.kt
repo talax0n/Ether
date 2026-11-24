@@ -27,6 +27,11 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.ui.text.style.TextAlign
+import dev.ether.app.ui.signin.SignInMode
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -171,7 +176,10 @@ private enum class FirstRunStage { WELCOME, INTRO }
 private fun FirstRun(onDone: () -> Unit) {
     var stage by rememberSaveable { mutableStateOf(FirstRunStage.WELCOME) }
     var signingIn by rememberSaveable { mutableStateOf(false) }
+    var signInMode by rememberSaveable { mutableStateOf<SignInMode?>(SignInMode.SIGN_IN) }
+    var askingToJoin by rememberSaveable { mutableStateOf(false) }
     val colors = Arcade.colors
+    val signIn = { mode: SignInMode? -> askingToJoin = false; signInMode = mode; signingIn = true }
     Box(Modifier.fillMaxSize()) {
         Crossfade(stage, animationSpec = tween(Motion.SCREEN_MS), label = "first-run") { s ->
             when (s) {
@@ -179,12 +187,12 @@ private fun FirstRun(onDone: () -> Unit) {
                     Welcome(
                         actions = {
                             LedgeButton(
-                                "Get started", { stage = FirstRunStage.INTRO }, Modifier.fillMaxWidth(),
+                                "Get started", { askingToJoin = true }, Modifier.fillMaxWidth(),
                                 icon = ArcadeIcons.Bolt, height = 61.dp, shape = WelcomePill,
                             )
                             Text(
                                 "I already have an account",
-                                Modifier.clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) { signingIn = true }
+                                Modifier.clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) { signIn(SignInMode.SIGN_IN) }
                                     .padding(horizontal = 12.dp, vertical = 8.dp),
                                 style = MaterialTheme.typography.titleSmall, color = colors.text,
                             )
@@ -203,7 +211,44 @@ private fun FirstRun(onDone: () -> Unit) {
             enter = slideInVertically(tween(Motion.SCREEN_MS)) { it } + fadeIn(),
             exit = slideOutVertically(tween(Motion.SCREEN_MS)) { it } + fadeOut(),
         ) {
-            SignInScreen(onClose = { signingIn = false }, startAtEmail = true)
+            SignInScreen(onClose = { signingIn = false }, startMode = signInMode)
+        }
+    }
+    if (askingToJoin) {
+        JoinSheet(
+            onCreate = { signIn(SignInMode.CREATE_ACCOUNT) },
+            onLogIn = { signIn(null) },
+            onSkip = { askingToJoin = false; stage = FirstRunStage.INTRO },
+            onDismiss = { askingToJoin = false },
+        )
+    }
+}
+
+/** Asked once after "Get started": make an account now, or skip and look around as a guest. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun JoinSheet(onCreate: () -> Unit, onLogIn: () -> Unit, onSkip: () -> Unit, onDismiss: () -> Unit) {
+    val colors = Arcade.colors
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = colors.background) {
+        Column(
+            Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            EthaLive(size = 88.dp)
+            Text("Save your progress", style = MaterialTheme.typography.headlineSmall, color = colors.text)
+            Text(
+                "An account keeps your card, matches and XP. You can also look around first.",
+                style = MaterialTheme.typography.bodyMedium, color = colors.muted, textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(4.dp))
+            LedgeButton("Create account", onCreate, Modifier.fillMaxWidth(), icon = ArcadeIcons.Bolt, height = 56.dp, shape = WelcomePill)
+            LedgeButton("Log in", onLogIn, Modifier.fillMaxWidth(), color = colors.surface, contentColor = colors.text, height = 56.dp, shape = WelcomePill)
+            Text(
+                "Skip for now",
+                Modifier.clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button, onClick = onSkip).padding(horizontal = 12.dp, vertical = 10.dp),
+                style = MaterialTheme.typography.titleSmall, color = colors.muted,
+            )
         }
     }
 }

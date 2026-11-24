@@ -87,10 +87,18 @@ import dev.ether.app.ui.theme.EtherTheme
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun SignInScreen(onClose: () -> Unit, startAtEmail: Boolean = false, vm: SignInViewModel = koinViewModel()) {
+/** [startMode] opens straight at the email form in that mode; null starts on the Google-or-email welcome. */
+fun SignInScreen(onClose: () -> Unit, startMode: SignInMode? = null, vm: SignInViewModel = koinViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val startAtEmail = startMode != null
     // The ViewModel outlives this overlay, so set the starting step each time it opens.
-    LaunchedEffect(Unit) { if (startAtEmail) vm.continueWithEmail() else vm.back() }
+    LaunchedEffect(Unit) {
+        if (startMode == null) vm.back()
+        else {
+            vm.onModeChange(startMode)
+            vm.continueWithEmail()
+        }
+    }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val clientId = BuildConfig.GOOGLE_WEB_CLIENT_ID
