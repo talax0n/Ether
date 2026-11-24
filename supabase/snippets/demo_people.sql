@@ -204,6 +204,10 @@ insert into public.listings (competition_id, kind, profile_id, created_at)
 select (select id from competitions where name = 'YAI Singapore 2026/27'), 'solo', ('de000000-0000-0000-0000-' || lpad(n::text, 12, '0'))::uuid, now() - (n || ' minutes')::interval from generate_series(1, 26) n;
 insert into public.listings (competition_id, kind, profile_id, created_at)
 select (select id from competitions where name = 'Cosmo Hacks 2026'), 'solo', ('de000000-0000-0000-0000-' || lpad(n::text, 12, '0'))::uuid, now() - (n || ' minutes')::interval from generate_series(15, 40) n;
+insert into public.listings (competition_id, kind, profile_id, created_at)
+select (select id from competitions where name = 'wHACKiest 2026'), 'solo', ('de000000-0000-0000-0000-' || lpad(n::text, 12, '0'))::uuid, now() - (n || ' minutes')::interval from generate_series(21, 46) n;
+-- Real listings made before this ran get their likes back now; later ones get them from the trigger.
+select public.demo_like_back(id) from public.listings;
 select count(*) as demo_people from auth.users where email like 'demo%@people.ether.app';
 select c.name, count(l.*) as listings from competitions c left join listings l on l.competition_id = c.id group by 1;
 commit;
