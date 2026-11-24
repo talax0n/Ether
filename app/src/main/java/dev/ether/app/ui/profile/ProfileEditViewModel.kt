@@ -21,8 +21,8 @@ data class ProfileForm(
     val major: String = "",
     val year: String = "",
     val bio: String = "",
-    val skills: String = "",
-    val roles: String = "",
+    val skills: List<String> = emptyList(),
+    val roles: List<String> = emptyList(),
     val phone: String = "",
     val instagram: String = "",
     val lineId: String = "",
@@ -30,9 +30,6 @@ data class ProfileForm(
     /** The sign-in photo (Google's), shown when no face is picked. Not editable here. */
     val photoUrl: String? = null,
 ) {
-    val skillTags get() = skills.splitTags()
-    val roleTags get() = roles.splitTags()
-
     /** Raw text of one contact field. */
     fun raw(kind: ContactKind): String = when (kind) {
         ContactKind.WHATSAPP -> phone
@@ -70,15 +67,14 @@ data class ProfileForm(
         // Everything is required: the database only counts a profile as complete with all of it.
         if (name.isBlank() || major.isBlank() || bio.isBlank()) return null
         val contacts = contactsOrNull() ?: return null
-        val skillTags = skills.splitTags().ifEmpty { return null }
-        val roleTags = roles.splitTags().ifEmpty { return null }
-        return ProfileDraft(name.trim(), major.trim(), yearValue, bio.trim(), skillTags, roleTags, contacts, face)
+        if (skills.isEmpty() || roles.isEmpty()) return null
+        return ProfileDraft(name.trim(), major.trim(), yearValue, bio.trim(), skills, roles, contacts, face)
     }
 
     companion object {
         fun of(p: Profile) = ProfileForm(
             p.name, p.major.orEmpty(), p.year?.toString().orEmpty(), p.bio,
-            p.skills.joinToString(", "), p.roles.joinToString(", "),
+            p.skills, p.roles,
             phone = p.contacts.phone?.let { "+$it" }.orEmpty(),
             instagram = p.contacts.instagram?.let { "@$it" }.orEmpty(),
             lineId = p.contacts.lineId.orEmpty(),
@@ -88,7 +84,6 @@ data class ProfileForm(
     }
 }
 
-private fun String.splitTags() = split(',').map(String::trim).filter(String::isNotEmpty).distinct()
 
 data class ProfileEditUiState(
     val loading: Boolean = true,

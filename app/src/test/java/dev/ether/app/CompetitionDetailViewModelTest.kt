@@ -36,7 +36,7 @@ class CompetitionDetailViewModelTest {
         val vm = CompetitionDetailViewModel(DemoData.campusHack, backend, backend) { DemoData.now }
 
         vm.openTeamForm()
-        vm.editTeamForm(TeamForm("Rocket", "We ship", "Mobile, Designer"))
+        vm.editTeamForm(TeamForm("Rocket", "We ship", listOf("Mobile", "Designer")))
         vm.createTeam()
 
         assertTrue(vm.state.value.listing is Listing.Team)

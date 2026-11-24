@@ -17,8 +17,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
 
-data class TeamForm(val name: String = "", val pitch: String = "", val openRoles: String = "") {
-    val roles get() = openRoles.split(',').map(String::trim).filter(String::isNotEmpty).distinct()
+data class TeamForm(val name: String = "", val pitch: String = "", val roles: List<String> = emptyList()) {
     val isValid get() = name.isNotBlank() && pitch.isNotBlank() && roles.isNotEmpty()
 }
 

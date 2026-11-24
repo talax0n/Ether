@@ -57,6 +57,8 @@ import dev.ether.app.ui.components.LoadingBox
 import dev.ether.app.ui.components.MessageBox
 import dev.ether.app.ui.components.Seats
 import dev.ether.app.ui.components.TagRow
+import dev.ether.app.ui.components.TagPicker
+import dev.ether.app.domain.TagCatalog
 import dev.ether.app.ui.components.Tone
 import dev.ether.app.ui.components.initials
 import dev.ether.app.ui.components.ledge
@@ -315,9 +317,7 @@ private fun TeamFormDialog(form: TeamForm, busy: Boolean, error: String?, onChan
                 )
                 ArcadeTextField(form.name, { onChange(form.copy(name = it)) }, "Team name")
                 ArcadeTextField(form.pitch, { onChange(form.copy(pitch = it)) }, "Pitch", singleLine = false, minLines = 2)
-                ArcadeTextField(form.openRoles, { onChange(form.copy(openRoles = it)) }, "Open roles, comma separated", keyboardOptions = KeyboardOptions.Default)
-                // Shows exactly what will be saved, so "Mobile, Designer" visibly becomes two roles.
-                if (form.roles.isNotEmpty()) TagRow(form.roles, CoralSoft)
+                TagPicker("Open roles", form.roles, TagCatalog.roles, CoralSoft, { onChange(form.copy(roles = it)) })
                 error?.let { ErrorText(it) }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     LedgeButton("Cancel", onDismiss, Modifier.weight(1f), color = Color.Transparent, contentColor = Arcade.colors.text)

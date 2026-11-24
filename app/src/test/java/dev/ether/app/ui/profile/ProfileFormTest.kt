@@ -11,7 +11,7 @@ import org.junit.Test
 
 class ProfileFormTest {
     private val complete = ProfileForm(
-        name = "Ana", major = "DKV", year = "3", bio = "Designer", skills = "Figma", roles = "Designer",
+        name = "Ana", major = "DKV", year = "3", bio = "Designer", skills = listOf("Figma"), roles = listOf("Designer"),
     )
 
     @Test

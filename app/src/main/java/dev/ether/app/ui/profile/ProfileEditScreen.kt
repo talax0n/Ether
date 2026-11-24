@@ -22,6 +22,8 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import dev.ether.app.domain.TagCatalog
+import dev.ether.app.ui.components.TagPicker
 import androidx.compose.ui.semantics.contentDescription
 import dev.ether.app.domain.AvatarFace
 import dev.ether.app.ui.components.Avatar
@@ -39,7 +41,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import dev.ether.app.ui.components.LedgeIconButton
-import dev.ether.app.ui.components.TagRow
 import dev.ether.app.domain.ContactKind
 import dev.ether.app.ui.components.icon
 import dev.ether.app.ui.theme.CoralSoft
@@ -92,7 +93,8 @@ fun ProfileEditScreen(isSetup: Boolean, onDone: () -> Unit, onBack: () -> Unit, 
         if (state.loading) return@Column LoadingBox()
         state.loadError?.let { return@Column MessageBox(it, action = "Retry", tone = Tone.ERROR, onAction = vm::load) }
         val form = state.form
-        val filled = listOf(form.name, form.major, form.year, form.bio, form.skills, form.roles).count { it.isNotBlank() } +
+        val filled = listOf(form.name, form.major, form.year, form.bio).count { it.isNotBlank() } +
+            listOf(form.skills, form.roles).count { it.isNotEmpty() } +
             (if (form.contactsOrNull() != null) 1 else 0)
         Column(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = if (isSetup) 24.dp else 4.dp, bottom = 12.dp),
@@ -119,10 +121,8 @@ fun ProfileEditScreen(isSetup: Boolean, onDone: () -> Unit, onBack: () -> Unit, 
             Field("Major", form.major, 3) { vm.edit { copy(major = it) } }
             Field("Year (1-10)", form.year, 4, KeyboardType.Number) { vm.edit { copy(year = it) } }
             Field("Bio", form.bio, 5, singleLine = false) { vm.edit { copy(bio = it) } }
-            Field("Skills, comma separated", form.skills, 6) { vm.edit { copy(skills = it) } }
-            if (form.skillTags.isNotEmpty()) TagRow(form.skillTags, SkySoft)
-            Field("Roles, comma separated", form.roles, 7) { vm.edit { copy(roles = it) } }
-            if (form.roleTags.isNotEmpty()) TagRow(form.roleTags, CoralSoft)
+            TagPicker("Skills", form.skills, TagCatalog.skills, SkySoft, { vm.edit { copy(skills = it) } }, Modifier.staggerIn(6))
+            TagPicker("Roles", form.roles, TagCatalog.roles, CoralSoft, { vm.edit { copy(roles = it) } }, Modifier.staggerIn(7))
             Text("How matches reach you", Modifier.padding(top = 6.dp), style = MaterialTheme.typography.titleMedium, color = colors.text)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(ArcadeIcons.Lock, contentDescription = null, tint = colors.muted, modifier = Modifier.size(16.dp))
